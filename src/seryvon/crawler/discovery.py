@@ -218,7 +218,7 @@ def parse_sitemap(
     return invalid
 
 
-def _same_host(url: str, host: str) -> bool:
+def same_host(url: str, host: str) -> bool:
     """Vrai si `url` est sur le même hôte (comparaison insensible à la casse)."""
     try:
         parsed_host = (urlsplit(url).hostname or "").lower().rstrip(".")
@@ -298,7 +298,7 @@ async def _run_discovery(
             if parsed.is_index:
                 next_queue.extend(parsed.sitemaps)
             else:
-                sitemap_urls.update(loc for loc in parsed.urls if _same_host(loc, norm.host))
+                sitemap_urls.update(loc for loc in parsed.urls if same_host(loc, norm.host))
         queue = next_queue
         depth += 1
 

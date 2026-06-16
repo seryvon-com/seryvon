@@ -10,21 +10,33 @@ from fastapi.testclient import TestClient
 
 from seryvon.api.main import app
 from seryvon.core import audit as audit_module
-from seryvon.crawler.fetch import FetchResult
+from seryvon.crawler import extract_page_signals
+from seryvon.crawler.discovery import DiscoveryResult, RobotsTxt
+from seryvon.models.signals import PageSignals
 
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch, sample_html: str) -> TestClient:
-    async def fake_fetch(url: str, **kwargs: object) -> FetchResult:
-        return FetchResult(
-            url=url,
-            final_url="https://example.com/",
-            status_code=200,
-            html=sample_html,
-            redirects=0,
+    async def fake_discover(url: str, **kwargs: object) -> DiscoveryResult:
+        return DiscoveryResult(
+            home_url="https://example.com/",
+            origin="https://example.com",
+            domain="example.com",
+            robots=RobotsTxt.allow_all(),
+            robots_found=False,
+            crawl_delay=None,
+            declared_sitemaps=[],
+            sitemap_urls=[],
+            sitemap_valid=False,
+            home_allowed=True,
+            frontier=["https://example.com/"],
         )
 
-    monkeypatch.setattr(audit_module, "fetch_page", fake_fetch)
+    async def fake_crawl(discovery: DiscoveryResult, **kwargs: object) -> list[PageSignals]:
+        return [extract_page_signals("https://example.com/", sample_html, status_code=200)]
+
+    monkeypatch.setattr(audit_module, "discover", fake_discover)
+    monkeypatch.setattr(audit_module, "crawl_site", fake_crawl)
     return TestClient(app)
 
 

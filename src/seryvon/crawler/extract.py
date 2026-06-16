@@ -15,10 +15,33 @@ testable sur fixtures et reproductible.
 from __future__ import annotations
 
 import json
+from urllib.parse import urldefrag, urljoin
 
 from selectolax.parser import HTMLParser
 
 from seryvon.models.signals import PageSignals
+
+# Schémas de href ignorés lors de l'expansion de la frontière de crawl.
+_NON_HTTP_SCHEMES = ("#", "mailto:", "tel:", "javascript:", "data:")
+
+
+def extract_links(html: str, base_url: str) -> list[str]:
+    """Liens HTTP(S) absolus d'une page, fragment retiré, dédupliqués et triés.
+
+    Utilisé par le crawler (M2) pour étendre la frontière. Le filtrage same-host
+    et le respect de robots.txt sont appliqués par l'appelant, pas ici (fonction
+    pure, déterministe : même HTML => mêmes liens dans le même ordre).
+    """
+    tree = HTMLParser(html)
+    links: set[str] = set()
+    for node in tree.css("a[href]"):
+        href = (node.attributes.get("href") or "").strip()
+        if not href or href.startswith(_NON_HTTP_SCHEMES):
+            continue
+        absolute = urldefrag(urljoin(base_url, href)).url
+        if absolute.startswith(("http://", "https://")):
+            links.add(absolute)
+    return sorted(links)
 
 
 def _text_ratio(html: str, text: str) -> float | None:

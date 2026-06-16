@@ -74,7 +74,8 @@ def run(
 ) -> None:
     """Lance un audit sur une URL et produit un rapport JSON.
 
-    Phase 0 : audit de la home uniquement. Le crawl multi-pages arrive en Phase 1.
+    Crawle le site (robots.txt + sitemaps + liens internes, dans les limites de
+    la config) puis score les 5 piliers.
     """
     audit_config = AuditConfig.from_yaml(config) if config else AuditConfig.default()
 
