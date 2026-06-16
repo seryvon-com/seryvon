@@ -1,0 +1,208 @@
+# Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
+# Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version. See <https://www.gnu.org/licenses/>.
+"""Modèles ORM (document 05 — modèle de données).
+
+Phase 0 : tables du cœur d'audit (domain, audit, page, page_signal,
+criterion_result, pillar_score, issue, aso_readiness). Les tables de citation
+tracking, rank tracking et comparaison concurrentielle (documents 05, 07, 10)
+sont ajoutées dans leurs phases respectives.
+"""
+
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import (
+    ARRAY,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from seryvon.db.base import Base
+
+
+def _uuid_pk() -> Mapped[uuid.UUID]:
+    return mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+
+class Domain(Base):
+    """Domaine audité (document 05, §2.1)."""
+
+    __tablename__ = "domain"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    host: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    audits: Mapped[list[Audit]] = relationship(
+        back_populates="domain", cascade="all, delete-orphan"
+    )
+
+
+class Audit(Base):
+    """Exécution d'audit (document 05, §2.2)."""
+
+    __tablename__ = "audit"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    domain_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("domain.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    tool_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    signal_schema_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    config_digest: Mapped[str | None] = mapped_column(String(64))
+    pillars_requested: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+
+    score_global: Mapped[float | None] = mapped_column(Float)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    domain: Mapped[Domain] = relationship(back_populates="audits")
+    pages: Mapped[list[Page]] = relationship(back_populates="audit", cascade="all, delete-orphan")
+    criterion_results: Mapped[list[CriterionResultRow]] = relationship(
+        back_populates="audit", cascade="all, delete-orphan"
+    )
+    pillar_scores: Mapped[list[PillarScoreRow]] = relationship(
+        back_populates="audit", cascade="all, delete-orphan"
+    )
+    issues: Mapped[list[IssueRow]] = relationship(
+        back_populates="audit", cascade="all, delete-orphan"
+    )
+    aso_readiness: Mapped[AsoReadinessRow | None] = relationship(
+        back_populates="audit", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class Page(Base):
+    """Page crawlée d'un audit (document 05, §2.3)."""
+
+    __tablename__ = "page"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    audit_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("audit.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    status_code: Mapped[int | None] = mapped_column(Integer)
+    render_mode: Mapped[str | None] = mapped_column(String(16))
+
+    audit: Mapped[Audit] = relationship(back_populates="pages")
+    signal: Mapped[PageSignalRow | None] = relationship(
+        back_populates="page", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class PageSignalRow(Base):
+    """Signaux d'une page, JSONB (internal inclut le bloc `aso`, document 05, §2.4)."""
+
+    __tablename__ = "page_signal"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    page_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("page.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    signal_schema_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    internal: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    external: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+    page: Mapped[Page] = relationship(back_populates="signal")
+
+
+class CriterionResultRow(Base):
+    """Résultat d'un critère persisté (document 05, §2.5)."""
+
+    __tablename__ = "criterion_result"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    audit_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("audit.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    criterion_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    pillars: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    raw_value: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    threshold: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    explanation: Mapped[str] = mapped_column(Text, default="")
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    weight: Mapped[float] = mapped_column(Float, default=1.0)
+
+    audit: Mapped[Audit] = relationship(back_populates="criterion_results")
+
+
+class PillarScoreRow(Base):
+    """Score agrégé d'un pilier (document 05, §2.6 — 5 valeurs possibles)."""
+
+    __tablename__ = "pillar_score"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    audit_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("audit.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    pillar: Mapped[str] = mapped_column(String(8), nullable=False)  # seo/geo/gso/aeo/aso
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+    measured: Mapped[int] = mapped_column(Integer, default=0)
+    excluded: Mapped[int] = mapped_column(Integer, default=0)
+
+    audit: Mapped[Audit] = relationship(back_populates="pillar_scores")
+
+
+class IssueRow(Base):
+    """Problème priorisé (document 05, §2.7)."""
+
+    __tablename__ = "issue"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    audit_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("audit.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    criterion_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    impact: Mapped[int] = mapped_column(Integer, nullable=False)
+    effort: Mapped[int] = mapped_column(Integer, nullable=False)
+    priority_score: Mapped[float] = mapped_column(Float, nullable=False)
+    priority_bucket: Mapped[str] = mapped_column(String(4), nullable=False)
+    recommendation: Mapped[str] = mapped_column(Text, default="")
+    affected_pages: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+
+    audit: Mapped[Audit] = relationship(back_populates="issues")
+
+
+class AsoReadinessRow(Base):
+    """Synthèse de readiness agentique (document 05, §2.8 — NOUVELLE TABLE)."""
+
+    __tablename__ = "aso_readiness"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    audit_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("audit.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
+    )
+    readiness_level: Mapped[str] = mapped_column(String(16), nullable=False)
+    agent_ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    has_webmcp: Mapped[bool] = mapped_column(Boolean, default=False)
+    has_action_schema: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_discovery_endpoints: Mapped[int] = mapped_column(Integer, default=0)
+    has_nlweb: Mapped[bool] = mapped_column(Boolean, default=False)
+    brand_coherence_score: Mapped[float | None] = mapped_column(Numeric)
+    blocked_agent_bots: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    audit: Mapped[Audit] = relationship(back_populates="aso_readiness")

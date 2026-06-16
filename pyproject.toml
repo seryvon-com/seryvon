@@ -1,0 +1,103 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seryvon"
+version = "0.1.0.dev0"
+description = "Outil d'audit déterministe SEO / GEO / GSO / AEO / ASO (open core)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE", "NOTICE"]
+authors = [
+    { name = "Powehi", email = "contact@powehi.eu" },
+]
+keywords = ["seo", "geo", "aeo", "gso", "aso", "audit", "llm", "agentic"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+]
+
+dependencies = [
+    "httpx>=0.27",
+    "selectolax>=0.3.21",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "typer>=0.12",
+    "rich>=13.7",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0.30",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.1",
+    "celery>=5.4",
+    "redis>=5.0",
+    "pyyaml>=6.0",
+    "cryptography>=42.0",
+]
+
+[project.optional-dependencies]
+render = ["playwright>=1.44"]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "vcrpy>=6.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "types-pyyaml",
+]
+
+[project.urls]
+Homepage = "https://seryvon.com"
+Repository = "https://github.com/powehi/seryvon"
+Documentation = "https://seryvon.com/docs"
+Issues = "https://github.com/powehi/seryvon/issues"
+
+[project.scripts]
+seryvon = "seryvon.cli.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/seryvon"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "RUF"]
+# B008  : Typer/FastAPI utilisent des appels par défaut dans la signature.
+# RUF001/002/003 : caractères « ambigus » (tirets, apostrophes) — faux positifs en français.
+ignore = ["B008", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["seryvon"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+strict = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+files = ["src/seryvon"]
+
+[[tool.mypy.overrides]]
+module = ["selectolax.*", "celery.*", "vcr.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra --cov=seryvon --cov-report=term-missing"
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
