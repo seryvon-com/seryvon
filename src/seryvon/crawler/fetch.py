@@ -29,6 +29,21 @@ class FetchResult:
     redirects: int
 
 
+@dataclass(slots=True)
+class FetchedResource:
+    """Réponse brute d'une ressource non-HTML (robots.txt, sitemap, éventuellement gzip).
+
+    Contrairement à `FetchResult`, le corps est conservé en `bytes` : les sitemaps
+    peuvent être compressés (`.xml.gz`) et doivent être décompressés avant parsing.
+    """
+
+    url: str
+    final_url: str
+    status_code: int
+    content: bytes
+    content_type: str | None = None
+
+
 async def fetch_page(
     url: str,
     *,
@@ -53,4 +68,32 @@ async def fetch_page(
             status_code=response.status_code,
             html=response.text,
             redirects=len(response.history),
+        )
+
+
+async def fetch_resource(
+    url: str,
+    *,
+    user_agent: str,
+    timeout: float = 15.0,
+) -> FetchedResource:
+    """Récupère une ressource brute (bytes) — robots.txt, sitemap, etc.
+
+    Le corps n'est pas décodé en texte : les sitemaps peuvent être gzippés. Le
+    statut HTTP (y compris 4xx) est retourné tel quel ; un robots.txt absent (404)
+    est interprété par l'appelant comme « tout autorisé » (RFC 9309).
+    """
+    headers = {"User-Agent": user_agent}
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=timeout,
+        headers=headers,
+    ) as client:
+        response = await client.get(url)
+        return FetchedResource(
+            url=url,
+            final_url=str(response.url),
+            status_code=response.status_code,
+            content=response.content,
+            content_type=response.headers.get("content-type"),
         )
