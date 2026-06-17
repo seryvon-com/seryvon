@@ -11,6 +11,6 @@
 il suffit de les importer dans ce fichier — le moteur les découvre via `RULES`.
 """
 
-from seryvon.scoring.rules import seo
+from seryvon.scoring.rules import perf, seo
 
-__all__ = ["seo"]
+__all__ = ["perf", "seo"]

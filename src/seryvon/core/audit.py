@@ -20,10 +20,17 @@ import json
 from datetime import UTC, datetime
 
 from seryvon import PILLARS, __version__
-from seryvon.core.config import AuditConfig, get_settings
+from seryvon.connectors import fetch_pagespeed
+from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.models.report import AuditReport
-from seryvon.models.signals import SIGNAL_SCHEMA_VERSION, SignalBundle, SiteSignals
+from seryvon.models.signals import (
+    SIGNAL_SCHEMA_VERSION,
+    ExternalSignals,
+    PageSignals,
+    SignalBundle,
+    SiteSignals,
+)
 from seryvon.scoring import run_criteria, score_global, score_pillar
 
 
@@ -31,6 +38,26 @@ def _config_digest(config: AuditConfig) -> str:
     """Empreinte stable de la config (reproductibilité — document 05, §8)."""
     payload = json.dumps(config.model_dump(), sort_keys=True).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()[:16]
+
+
+async def _collect_external(pages: list[PageSignals], settings: Settings) -> ExternalSignals:
+    """Collecte les signaux externes (PSI). BYOK : sans clé, rien n'est appelé.
+
+    Décision D4 : PageSpeed Insights sur la home seule. Sans `PSI_API_KEY`, les
+    critères perf.* restent `not_measured` (dégradation gracieuse).
+    """
+    if not (settings.psi_api_key and pages):
+        return ExternalSignals()
+    psi = await fetch_pagespeed(
+        pages[0].url,
+        api_key=settings.psi_api_key,
+        strategy=settings.pagespeed_strategy,
+        timeout=settings.request_timeout,
+    )
+    return ExternalSignals(
+        core_web_vitals=psi.core_web_vitals,
+        lighthouse_performance=psi.lighthouse_performance,
+    )
 
 
 async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
@@ -60,6 +87,7 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         respect_robots=config.crawl.respect_robots,
         timeout=settings.request_timeout,
     )
+    external = await _collect_external(pages, settings)
     bundle = SignalBundle(
         domain=discovery.domain,
         signal_schema_version=SIGNAL_SCHEMA_VERSION,
@@ -70,6 +98,7 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
             sitemap_valid=discovery.sitemap_valid,
             sitemap_url_count=len(discovery.sitemap_urls),
         ),
+        external=external,
     )
 
     results = run_criteria(bundle, config)

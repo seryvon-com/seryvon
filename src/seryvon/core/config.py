@@ -24,6 +24,9 @@ import yaml
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Stratégie PSI par défaut (décision D4 : home seule, mobile-first).
+DEFAULT_PSI_STRATEGY = "mobile"
+
 
 class Settings(BaseSettings):
     """Configuration d'infrastructure, lue depuis l'environnement / `.env`."""
@@ -50,6 +53,11 @@ class Settings(BaseSettings):
 
     # Chiffrement BYOK (Fernet). Vide => fonctions BYOK désactivées (Phase 0).
     secret_key: str = ""
+
+    # PageSpeed Insights (BYOK). Clé lue dans la variable PSI_API_KEY (convention
+    # du document 04) ; vide => critères perf.* not_measured.
+    psi_api_key: str = Field(default="", validation_alias="PSI_API_KEY")
+    pagespeed_strategy: str = DEFAULT_PSI_STRATEGY
 
 
 @lru_cache
