@@ -16,12 +16,17 @@ modification du moteur (exigence O6 — extensibilité).
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
 
 from seryvon.models.enums import Status
 from seryvon.models.signals import SignalBundle
+
+#: Surcharges de seuils par critère (section `thresholds:` du YAML de config),
+#: ex. {"content.depth": {"target_words": 1000}}. Mapping en lecture seule.
+ThresholdConfig = Mapping[str, Mapping[str, Any]]
 
 
 class CriterionResult(BaseModel):
@@ -69,8 +74,14 @@ class Criterion(ABC):
     weight: ClassVar[float] = 1.0
 
     @abstractmethod
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
-        """Évalue le critère sur les signaux et renvoie un résultat déterministe."""
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        """Évalue le critère et renvoie un résultat déterministe.
+
+        `thresholds` porte les surcharges de seuils (config YAML) ; `None` =>
+        seuils par défaut. Scoring pur : aucune I/O, fonction de (signals, seuils).
+        """
         raise NotImplementedError
 
 

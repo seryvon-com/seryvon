@@ -26,10 +26,11 @@ implémentés (Phase 2).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from itertools import pairwise
 from typing import Any, ClassVar
 
-from seryvon.models.criterion import Criterion, CriterionResult, register
+from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import STATUS_OK_THRESHOLD, status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
 
@@ -73,13 +74,20 @@ class PageCriterion(Criterion):
     def score_page(self, page: PageSignals) -> float:
         raise NotImplementedError
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def _aggregate(
+        self,
+        signals: SignalBundle,
+        score_page: Callable[[PageSignals], float],
+        *,
+        threshold: dict[str, Any] | None = None,
+    ) -> CriterionResult:
+        """Moyenne des scores par page + évidence des pages non conformes."""
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
                 self.key, self.pillars, self.weight, "Aucune page crawlée."
             )
-        scores = [self.score_page(page) for page in pages]
+        scores = [score_page(page) for page in pages]
         score = _mean(scores)
         passing = sum(1 for s in scores if s >= STATUS_OK_THRESHOLD)
         failing = sorted(
@@ -91,12 +99,17 @@ class PageCriterion(Criterion):
             raw_value={"pages": len(pages), "passing": passing, "mean_score": score},
             score=score,
             status=status_from_score(score),
-            threshold=dict(self.threshold),
+            threshold=dict(self.threshold if threshold is None else threshold),
             explanation=f"{self.label} : {passing}/{len(pages)} page(s) conforme(s) "
             f"(score moyen {score}).",
             evidence={**_EVIDENCE_HTML, "non_conformes": failing[:_MAX_EVIDENCE]},
             weight=self.weight,
         )
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        return self._aggregate(signals, self.score_page)
 
 
 # --------------------------------------------------------------------------- #
@@ -181,7 +194,9 @@ class MetaTitleUniqueCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 1.0
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         titles = [p.title for p in signals.pages if p.title]
         if not titles:
             return CriterionResult.not_measured(
@@ -292,8 +307,24 @@ class ContentDepthCriterion(PageCriterion):
     label = "Profondeur de contenu"
     threshold: ClassVar[dict[str, Any]] = {"min_words": CONTENT_MIN_WORDS}
 
-    def score_page(self, page: PageSignals) -> float:
-        return round(min(100.0, page.word_count / CONTENT_MIN_WORDS * 100), 2)
+    @staticmethod
+    def _target_words(thresholds: ThresholdConfig | None) -> float:
+        """Seuil de mots : surcharge `content.depth.target_words` ou défaut 800."""
+        section = thresholds.get("content.depth") if thresholds else None
+        value = section.get("target_words") if section else None
+        if isinstance(value, int | float) and value > 0:
+            return float(value)
+        return float(CONTENT_MIN_WORDS)
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        target = self._target_words(thresholds)
+        return self._aggregate(
+            signals,
+            lambda page: round(min(100.0, page.word_count / target * 100), 2),
+            threshold={"min_words": int(target)},
+        )
 
 
 @register
@@ -364,7 +395,9 @@ class LinksOrphansCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 0.7
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         pages = signals.pages
         if len(pages) < 2:
             return CriterionResult.not_measured(
@@ -403,7 +436,9 @@ class ImgAltCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 0.5
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         total = sum(p.images_total for p in signals.pages)
         if total == 0:
             return CriterionResult.not_measured(
@@ -435,7 +470,9 @@ class CrawlIndexableCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 1.2
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
@@ -464,7 +501,9 @@ class CrawlSitemapCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 0.8
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         valid = signals.site.sitemap_valid
         score = 100.0 if valid else 0.0
         return CriterionResult(
@@ -495,7 +534,9 @@ class CrawlHttpsCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 1.0
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
@@ -547,7 +588,9 @@ class HreflangCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 0.5
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         with_hreflang = [p for p in signals.pages if p.hreflang]
         if not with_hreflang:
             return CriterionResult.not_measured(

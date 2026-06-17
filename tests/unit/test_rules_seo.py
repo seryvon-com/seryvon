@@ -197,6 +197,14 @@ def test_content_depth() -> None:
     assert ContentDepthCriterion().evaluate(_pages(_page(word_count=1200))).score == 100
 
 
+def test_content_depth_threshold_override() -> None:
+    bundle = _pages(_page(word_count=800))
+    assert ContentDepthCriterion().evaluate(bundle).score == 100.0  # défaut 800 mots
+    overridden = ContentDepthCriterion().evaluate(bundle, {"content.depth": {"target_words": 1600}})
+    assert overridden.score == 50.0  # 800 / 1600
+    assert overridden.threshold == {"min_words": 1600}
+
+
 def test_content_text_ratio() -> None:
     assert ContentTextRatioCriterion().evaluate(_pages(_page(text_ratio=0.2))).score == 100
     assert ContentTextRatioCriterion().evaluate(_pages(_page(text_ratio=0.075))).score == 50

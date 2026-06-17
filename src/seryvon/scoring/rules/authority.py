@@ -20,7 +20,7 @@ from __future__ import annotations
 import math
 from typing import ClassVar
 
-from seryvon.models.criterion import Criterion, CriterionResult, register
+from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import SignalBundle
 
@@ -36,7 +36,9 @@ class AuthorityOprCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 1.0
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         opr = signals.external.open_page_rank
         if opr is None:
             return CriterionResult.not_measured(
@@ -68,7 +70,9 @@ class AuthorityBacklinksCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 1.0
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         referring = signals.external.referring_domains
         if referring is None:
             return CriterionResult.not_measured(

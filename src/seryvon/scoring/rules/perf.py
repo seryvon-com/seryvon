@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from seryvon.models.criterion import Criterion, CriterionResult, register
+from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import SignalBundle
 
@@ -32,7 +32,9 @@ class CoreWebVitalCriterion(Criterion):
     poor: ClassVar[float]
     unit: ClassVar[str] = ""
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         cwv = signals.external.core_web_vitals
         value = cwv.get(self.metric) if cwv else None
         if value is None:
@@ -107,7 +109,9 @@ class PerfLighthouseCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 1.0
 
-    def evaluate(self, signals: SignalBundle) -> CriterionResult:
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
         raw = signals.external.lighthouse_performance
         if raw is None:
             return CriterionResult.not_measured(
