@@ -10,7 +10,7 @@
 Critères `perf.*` du document 04 §2. Ils ne lisent que `signals.external`
 (rempli par le connecteur PageSpeed Insights) ; absents => `not_measured`
 (jamais d'estimation). Seuils = bandes officielles Google (good / needs-
-improvement / poor). Tag `gso` ajouté en Phase 2 ; seo seul en Phase 1.
+improvement / poor). Multi-piliers seo + gso (la perf compte pour les deux).
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ class PerfLcpCriterion(CoreWebVitalCriterion):
     """Largest Contentful Paint (`perf.lcp`) : bon ≤ 2500 ms."""
 
     key = "perf.lcp"
-    pillars: ClassVar[list[str]] = ["seo"]
+    pillars: ClassVar[list[str]] = ["seo", "gso"]
     weight = 1.5
     metric = "lcp"
     good = 2500.0
@@ -81,7 +81,7 @@ class PerfClsCriterion(CoreWebVitalCriterion):
     """Cumulative Layout Shift (`perf.cls`) : bon ≤ 0.1."""
 
     key = "perf.cls"
-    pillars: ClassVar[list[str]] = ["seo"]
+    pillars: ClassVar[list[str]] = ["seo", "gso"]
     weight = 1.2
     metric = "cls"
     good = 0.1
@@ -93,7 +93,7 @@ class PerfInpCriterion(CoreWebVitalCriterion):
     """Interaction to Next Paint (`perf.inp`) : bon ≤ 200 ms."""
 
     key = "perf.inp"
-    pillars: ClassVar[list[str]] = ["seo"]
+    pillars: ClassVar[list[str]] = ["seo", "gso"]
     weight = 1.2
     metric = "inp"
     good = 200.0
@@ -106,7 +106,7 @@ class PerfLighthouseCriterion(Criterion):
     """Score de performance Lighthouse (`perf.lighthouse`) : score labo ×100."""
 
     key = "perf.lighthouse"
-    pillars: ClassVar[list[str]] = ["seo"]
+    pillars: ClassVar[list[str]] = ["seo", "gso"]
     weight = 1.0
 
     def evaluate(

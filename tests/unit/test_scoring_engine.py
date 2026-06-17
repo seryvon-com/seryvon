@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from seryvon.core.config import AuditConfig
+from seryvon.core.config import DEFAULT_PILLAR_WEIGHTS, AuditConfig
 from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import Status
 from seryvon.models.signals import ExternalSignals, PageSignals, SignalBundle, SiteSignals
@@ -116,12 +116,22 @@ def test_score_pillar_all_not_measured() -> None:
 
 
 def test_score_global_excludes_unmeasured_pillars(bundle_with_title: SignalBundle) -> None:
-    """Seul SEO est mesuré en Phase 0 -> le global égale le score SEO."""
+    """Les piliers sans critère mesuré sont exclus ; le global renormalise le reste."""
     cfg = AuditConfig.default()
     results = run_criteria(bundle_with_title, cfg)
-    pillars = {p: score_pillar(p, results) for p in ("seo", "geo", "gso", "aeo", "aso")}
+    pillars = {p: score_pillar(p, results) for p in PILLARS}
     overall = score_global(pillars, cfg)
-    assert overall == pillars["seo"].score
+
+    contributing = {p: ps for p, ps in pillars.items() if ps.measured > 0}
+    weights = DEFAULT_PILLAR_WEIGHTS
+    expected = round(
+        sum(ps.score * weights[p] for p, ps in contributing.items())
+        / sum(weights[p] for p in contributing),
+        2,
+    )
+    assert overall == expected
+    # Au moins un pilier reste non mesuré sur ce bundle minimal (ex. geo).
+    assert any(ps.measured == 0 for ps in pillars.values())
 
 
 def test_score_clamped_to_range(bundle_with_title: SignalBundle) -> None:

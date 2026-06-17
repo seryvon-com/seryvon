@@ -13,15 +13,12 @@ Agrégation multi-pages :
 - critères *site-level* (unicité des titles, orphelines, indexabilité, HTTPS,
   sitemap, alt) : calcul direct sur l'ensemble du crawl.
 
-Déterminisme : `evaluate()` ne lit que le `SignalBundle` (aucune I/O) ; toutes
-les sorties (listes d'évidence) sont triées. Les critères `perf.*` (PSI) et
-`authority.*` (OpenPageRank) arrivent aux étapes 5/6.
+Déterminisme : `evaluate(signals, thresholds)` ne lit que le `SignalBundle` et
+les seuils (aucune I/O) ; les sorties (listes d'évidence) sont triées. Les seuils
+surchargeables passent par `thresholds` (ex. `content.depth.target_words`).
 
-Limitation connue : seuls les seuils par défaut (ci-dessous) sont appliqués ; la
-surcharge `thresholds:` du YAML n'est pas encore câblée (seul
-`criteria_overrides.weight` l'est, via le moteur). Tags multi-piliers
-(struct.schema → gso/aeo/aso, perf → gso) ajoutés quand ces piliers seront
-implémentés (Phase 2).
+`struct.schema` porte les tags multi-piliers gso/aeo/aso (Phase 2) ; les règles
+`perf.*` (module `perf.py`) portent seo + gso.
 """
 
 from __future__ import annotations
@@ -348,11 +345,12 @@ class ContentTextRatioCriterion(PageCriterion):
 class StructSchemaCriterion(PageCriterion):
     """Présence de données structurées JSON-LD (`struct.schema`).
 
-    Tags multi-piliers (gso/aeo/aso) ajoutés en Phase 2 ; seo seul en Phase 1.
+    Multi-piliers : la donnée structurée est la fondation que SEO, GSO, AEO et
+    les agents (ASO) consomment.
     """
 
     key = "struct.schema"
-    pillars: ClassVar[list[str]] = ["seo"]
+    pillars: ClassVar[list[str]] = ["seo", "gso", "aeo", "aso"]
     weight = 1.5
     label = "Données structurées"
     threshold: ClassVar[dict[str, Any]] = {"min_types": 1}
