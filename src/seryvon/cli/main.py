@@ -15,6 +15,7 @@ de jalon, document 06, Phase 0). Les commandes `aso`, `compare`, `history`, `ci`
 from __future__ import annotations
 
 import asyncio
+from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
@@ -25,7 +26,17 @@ from rich.table import Table
 from seryvon import __version__
 from seryvon.core.audit import run_audit
 from seryvon.core.config import AuditConfig
-from seryvon.reporting import report_to_json
+from seryvon.models.report import AuditReport
+from seryvon.reporting import report_to_html, report_to_json
+
+
+class OutputFormat(StrEnum):
+    """Format(s) de sortie du rapport d'audit."""
+
+    json = "json"
+    html = "html"
+    both = "both"
+
 
 app = typer.Typer(
     name="seryvon",
@@ -67,12 +78,16 @@ def run(
             "--config", "-c", help="Fichier YAML de configuration (pondérations, seuils)."
         ),
     ] = None,
+    fmt: Annotated[
+        OutputFormat,
+        typer.Option("--format", "-f", help="Format de sortie : json, html ou both."),
+    ] = OutputFormat.json,
     quiet: Annotated[
         bool,
-        typer.Option("--quiet", "-q", help="N'émet que le JSON (pas de tableau récapitulatif)."),
+        typer.Option("--quiet", "-q", help="N'émet que le rapport (pas de tableau récapitulatif)."),
     ] = False,
 ) -> None:
-    """Lance un audit sur une URL et produit un rapport JSON.
+    """Lance un audit sur une URL et produit un rapport (JSON et/ou HTML).
 
     Crawle le site (robots.txt + sitemaps + liens internes, dans les limites de
     la config) puis score les 5 piliers.
@@ -85,17 +100,41 @@ def run(
         console.print(f"[red]Échec de l'audit :[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    payload = report_to_json(report)
-
-    if output:
-        output.write_text(payload, encoding="utf-8")
-        if not quiet:
-            console.print(f"[green]Rapport écrit :[/green] {output}")
-    elif quiet:
-        typer.echo(payload)
+    _write_report(report, output, fmt, quiet=quiet)
 
     if not quiet:
         _print_summary(report)
+
+
+def _write_report(
+    report: AuditReport, output: Path | None, fmt: OutputFormat, *, quiet: bool
+) -> None:
+    """Écrit le rapport au(x) format(s) demandé(s), sur fichier ou stdout."""
+    want_json = fmt in (OutputFormat.json, OutputFormat.both)
+    want_html = fmt in (OutputFormat.html, OutputFormat.both)
+    json_payload = report_to_json(report) if want_json else ""
+    html_payload = report_to_html(report) if want_html else ""
+
+    if output is None:
+        if quiet:
+            typer.echo(html_payload if fmt is OutputFormat.html else json_payload)
+        return
+
+    if fmt is OutputFormat.both:
+        json_path = output.with_suffix(".json")
+        html_path = output.with_suffix(".html")
+        json_path.write_text(json_payload, encoding="utf-8")
+        html_path.write_text(html_payload, encoding="utf-8")
+        written = [json_path, html_path]
+    elif fmt is OutputFormat.html:
+        output.write_text(html_payload, encoding="utf-8")
+        written = [output]
+    else:
+        output.write_text(json_payload, encoding="utf-8")
+        written = [output]
+
+    if not quiet:
+        console.print(f"[green]Rapport écrit :[/green] {', '.join(str(p) for p in written)}")
 
 
 def _print_summary(report) -> None:  # type: ignore[no-untyped-def]

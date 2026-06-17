@@ -72,6 +72,25 @@ def test_run_writes_output_file(tmp_path: Path) -> None:
     assert data["domain"] == "example.com"
 
 
+def test_run_html_output(tmp_path: Path) -> None:
+    out = tmp_path / "report.html"
+    result = runner.invoke(app, ["run", "https://example.com", "-o", str(out), "-f", "html"])
+    assert result.exit_code == 0
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    assert "<!DOCTYPE html>" in content
+    assert "example.com" in content
+
+
+def test_run_both_formats(tmp_path: Path) -> None:
+    out = tmp_path / "report.json"
+    result = runner.invoke(app, ["run", "https://example.com", "-o", str(out), "-f", "both"])
+    assert result.exit_code == 0
+    assert (tmp_path / "report.json").exists()
+    assert (tmp_path / "report.html").exists()
+    json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
+
+
 def test_aso_command_not_yet_implemented() -> None:
     result = runner.invoke(app, ["aso", "https://example.com"])
     assert result.exit_code == 2
