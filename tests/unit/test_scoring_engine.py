@@ -8,6 +8,7 @@ from __future__ import annotations
 from seryvon.core.config import DEFAULT_PILLAR_WEIGHTS, AuditConfig
 from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import Status
+from seryvon.models.report import PillarScore
 from seryvon.models.signals import ExternalSignals, PageSignals, SignalBundle, SiteSignals
 from seryvon.scoring.engine import run_criteria, score_global, score_pillar
 
@@ -115,23 +116,23 @@ def test_score_pillar_all_not_measured() -> None:
     assert ps.excluded == 1
 
 
-def test_score_global_excludes_unmeasured_pillars(bundle_with_title: SignalBundle) -> None:
-    """Les piliers sans critère mesuré sont exclus ; le global renormalise le reste."""
+def test_score_global_excludes_unmeasured_pillars() -> None:
+    """Les piliers sans critère mesuré (measured == 0) sont exclus et renormalisés."""
     cfg = AuditConfig.default()
-    results = run_criteria(bundle_with_title, cfg)
-    pillars = {p: score_pillar(p, results) for p in PILLARS}
+    pillars = {
+        "seo": PillarScore(pillar="seo", score=80.0, measured=5, excluded=0),
+        "geo": PillarScore(pillar="geo", score=0.0, measured=0, excluded=3),  # exclu
+        "gso": PillarScore(pillar="gso", score=60.0, measured=2, excluded=1),
+        "aeo": PillarScore(pillar="aeo", score=0.0, measured=0, excluded=2),  # exclu
+        "aso": PillarScore(pillar="aso", score=40.0, measured=1, excluded=0),
+    }
     overall = score_global(pillars, cfg)
-
-    contributing = {p: ps for p, ps in pillars.items() if ps.measured > 0}
-    weights = DEFAULT_PILLAR_WEIGHTS
+    w = DEFAULT_PILLAR_WEIGHTS
     expected = round(
-        sum(ps.score * weights[p] for p, ps in contributing.items())
-        / sum(weights[p] for p in contributing),
+        (80.0 * w["seo"] + 60.0 * w["gso"] + 40.0 * w["aso"]) / (w["seo"] + w["gso"] + w["aso"]),
         2,
     )
     assert overall == expected
-    # Au moins un pilier reste non mesuré sur ce bundle minimal (ex. geo).
-    assert any(ps.measured == 0 for ps in pillars.values())
 
 
 def test_score_clamped_to_range(bundle_with_title: SignalBundle) -> None:
