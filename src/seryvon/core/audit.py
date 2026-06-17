@@ -20,7 +20,7 @@ import json
 from datetime import UTC, datetime
 
 from seryvon import PILLARS, __version__
-from seryvon.connectors import fetch_pagespeed
+from seryvon.connectors import fetch_openpagerank, fetch_pagespeed
 from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.models.report import AuditReport
@@ -40,24 +40,30 @@ def _config_digest(config: AuditConfig) -> str:
     return hashlib.sha256(payload).hexdigest()[:16]
 
 
-async def _collect_external(pages: list[PageSignals], settings: Settings) -> ExternalSignals:
-    """Collecte les signaux externes (PSI). BYOK : sans clé, rien n'est appelé.
+async def _collect_external(
+    domain: str, pages: list[PageSignals], settings: Settings
+) -> ExternalSignals:
+    """Collecte les signaux externes (PSI, OpenPageRank). BYOK : sans clé, aucun appel.
 
-    Décision D4 : PageSpeed Insights sur la home seule. Sans `PSI_API_KEY`, les
-    critères perf.* restent `not_measured` (dégradation gracieuse).
+    Décision D4 : PageSpeed Insights sur la home seule. Sans clé, les critères
+    dépendants restent `not_measured` (dégradation gracieuse, ENF-03).
     """
-    if not (settings.psi_api_key and pages):
-        return ExternalSignals()
-    psi = await fetch_pagespeed(
-        pages[0].url,
-        api_key=settings.psi_api_key,
-        strategy=settings.pagespeed_strategy,
-        timeout=settings.request_timeout,
-    )
-    return ExternalSignals(
-        core_web_vitals=psi.core_web_vitals,
-        lighthouse_performance=psi.lighthouse_performance,
-    )
+    external = ExternalSignals()
+    if settings.psi_api_key and pages:
+        psi = await fetch_pagespeed(
+            pages[0].url,
+            api_key=settings.psi_api_key,
+            strategy=settings.pagespeed_strategy,
+            timeout=settings.request_timeout,
+        )
+        external.core_web_vitals = psi.core_web_vitals
+        external.lighthouse_performance = psi.lighthouse_performance
+    if settings.opr_api_key and domain:
+        opr = await fetch_openpagerank(
+            domain, api_key=settings.opr_api_key, timeout=settings.request_timeout
+        )
+        external.open_page_rank = opr.page_rank
+    return external
 
 
 async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
@@ -87,7 +93,7 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         respect_robots=config.crawl.respect_robots,
         timeout=settings.request_timeout,
     )
-    external = await _collect_external(pages, settings)
+    external = await _collect_external(discovery.domain, pages, settings)
     bundle = SignalBundle(
         domain=discovery.domain,
         signal_schema_version=SIGNAL_SCHEMA_VERSION,

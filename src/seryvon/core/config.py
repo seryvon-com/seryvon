@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     psi_api_key: str = Field(default="", validation_alias="PSI_API_KEY")
     pagespeed_strategy: str = DEFAULT_PSI_STRATEGY
 
+    # OpenPageRank (BYOK). Clé lue dans OPR_API_KEY ; vide => authority.opr
+    # not_measured.
+    opr_api_key: str = Field(default="", validation_alias="OPR_API_KEY")
+
 
 @lru_cache
 def get_settings() -> Settings:
