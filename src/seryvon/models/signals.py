@@ -13,15 +13,15 @@ scoring (déterministe). Un même `SignalBundle` doit toujours produire les mêm
 scores — propriété testée explicitement (document 03, §9).
 
 Le `signal_schema_version` est incrémenté à chaque évolution de structure
-(le bloc `aso` l'a fait passer à 2 ; les signaux M3.1 — Open Graph, Twitter,
-hreflang, cibles de liens, bloc `site` — l'ont fait passer à 3).
+(2 = bloc `aso` ; 3 = signaux M3.1 OG/Twitter/hreflang/liens/`site` ;
+4 = signaux M3.2 GSO/AEO on-page + ASO statique peuplé).
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 3
+SIGNAL_SCHEMA_VERSION = 4
 
 
 class WebMcpSignals(BaseModel):
@@ -81,6 +81,15 @@ class PageSignals(BaseModel):
     internal_link_targets: list[str] = Field(default_factory=list)
     images_total: int = 0
     images_with_alt: int = 0
+
+    # Signaux on-page M3.2 (GSO/AEO) — alimentent les piliers GSO et AEO.
+    tables_count: int = 0  # tableaux <table> (itemlist / comparatifs)
+    definition_lists_count: int = 0  # listes <dl> (glossaires / definitions)
+    question_headings: int = 0  # titres Hn formulés en question (format Q-R)
+    lead_paragraph_words: int = 0  # mots du 1er paragraphe (answer-directness)
+    has_author: bool = False  # auteur/Person déclaré (JSON-LD)
+    author_has_credentials: bool = False  # Person avec credentials (jobTitle, sameAs…)
+    has_structured_dates: bool = False  # datePublished / dateModified en JSON-LD
 
     aso: AsoSignals = Field(default_factory=AsoSignals)
 

@@ -126,3 +126,73 @@ def test_extract_internal_link_targets_resolved_and_classified() -> None:
 def test_extract_records_redirects() -> None:
     signals = extract_page_signals("https://example.com/", "<html></html>", redirects=2)
     assert signals.redirects == 2
+
+
+# --------------------------------------------------------------------------- #
+# M3.2 — signaux GSO/AEO on-page + ASO statique                               #
+# --------------------------------------------------------------------------- #
+_RICH_HTML = """<html><head>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+  {"@type":"FAQPage"},
+  {"@type":"HowTo","step":[{"@type":"HowToStep"}]},
+  {"@type":"Article","datePublished":"2026-01-01",
+   "author":{"@type":"Person","name":"Jane","jobTitle":"Engineer",
+             "sameAs":["https://www.wikidata.org/wiki/Q1"]}},
+  {"@type":"WebSite","potentialAction":{"@type":"SearchAction"}},
+  {"@type":"Product","offers":{"@type":"Offer","price":"9.99"}}
+]}
+</script>
+</head>
+<body>
+<main>
+<h1>Titre</h1>
+<p>Un paragraphe de réponse directe avec assez de mots pour être significatif ici aujourd'hui.</p>
+<h2>Comment faire ?</h2>
+<h2>Section normale</h2>
+<table><tr><td>a</td></tr></table>
+<dl><dt>Terme</dt><dd>Définition</dd></dl>
+<form action="/search" method="get"><input name="q" aria-label="Recherche"></form>
+<a href="/openapi.json">API</a>
+<button toolname="search">x</button>
+<script>navigator.modelContext.registerTool({})</script>
+</main>
+</body></html>"""
+
+
+def test_extract_jsonld_rich_signals() -> None:
+    s = extract_page_signals("https://example.com/", _RICH_HTML)
+    assert {"FAQPage", "HowTo", "Article", "WebSite", "Product", "Offer", "Person"} <= set(
+        s.structured_data_types
+    )
+    assert s.has_author is True
+    assert s.author_has_credentials is True
+    assert s.has_structured_dates is True
+
+
+def test_extract_content_counts() -> None:
+    s = extract_page_signals("https://example.com/", _RICH_HTML)
+    assert s.tables_count == 1
+    assert s.definition_lists_count == 1
+    assert s.question_headings == 1  # "Comment faire ?"
+    assert s.lead_paragraph_words == 14
+
+
+def test_extract_aso_static_signals() -> None:
+    aso = extract_page_signals("https://example.com/", _RICH_HTML).aso
+    assert aso.webmcp.has_register_tool is True
+    assert aso.webmcp.has_tool_attributes is True
+    assert aso.webmcp.tool_count == 1
+    assert aso.potential_actions == ["SearchAction"]
+    assert aso.action_schema_types == ["HowTo", "Product"]
+    assert aso.agent_usable_forms == 1
+    assert aso.openapi_links == ["/openapi.json"]
+
+
+def test_extract_aso_absent_by_default(sample_html: str) -> None:
+    aso = extract_page_signals("https://example.com/", sample_html).aso
+    assert aso.webmcp.has_register_tool is False
+    assert aso.potential_actions == []
+    assert aso.action_schema_types == []
+    assert aso.agent_usable_forms == 0
+    assert aso.openapi_links == []
