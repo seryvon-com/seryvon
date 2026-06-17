@@ -13,14 +13,15 @@ scoring (déterministe). Un même `SignalBundle` doit toujours produire les mêm
 scores — propriété testée explicitement (document 03, §9).
 
 Le `signal_schema_version` est incrémenté à chaque évolution de structure
-(le bloc `aso` l'a fait passer à 2 — document 05, §2.4).
+(le bloc `aso` l'a fait passer à 2 ; les signaux M3.1 — Open Graph, Twitter,
+hreflang, cibles de liens, bloc `site` — l'ont fait passer à 3).
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 2
+SIGNAL_SCHEMA_VERSION = 3
 
 
 class WebMcpSignals(BaseModel):
@@ -52,12 +53,19 @@ class PageSignals(BaseModel):
 
     url: str
     status_code: int | None = None
-    render_mode: str | None = None  # "ssr" | "csr" | "hybrid" (Phase 1)
+    render_mode: str | None = None  # "ssr" | "csr" (heuristique M2, décision D2)
+    redirects: int = 0  # nombre de sauts de redirection avant l'URL finale
 
     title: str | None = None
     meta_description: str | None = None
     canonical: str | None = None
     meta_robots: str | None = None
+
+    # Métadonnées sociales (clé complète -> contenu), ex. {"og:title": "..."}.
+    open_graph: dict[str, str] = Field(default_factory=dict)
+    twitter_card: dict[str, str] = Field(default_factory=dict)
+    # hreflang déclarés : code de langue -> href (ex. {"fr": "...", "x-default": "..."}).
+    hreflang: dict[str, str] = Field(default_factory=dict)
 
     h1_count: int = 0
     headings: dict[str, int] = Field(default_factory=dict)  # {"h1": 1, "h2": 4, ...}
@@ -68,6 +76,9 @@ class PageSignals(BaseModel):
     structured_data_types: list[str] = Field(default_factory=list)
     internal_links: int = 0
     external_links: int = 0
+    # Cibles internes absolues (même hôte), dédupliquées et triées : graphe de
+    # maillage pour le critère links.orphans (renseigné par M3.1).
+    internal_link_targets: list[str] = Field(default_factory=list)
     images_total: int = 0
     images_with_alt: int = 0
 
@@ -93,15 +104,25 @@ class ExternalSignals(BaseModel):
     brand_coherence: dict[str, float] | None = None
 
 
+class SiteSignals(BaseModel):
+    """Signaux au niveau site, issus de M1 Discovery (alimente les critères crawl.*)."""
+
+    robots_found: bool = False
+    crawl_delay: float | None = None
+    sitemap_valid: bool = False  # au moins un sitemap récupéré et parsé
+    sitemap_url_count: int = 0  # nombre d'URLs same-host extraites des sitemaps
+
+
 class SignalBundle(BaseModel):
     """Agrégat complet des signaux d'un audit, consommé par le moteur de scoring."""
 
     domain: str
     signal_schema_version: int = SIGNAL_SCHEMA_VERSION
     pages: list[PageSignals] = Field(default_factory=list)
+    site: SiteSignals = Field(default_factory=SiteSignals)
     external: ExternalSignals = Field(default_factory=ExternalSignals)
 
     @property
     def home(self) -> PageSignals | None:
-        """Première page crawlée (la home en Phase 0)."""
+        """Première page crawlée (la home)."""
         return self.pages[0] if self.pages else None

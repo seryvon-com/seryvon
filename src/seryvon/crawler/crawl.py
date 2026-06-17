@@ -133,7 +133,10 @@ async def _run_crawl(
             if result.final_url in results:
                 continue
             signals = extract_page_signals(
-                result.final_url, result.html, status_code=result.status_code
+                result.final_url,
+                result.html,
+                status_code=result.status_code,
+                redirects=result.redirects,
             )
             signals.render_mode = detect_render_mode(result.html)
             results[result.final_url] = signals

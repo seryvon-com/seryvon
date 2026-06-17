@@ -23,7 +23,7 @@ from seryvon import PILLARS, __version__
 from seryvon.core.config import AuditConfig, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.models.report import AuditReport
-from seryvon.models.signals import SIGNAL_SCHEMA_VERSION, SignalBundle
+from seryvon.models.signals import SIGNAL_SCHEMA_VERSION, SignalBundle, SiteSignals
 from seryvon.scoring import run_criteria, score_global, score_pillar
 
 
@@ -64,6 +64,12 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         domain=discovery.domain,
         signal_schema_version=SIGNAL_SCHEMA_VERSION,
         pages=pages,
+        site=SiteSignals(
+            robots_found=discovery.robots_found,
+            crawl_delay=discovery.crawl_delay,
+            sitemap_valid=discovery.sitemap_valid,
+            sitemap_url_count=len(discovery.sitemap_urls),
+        ),
     )
 
     results = run_criteria(bundle, config)

@@ -7,15 +7,16 @@
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
 """Extraction déterministe de signaux internes depuis le HTML d'une page.
 
-Phase 0 : signaux de base (title, meta, headings, contenu, JSON-LD types,
-liens, images). L'extraction est PURE (HTML -> PageSignals, sans I/O), donc
-testable sur fixtures et reproductible.
+Signaux M3.1 complets : title, meta (description/robots/canonical), Open Graph,
+Twitter Cards, hreflang, headings, contenu, JSON-LD types, liens (cibles internes
+absolues pour le graphe de maillage), images. L'extraction est PURE
+(HTML -> PageSignals, sans I/O), donc testable sur fixtures et reproductible.
 """
 
 from __future__ import annotations
 
 import json
-from urllib.parse import urldefrag, urljoin
+from urllib.parse import urldefrag, urljoin, urlsplit
 
 from selectolax.parser import HTMLParser
 
@@ -25,14 +26,13 @@ from seryvon.models.signals import PageSignals
 _NON_HTTP_SCHEMES = ("#", "mailto:", "tel:", "javascript:", "data:")
 
 
-def extract_links(html: str, base_url: str) -> list[str]:
-    """Liens HTTP(S) absolus d'une page, fragment retiré, dédupliqués et triés.
+def _host(url: str) -> str:
+    """Hôte d'une URL en minuscules (chaîne vide si non analysable)."""
+    return (urlsplit(url).hostname or "").lower()
 
-    Utilisé par le crawler (M2) pour étendre la frontière. Le filtrage same-host
-    et le respect de robots.txt sont appliqués par l'appelant, pas ici (fonction
-    pure, déterministe : même HTML => mêmes liens dans le même ordre).
-    """
-    tree = HTMLParser(html)
+
+def _links_from_tree(tree: HTMLParser, base_url: str) -> list[str]:
+    """Liens HTTP(S) absolus d'un arbre, fragment retiré, dédupliqués et triés."""
     links: set[str] = set()
     for node in tree.css("a[href]"):
         href = (node.attributes.get("href") or "").strip()
@@ -42,6 +42,16 @@ def extract_links(html: str, base_url: str) -> list[str]:
         if absolute.startswith(("http://", "https://")):
             links.add(absolute)
     return sorted(links)
+
+
+def extract_links(html: str, base_url: str) -> list[str]:
+    """Liens HTTP(S) absolus d'une page, fragment retiré, dédupliqués et triés.
+
+    Utilisé par le crawler (M2) pour étendre la frontière. Le filtrage same-host
+    et le respect de robots.txt sont appliqués par l'appelant, pas ici (fonction
+    pure, déterministe : même HTML => mêmes liens dans le même ordre).
+    """
+    return _links_from_tree(HTMLParser(html), base_url)
 
 
 def _text_ratio(html: str, text: str) -> float | None:
@@ -90,25 +100,43 @@ def extract_page_signals(
     html: str,
     *,
     status_code: int | None = None,
+    redirects: int = 0,
 ) -> PageSignals:
-    """Transforme le HTML d'une page en `PageSignals` (signaux internes de base)."""
+    """Transforme le HTML d'une page en `PageSignals` (signaux internes complets)."""
     tree = HTMLParser(html)
 
     title_node = tree.css_first("title")
     title = title_node.text(strip=True) if title_node else None
 
     description = None
-    canonical = None
     meta_robots = None
+    open_graph: dict[str, str] = {}
+    twitter_card: dict[str, str] = {}
     for meta in tree.css("meta"):
-        name = (meta.attributes.get("name") or "").lower()
+        attrs = meta.attributes
+        name = (attrs.get("name") or "").lower()
+        prop = (attrs.get("property") or "").lower()
+        content = attrs.get("content")
         if name == "description":
-            description = meta.attributes.get("content")
+            description = content
         elif name == "robots":
-            meta_robots = meta.attributes.get("content")
+            meta_robots = content
+        key = prop or name
+        if key.startswith("og:"):
+            open_graph[key] = content or ""
+        elif key.startswith("twitter:"):
+            twitter_card[key] = content or ""
+
+    canonical = None
     for link in tree.css('link[rel="canonical"]'):
         canonical = link.attributes.get("href")
         break
+
+    hreflang: dict[str, str] = {}
+    for link in tree.css('link[rel="alternate"]'):
+        lang = (link.attributes.get("hreflang") or "").strip()
+        if lang:
+            hreflang[lang] = (link.attributes.get("href") or "").strip()
 
     headings: dict[str, int] = {}
     for level in range(1, 7):
@@ -124,29 +152,30 @@ def extract_page_signals(
     images = tree.css("img")
     images_with_alt = sum(1 for img in images if (img.attributes.get("alt") or "").strip())
 
-    internal_links = 0
-    external_links = 0
-    for a in tree.css("a[href]"):
-        href = a.attributes.get("href") or ""
-        if href.startswith(("http://", "https://")):
-            external_links += 1
-        elif href.startswith(("/", "#", ".")) or not href.startswith("mailto:"):
-            internal_links += 1
+    page_host = _host(url)
+    all_links = _links_from_tree(tree, url)
+    internal_targets = [link for link in all_links if _host(link) == page_host]
+    external_links = len(all_links) - len(internal_targets)
 
     return PageSignals(
         url=url,
         status_code=status_code,
+        redirects=redirects,
         title=title,
         meta_description=description,
         canonical=canonical,
         meta_robots=meta_robots,
+        open_graph=open_graph,
+        twitter_card=twitter_card,
+        hreflang=hreflang,
         h1_count=headings.get("h1", 0),
         headings=headings,
         word_count=word_count,
         text_ratio=_text_ratio(html, visible_text),
         structured_data_types=_structured_data_types(tree),
-        internal_links=internal_links,
+        internal_links=len(internal_targets),
         external_links=external_links,
+        internal_link_targets=internal_targets,
         images_total=len(images),
         images_with_alt=images_with_alt,
     )
