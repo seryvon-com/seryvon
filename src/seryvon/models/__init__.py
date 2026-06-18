@@ -1,4 +1,4 @@
-"""Modèles Pydantic partagés (signaux, critères, rapport, énumérations)."""
+"""Shared Pydantic models (signals, criteria, report, enumerations)."""
 
 from seryvon.models.criterion import (
     RULES,

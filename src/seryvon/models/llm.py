@@ -5,12 +5,12 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Contrat d'E/S des connecteurs de citation LLM (module M4, document 07 §7).
+"""I/O contract for the LLM citation connectors (module M4, document 07 §7).
 
-`LlmResponse` est la donnée brute produite par un connecteur (réseau, non
-déterministe) pour un triplet (prompt, moteur, répétition). L'agrégateur
-(`seryvon.citation.aggregate`) en dérive un `CitationMetrics` figé et
-déterministe ; c'est ce dernier — et lui seul — que lisent les règles de scoring.
+`LlmResponse` is the raw data produced by a connector (network, non-deterministic)
+for a (prompt, engine, repetition) triple. The aggregator
+(`seryvon.citation.aggregate`) derives a frozen, deterministic `CitationMetrics`
+from it; that — and only that — is what the scoring rules read.
 """
 
 from __future__ import annotations
@@ -21,28 +21,28 @@ from pydantic import BaseModel, Field
 
 
 class LlmCitation(BaseModel):
-    """Une source citée par un moteur (document 07 §7)."""
+    """A source cited by an engine (document 07 §7)."""
 
     url: str | None = None
     domain: str | None = None
     title: str | None = None
-    position: int | None = None  # rang dans la liste de citations
+    position: int | None = None  # rank in the citation list
 
 
 class LlmResponse(BaseModel):
-    """Réponse d'un moteur LLM pour un (prompt, moteur, répétition).
+    """An LLM engine response for a (prompt, engine, repetition).
 
-    `web_search_enabled` distingue le mode *retrieval* (recherche web active →
-    citation réelle) du mode *knowledge* (modèle nu → notoriété de mémoire),
+    `web_search_enabled` distinguishes *retrieval* mode (web search active ->
+    actual citation) from *knowledge* mode (bare model -> awareness from memory),
     document 07 §2.
     """
 
     engine: str
-    model: str  # variante réellement exécutée (renvoyée par l'API)
+    model: str  # variant actually executed (returned by the API)
     prompt_id: str
     repetition: int
     response_text: str = ""
     citations: list[LlmCitation] = Field(default_factory=list)
     web_search_enabled: bool = False
-    usage: dict[str, Any] = Field(default_factory=dict)  # tokens in/out, coût estimé
+    usage: dict[str, Any] = Field(default_factory=dict)  # tokens in/out, estimated cost
     rate_limit_snapshot: dict[str, Any] = Field(default_factory=dict)

@@ -5,24 +5,23 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Agrégateur de citation LLM — cœur pur et déterministe (document 07 §8-9).
+"""LLM citation aggregator — pure, deterministic core (document 07 §8-9).
 
-Transforme une liste de `LlmResponse` (collectées par les connecteurs, non
-déterministes) en un `CitationMetrics` figé. Aucune I/O : mêmes réponses en
-entrée => mêmes métriques en sortie (frontière collecte/scoring, document 03 §9).
+Turns a list of `LlmResponse` (collected by the connectors, non-deterministic)
+into a frozen `CitationMetrics`. No I/O: the same responses in => the same
+metrics out (collection/scoring boundary, document 03 §9).
 
-Formules (document 07 §9 ; l'intention prime, l'implémentation l'explicite) :
-- `citation_rate`   : part des réponses *retrieval* (recherche web active) citant
-  le domaine cible — la citation d'URL n'existe qu'en mode retrieval.
-- `mention_rate`    : part des réponses (tous modes) mentionnant la marque.
-- `citation_confidence` : pour chaque (prompt, moteur) cité au moins une fois,
-  fraction de répétitions citant ; moyenne sur ces groupes (5/5 = fort, 1/5 = faible).
-- `share_of_voice`  : citations du domaine / (domaine + concurrents), mode retrieval.
-- `knowledge_presence` : mention de la marque en mode nu (notoriété), informatif.
+Formulas (document 07 §9; intent is authoritative, the implementation makes it explicit):
+- `citation_rate`   : share of *retrieval* responses (web search active) citing
+  the target domain — URL citation only exists in retrieval mode.
+- `mention_rate`    : share of responses (all modes) mentioning the brand.
+- `citation_confidence` : for each (prompt, engine) cited at least once, the
+  fraction of repetitions citing; averaged over those groups (5/5 = strong, 1/5 = weak).
+- `share_of_voice`  : domain citations / (domain + competitors), retrieval mode.
+- `knowledge_presence` : brand mention in bare mode (awareness), informational.
 
-Normalisation de domaine sans dépendance (eTLD+1 via une table de suffixes
-composés connus) ; une PSL complète (`tldextract` hors-ligne) pourra l'affiner
-dans une slice ultérieure.
+Dependency-free domain normalization (eTLD+1 via a table of known compound
+suffixes); a full PSL (`tldextract` offline) may refine it in a later slice.
 """
 
 from __future__ import annotations
@@ -37,7 +36,7 @@ from urllib.parse import urlsplit
 from seryvon.models.llm import LlmCitation, LlmResponse
 from seryvon.models.signals import CitationMetrics, EngineCitationMetrics
 
-# Suffixes publics composés courants (eTLD+1 = 3 labels au lieu de 2).
+# Common compound public suffixes (eTLD+1 = 3 labels instead of 2).
 _COMPOUND_SUFFIXES = frozenset(
     {
         "co.uk", "org.uk", "gov.uk", "ac.uk", "me.uk", "ltd.uk", "plc.uk",
@@ -55,14 +54,14 @@ _COMPOUND_SUFFIXES = frozenset(
 
 
 def registrable_domain(value: str | None) -> str | None:
-    """Réduit une URL ou un hôte à son domaine enregistrable (eTLD+1), en minuscules."""
+    """Reduce a URL or host to its registrable domain (eTLD+1), lowercased."""
     if not value:
         return None
     raw = value.strip().lower()
     if not raw:
         return None
     if "//" not in raw:
-        raw = "//" + raw  # `urlsplit` n'isole le netloc qu'avec un séparateur d'autorité.
+        raw = "//" + raw  # `urlsplit` only isolates the netloc with an authority separator.
     host = urlsplit(raw).netloc
     host = host.rsplit("@", 1)[-1].split(":", 1)[0].strip(".")
     if not host:
@@ -77,21 +76,21 @@ def registrable_domain(value: str | None) -> str | None:
 
 
 def domain_matches(citation_domain: str | None, target: str) -> bool:
-    """Vrai si deux domaines partagent le même domaine enregistrable (www/sous-domaines ignorés)."""
+    """True if both domains share the same registrable domain (www/subdomains ignored)."""
     left = registrable_domain(citation_domain)
     right = registrable_domain(target)
     return left is not None and left == right
 
 
 def _normalize(text: str) -> str:
-    """Casefold + suppression des accents (matching robuste casse/accents)."""
+    """Casefold + strip accents (robust case/accent-insensitive matching)."""
     decomposed = unicodedata.normalize("NFKD", text)
     stripped = "".join(c for c in decomposed if not unicodedata.combining(c))
     return stripped.casefold()
 
 
 def brand_mentioned(text: str, brand: str) -> bool:
-    """Vrai si `brand` apparaît dans `text` (insensible à la casse/aux accents, bornes de mot)."""
+    """True if `brand` appears in `text` (case/accent-insensitive, word boundaries)."""
     if not text or not brand:
         return False
     needle = _normalize(brand).strip()
@@ -158,6 +157,8 @@ def _compute(
         else None
     )
 
+    # For each (prompt, engine) retrieval group cited at least once, fraction of
+    # repetitions citing; averaged over those groups (5/5 strong, 1/5 weak).
     groups: defaultdict[tuple[str, str], list[bool]] = defaultdict(list)
     for response, cited in zip(retrieval, cited_flags, strict=True):
         groups[(response.prompt_id, response.engine)].append(cited)
@@ -199,7 +200,7 @@ def aggregate_citations(
     competitors: Sequence[str] = (),
     prompt_set_version: int | None = None,
 ) -> CitationMetrics | None:
-    """Agrège les `LlmResponse` en `CitationMetrics` ; `None` si la liste est vide."""
+    """Aggregate the `LlmResponse` list into `CitationMetrics`; `None` if the list is empty."""
     if not responses:
         return None
 

@@ -5,12 +5,12 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Contrat des critères de scoring et registre auto-enregistré.
+"""Scoring-criterion contract and self-registering registry.
 
-Pattern « Rule registry » (document 03, §3.1) : chaque critère est une classe
-implémentant `Criterion`, décorée par `@register`, qui produit un `CriterionResult`
-déterministe à partir d'un `SignalBundle`. L'ajout d'un critère ne requiert aucune
-modification du moteur (exigence O6 — extensibilité).
+"Rule registry" pattern (document 03, §3.1): each criterion is a class
+implementing `Criterion`, decorated with `@register`, that produces a
+deterministic `CriterionResult` from a `SignalBundle`. Adding a criterion requires
+no change to the engine (requirement O6 — extensibility).
 """
 
 from __future__ import annotations
@@ -24,16 +24,16 @@ from pydantic import BaseModel, Field
 from seryvon.models.enums import Status
 from seryvon.models.signals import SignalBundle
 
-#: Surcharges de seuils par critère (section `thresholds:` du YAML de config),
-#: ex. {"content.depth": {"target_words": 1000}}. Mapping en lecture seule.
+#: Per-criterion threshold overrides (the `thresholds:` section of the YAML config),
+#: e.g. {"content.depth": {"target_words": 1000}}. Read-only mapping.
 ThresholdConfig = Mapping[str, Mapping[str, Any]]
 
 
 class CriterionResult(BaseModel):
-    """Résultat traçable d'un critère (document 03, §3.1 ; document 05, §7).
+    """Traceable result of a criterion (document 03, §3.1; document 05, §7).
 
-    Chaque score est explicable : `raw_value` (donnée mesurée), `threshold`
-    (seuils appliqués), `explanation` (lisible) et `evidence` (source).
+    Every score is explainable: `raw_value` (measured data), `threshold` (applied
+    thresholds), `explanation` (human-readable) and `evidence` (source).
     """
 
     key: str
@@ -54,7 +54,7 @@ class CriterionResult(BaseModel):
         weight: float,
         reason: str,
     ) -> CriterionResult:
-        """Construit un résultat `not_measured` (exclu du calcul, renormalisé)."""
+        """Build a `not_measured` result (excluded from the computation, renormalized)."""
         return cls(
             key=key,
             pillars=pillars,
@@ -67,7 +67,7 @@ class CriterionResult(BaseModel):
 
 
 class Criterion(ABC):
-    """Interface d'un critère de scoring. Sous-classe + `@register` pour l'activer."""
+    """Scoring-criterion interface. Subclass + `@register` to activate it."""
 
     key: ClassVar[str]
     pillars: ClassVar[list[str]]
@@ -77,27 +77,27 @@ class Criterion(ABC):
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
     ) -> CriterionResult:
-        """Évalue le critère et renvoie un résultat déterministe.
+        """Evaluate the criterion and return a deterministic result.
 
-        `thresholds` porte les surcharges de seuils (config YAML) ; `None` =>
-        seuils par défaut. Scoring pur : aucune I/O, fonction de (signals, seuils).
+        `thresholds` carries the threshold overrides (YAML config); `None` =>
+        default thresholds. Pure scoring: no I/O, a function of (signals, thresholds).
         """
         raise NotImplementedError
 
 
-# Registre global des critères, peuplé par le décorateur `@register`.
+# Global criteria registry, populated by the `@register` decorator.
 RULES: dict[str, Criterion] = {}
 
 
 def register(cls: type[Criterion]) -> type[Criterion]:
-    """Décorateur : instancie le critère et l'enregistre par sa `key` unique."""
+    """Decorator: instantiate the criterion and register it by its unique `key`."""
     instance = cls()
     if instance.key in RULES:
-        raise ValueError(f"Critère déjà enregistré : {instance.key!r}")
+        raise ValueError(f"Criterion already registered: {instance.key!r}")
     RULES[instance.key] = instance
     return cls
 
 
 def clear_registry() -> None:
-    """Vide le registre (utilitaire de test uniquement)."""
+    """Clear the registry (test utility only)."""
     RULES.clear()

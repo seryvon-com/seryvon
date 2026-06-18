@@ -5,7 +5,7 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Modèles du rapport d'audit (source de vérité JSON — document 05, §7)."""
+"""Audit report models (JSON source of truth — document 05, §7)."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from seryvon.models.enums import ReadinessLevel, Severity
 
 
 class PillarScore(BaseModel):
-    """Score agrégé d'un pilier, avec décompte mesuré/exclu (renormalisation)."""
+    """Aggregated score of a pillar, with measured/excluded counts (renormalization)."""
 
     pillar: str
     score: float
@@ -27,7 +27,7 @@ class PillarScore(BaseModel):
 
 
 class Issue(BaseModel):
-    """Problème priorisé (document 04, §7 : (impact × sévérité) / effort)."""
+    """Prioritized issue (document 04, §7: (impact × severity) / effort)."""
 
     criterion_key: str
     severity: Severity
@@ -40,7 +40,7 @@ class Issue(BaseModel):
 
 
 class AsoReadiness(BaseModel):
-    """Synthèse de la readiness agentique (table `aso_readiness`, document 05, §2.8)."""
+    """Agentic-readiness summary (table `aso_readiness`, document 05, §2.8)."""
 
     readiness_level: ReadinessLevel = ReadinessLevel.NONE
     agent_ready: bool = False
@@ -53,7 +53,7 @@ class AsoReadiness(BaseModel):
 
 
 class AuditReport(BaseModel):
-    """Rapport complet d'un audit (sérialisé en JSON, source de vérité)."""
+    """Complete report of an audit (serialized to JSON, source of truth)."""
 
     domain: str
     tool_version: str

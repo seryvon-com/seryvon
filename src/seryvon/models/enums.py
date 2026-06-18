@@ -5,7 +5,7 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Énumérations partagées (statuts, sévérités, readiness agentique)."""
+"""Shared enumerations (statuses, severities, agentic readiness)."""
 
 from __future__ import annotations
 
@@ -13,23 +13,23 @@ from enum import StrEnum
 
 
 class Status(StrEnum):
-    """Statut d'un critère, dérivé du score (document 04, §1.3)."""
+    """Criterion status, derived from the score (document 04, §1.3)."""
 
     OK = "ok"  # score >= 80
     WARNING = "warning"  # 50 <= score < 80
     CRITICAL = "critical"  # score < 50
-    NOT_MEASURED = "not_measured"  # donnée indisponible -> exclu du calcul
+    NOT_MEASURED = "not_measured"  # data unavailable -> excluded from the computation
 
 
 class Severity(StrEnum):
-    """Sévérité d'un problème (alimente la priorisation, document 04, §7)."""
+    """Severity of an issue (feeds the prioritization, document 04, §7)."""
 
     WARNING = "warning"
     CRITICAL = "critical"
 
 
 class ReadinessLevel(StrEnum):
-    """Niveau de readiness agentique agrégé (pilier ASO, document 04, §6)."""
+    """Aggregated agentic readiness level (ASO pillar, document 04, §6)."""
 
     NONE = "none"
     BASIC = "basic"
@@ -37,13 +37,13 @@ class ReadinessLevel(StrEnum):
     ADVANCED = "advanced"
 
 
-# Seuils de bascule score -> statut. Centralisés pour le déterminisme.
+# Score -> status switch thresholds. Centralized for determinism.
 STATUS_OK_THRESHOLD = 80.0
 STATUS_WARNING_THRESHOLD = 50.0
 
 
 def status_from_score(score: float) -> Status:
-    """Convertit un score [0-100] en statut selon les seuils canoniques."""
+    """Convert a [0-100] score into a status according to the canonical thresholds."""
     if score >= STATUS_OK_THRESHOLD:
         return Status.OK
     if score >= STATUS_WARNING_THRESHOLD:
