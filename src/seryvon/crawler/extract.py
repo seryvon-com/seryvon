@@ -5,17 +5,17 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Extraction déterministe de signaux internes depuis le HTML d'une page.
+"""Deterministic extraction of internal signals from a page's HTML.
 
-M3.1 : title, meta (description/robots/canonical), Open Graph, Twitter, hreflang,
-headings, contenu, JSON-LD types, liens (cibles internes), images.
-M3.2 (Phase 2) : analyse JSON-LD enrichie (potentialAction, schemas d'action,
-auteurs/credentials, dates), comptages on-page (tables, listes de définition,
-titres-questions, paragraphe d'accroche) et signaux ASO statiques (WebMCP,
-formulaires agent-usables, OpenAPI).
-M3.3 (cœur GEO) : ratio contenu principal/bruit, entités estimées (heuristique),
-domaines sortants, date de contenu, plateformes cross-surface. L'extraction est
-PURE (HTML -> PageSignals, sans I/O), donc testable sur fixtures et reproductible.
+M3.1: title, meta (description/robots/canonical), Open Graph, Twitter, hreflang,
+headings, content, JSON-LD types, links (internal targets), images.
+M3.2 (Phase 2): enriched JSON-LD analysis (potentialAction, action schemas,
+authors/credentials, dates), on-page counts (tables, definition lists,
+question headings, lead paragraph) and static ASO signals (WebMCP,
+agent-usable forms, OpenAPI).
+M3.3 (GEO core): main-content/noise ratio, estimated entities (heuristic),
+outbound domains, content date, cross-surface platforms. Extraction is PURE
+(HTML -> PageSignals, no I/O), so it is testable on fixtures and reproducible.
 """
 
 from __future__ import annotations
@@ -29,17 +29,17 @@ from selectolax.parser import HTMLParser
 
 from seryvon.models.signals import AsoSignals, PageSignals, WebMcpSignals
 
-# Schémas de href ignorés lors de l'expansion de la frontière de crawl.
+# href schemes ignored when expanding the crawl frontier.
 _NON_HTTP_SCHEMES = ("#", "mailto:", "tel:", "javascript:", "data:")
 
 
 def _host(url: str) -> str:
-    """Hôte d'une URL en minuscules (chaîne vide si non analysable)."""
+    """Lowercased host of a URL (empty string if not parseable)."""
     return (urlsplit(url).hostname or "").lower()
 
 
 def _links_from_tree(tree: HTMLParser, base_url: str) -> list[str]:
-    """Liens HTTP(S) absolus d'un arbre, fragment retiré, dédupliqués et triés."""
+    """Absolute HTTP(S) links of a tree, fragment removed, deduplicated and sorted."""
     links: set[str] = set()
     for node in tree.css("a[href]"):
         href = (node.attributes.get("href") or "").strip()
@@ -52,32 +52,32 @@ def _links_from_tree(tree: HTMLParser, base_url: str) -> list[str]:
 
 
 def extract_links(html: str, base_url: str) -> list[str]:
-    """Liens HTTP(S) absolus d'une page, fragment retiré, dédupliqués et triés.
+    """Absolute HTTP(S) links of a page, fragment removed, deduplicated and sorted.
 
-    Utilisé par le crawler (M2) pour étendre la frontière. Le filtrage same-host
-    et le respect de robots.txt sont appliqués par l'appelant, pas ici (fonction
-    pure, déterministe : même HTML => mêmes liens dans le même ordre).
+    Used by the crawler (M2) to expand the frontier. Same-host filtering and
+    robots.txt compliance are applied by the caller, not here (pure, deterministic
+    function: same HTML => same links in the same order).
     """
     return _links_from_tree(HTMLParser(html), base_url)
 
 
 def _text_ratio(html: str, text: str) -> float | None:
-    """Ratio texte visible / taille HTML brute. None si HTML vide."""
+    """Visible-text / raw-HTML size ratio. None if HTML is empty."""
     html_len = len(html)
     if html_len == 0:
         return None
     return round(len(text) / html_len, 4)
 
 
-# Types de schema « actionnables » qu'un agent consomme pour agir (pilier ASO).
+# "Actionable" schema types an agent consumes to act (ASO pillar).
 _ACTION_SCHEMA_TYPES = {"Product", "Service", "Event", "HowTo"}
-# Clés signalant des credentials d'auteur (pilier AEO).
+# Keys signalling author credentials (AEO pillar).
 _AUTHOR_CREDENTIAL_KEYS = ("jobTitle", "knowsAbout", "sameAs", "affiliation", "award", "alumniOf")
-# Indices d'URL d'API documentée (pilier ASO).
+# URL hints of a documented API (ASO pillar).
 _OPENAPI_HINTS = ("openapi", "swagger", "api-docs")
-# Entité estimée (heuristique GEO, DG1) : token capitalisé alphabétique, longueur ≥ 3.
+# Estimated entity (GEO heuristic, DG1): alphabetic capitalized token, length >= 3.
 _ENTITY_RE = re.compile(r"\b[A-ZÀ-Ý][\wÀ-ÿ]{2,}\b")
-# Plateformes cross-surface reconnues (pilier GEO/ASO) : fragment d'hôte -> nom.
+# Recognized cross-surface platforms (GEO/ASO pillar): host fragment -> name.
 _PLATFORM_HOSTS = {
     "twitter.com": "twitter",
     "x.com": "twitter",
@@ -94,7 +94,7 @@ _PLATFORM_HOSTS = {
 
 @dataclass(slots=True)
 class _JsonLdAnalysis:
-    """Synthèse déterministe des blocs JSON-LD d'une page."""
+    """Deterministic summary of a page's JSON-LD blocks."""
 
     types: list[str]
     potential_actions: list[str]
@@ -107,7 +107,7 @@ class _JsonLdAnalysis:
 
 
 def _type_names(node: dict[str, object]) -> list[str]:
-    """Valeurs `@type` d'un nœud (str ou liste de str)."""
+    """`@type` values of a node (str or list of str)."""
     raw = node.get("@type")
     if isinstance(raw, str):
         return [raw]
@@ -117,7 +117,7 @@ def _type_names(node: dict[str, object]) -> list[str]:
 
 
 def _collect_types(node: object) -> list[str]:
-    """Collecte récursivement les `@type` sous un nœud JSON-LD."""
+    """Recursively collect the `@type` values under a JSON-LD node."""
     found: list[str] = []
     if isinstance(node, dict):
         found.extend(_type_names(node))
@@ -130,10 +130,10 @@ def _collect_types(node: object) -> list[str]:
 
 
 def _analyze_jsonld(tree: HTMLParser) -> _JsonLdAnalysis:
-    """Parcourt les blocs JSON-LD (support `@graph`) une fois et en tire les signaux.
+    """Walk the JSON-LD blocks (with `@graph` support) once and derive the signals.
 
-    Pure et déterministe : sorties triées. Couvre les types, les `potentialAction`,
-    les schemas d'action riches, la présence d'auteur/credentials et de dates.
+    Pure and deterministic: sorted outputs. Covers types, `potentialAction`,
+    rich action schemas, the presence of author/credentials and of dates.
     """
     types: set[str] = set()
     potential_actions: set[str] = set()
@@ -196,7 +196,7 @@ def _analyze_jsonld(tree: HTMLParser) -> _JsonLdAnalysis:
 
 
 def _webmcp_signals(tree: HTMLParser, html: str) -> WebMcpSignals:
-    """Détecte WebMCP statiquement (D9) : API impérative dans les scripts, attributs déclaratifs."""
+    """Detect WebMCP statically (D9): imperative API in scripts, declarative attributes."""
     low = html.lower()
     has_register = "registertool" in low or "navigator.modelcontext" in low
     tool_count = len(tree.css("[toolname]"))
@@ -211,7 +211,7 @@ def _webmcp_signals(tree: HTMLParser, html: str) -> WebMcpSignals:
 
 
 def _agent_usable_forms(tree: HTMLParser) -> int:
-    """Compte les formulaires exploitables par un agent (action/méthode + inputs labellisés)."""
+    """Count agent-usable forms (action/method + labelled inputs)."""
     count = 0
     for form in tree.css("form"):
         if not (form.attributes.get("action") or form.attributes.get("method")):
@@ -229,7 +229,7 @@ def _agent_usable_forms(tree: HTMLParser) -> int:
 
 
 def _openapi_links(tree: HTMLParser) -> list[str]:
-    """Liens vers une API documentée (`<a>`/`<link>` pointant openapi/swagger/api-docs)."""
+    """Links to a documented API (`<a>`/`<link>` pointing to openapi/swagger/api-docs)."""
     links: set[str] = set()
     for node in tree.css("a[href], link[href]"):
         href = (node.attributes.get("href") or "").strip()
@@ -239,7 +239,7 @@ def _openapi_links(tree: HTMLParser) -> list[str]:
 
 
 def _aso_signals(tree: HTMLParser, html: str, jsonld: _JsonLdAnalysis) -> AsoSignals:
-    """Assemble les signaux ASO statiques (M11, transposé de audit_webmcp.py — MIT)."""
+    """Assemble the static ASO signals (M11, adapted from audit_webmcp.py — MIT)."""
     return AsoSignals(
         webmcp=_webmcp_signals(tree, html),
         potential_actions=jsonld.potential_actions,
@@ -256,7 +256,7 @@ def extract_page_signals(
     status_code: int | None = None,
     redirects: int = 0,
 ) -> PageSignals:
-    """Transforme le HTML d'une page en `PageSignals` (signaux internes complets)."""
+    """Turn a page's HTML into `PageSignals` (complete internal signals)."""
     tree = HTMLParser(html)
 
     title_node = tree.css_first("title")
@@ -317,7 +317,7 @@ def extract_page_signals(
     lead = main.css_first("p") if main else None
     lead_paragraph_words = len(lead.text(strip=True).split()) if lead else 0
 
-    # Signaux M3.3 (cœur GEO).
+    # M3.3 signals (GEO core).
     main_node = tree.css_first("main") or tree.css_first("article")
     if main_node is not None:
         main_words = len(main_node.text(separator=" ", strip=True).split())

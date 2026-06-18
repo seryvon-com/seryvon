@@ -5,19 +5,19 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""M2 Crawler async multi-pages.
+"""M2 multi-page async crawler.
 
-Parcours en largeur (BFS) par vagues à partir de la frontière fournie par M1.
-Couche de collecte : les I/O (fetch) sont injectables pour des tests sans réseau.
+Breadth-first traversal (BFS) by waves from the frontier provided by M1.
+Collection layer: the I/O (fetch) is injectable for network-free tests.
 
-Déterminisme : la sortie ne dépend jamais de l'ordre d'arrivée des réponses
-concurrentes. Chaque vague est filtrée puis traitée par URL triée, les pages sont
-dédupliquées par URL finale (après redirections) et la liste finale est triée par
-URL. Concurrence bornée par un sémaphore ; si un `crawl-delay` est déclaré, la
-concurrence retombe à 1 avec une pause entre requêtes (politesse, ENF-04).
+Determinism: the output never depends on the arrival order of concurrent
+responses. Each wave is filtered then processed by sorted URL, pages are
+deduplicated by final URL (after redirects) and the final list is sorted by URL.
+Concurrency is bounded by a semaphore; if a `crawl-delay` is declared,
+concurrency drops to 1 with a pause between requests (politeness, ENF-04).
 
-Détection SSR/CSR : heuristique sans navigateur (décision D2). La mesure fiable
-par rendu Playwright arrive en Phase 2 pour le critère geo.ssr.
+SSR/CSR detection: browser-free heuristic (decision D2). The reliable
+Playwright-rendering measurement arrives in Phase 2 for the geo.ssr criterion.
 """
 
 from __future__ import annotations
@@ -34,24 +34,24 @@ from seryvon.crawler.extract import extract_links, extract_page_signals
 from seryvon.crawler.fetch import FetchResult, fetch_page
 from seryvon.models.signals import PageSignals
 
-#: Récupère une page par URL (injectable pour les tests).
+#: Fetch a page by URL (injectable for tests).
 PageFetcher = Callable[[str], Awaitable[FetchResult]]
-#: Pause asynchrone (injectable : no-op en test, asyncio.sleep en prod).
+#: Async pause (injectable: no-op in tests, asyncio.sleep in prod).
 Sleeper = Callable[[float], Awaitable[None]]
 
 DEFAULT_MAX_CONCURRENCY = 5
 
-# Heuristique SSR/CSR (D2) — remplacée par une mesure Playwright en Phase 2.
+# SSR/CSR heuristic (D2) — replaced by a Playwright measurement in Phase 2.
 _SSR_MIN_WORDS = 50
 _CSR_MOUNT_SELECTORS = ("#root", "#app", "[data-reactroot]", "[ng-version]")
 
 
 def detect_render_mode(html: str) -> str:
-    """Devine `"ssr"` ou `"csr"` sans navigateur (heuristique, décision D2).
+    """Guess `"ssr"` or `"csr"` without a browser (heuristic, decision D2).
 
-    Un corps riche en texte indique un rendu serveur ; un corps quasi vide avec
-    un nœud de montage SPA ou de nombreux scripts indique un rendu client. La
-    mesure fiable (HTML brut vs DOM rendu) viendra avec Playwright (Phase 2).
+    A text-rich body indicates server rendering; a near-empty body with an SPA
+    mount node or many scripts indicates client rendering. The reliable
+    measurement (raw HTML vs rendered DOM) will come with Playwright (Phase 2).
     """
     tree = HTMLParser(html)
     body = tree.body
@@ -71,14 +71,14 @@ async def _fetch_wave(
     delay: float,
     sleep: Sleeper,
 ) -> dict[str, FetchResult]:
-    """Récupère une vague d'URLs en concurrence bornée ; les échecs sont ignorés."""
+    """Fetch a wave of URLs with bounded concurrency; failures are ignored."""
     fetched: dict[str, FetchResult] = {}
 
     async def _one(url: str) -> None:
         async with semaphore:
             if delay > 0:
                 await sleep(delay)
-            # Page injoignable : ignorée (ENF-03), l'audit continue.
+            # Unreachable page: ignored (ENF-03), the audit continues.
             with contextlib.suppress(httpx.HTTPError):
                 fetched[url] = await fetch(url)
 
@@ -97,7 +97,7 @@ async def _run_crawl(
     max_concurrency: int,
     respect_robots: bool,
 ) -> list[PageSignals]:
-    """Boucle de crawl BFS déterministe à partir d'un fetcher (réel ou injecté)."""
+    """Deterministic BFS crawl loop from a fetcher (real or injected)."""
     robots = discovery.robots
     host = discovery.domain
     delay = discovery.crawl_delay or 0.0
@@ -163,10 +163,10 @@ async def crawl_site(
     fetch: PageFetcher | None = None,
     sleep: Sleeper | None = None,
 ) -> list[PageSignals]:
-    """Crawle un site à partir de la frontière de M1 et renvoie les signaux par page.
+    """Crawl a site from the M1 frontier and return the per-page signals.
 
-    Si `fetch` est fourni (tests), il est utilisé tel quel ; sinon `fetch_page`
-    (httpx) est employé. La liste renvoyée est triée par URL (déterminisme).
+    If `fetch` is provided (tests), it is used as-is; otherwise `fetch_page`
+    (httpx) is used. The returned list is sorted by URL (determinism).
     """
     page_fetch = fetch
     if page_fetch is None:

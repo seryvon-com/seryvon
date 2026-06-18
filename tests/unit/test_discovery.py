@@ -53,7 +53,7 @@ def test_normalize_strips_trailing_dot_and_fragment_keeps_query() -> None:
 
 
 def test_normalize_without_host_raises() -> None:
-    with pytest.raises(ValueError, match="hôte"):
+    with pytest.raises(ValueError, match="host"):
         normalize_url("https:///")
 
 

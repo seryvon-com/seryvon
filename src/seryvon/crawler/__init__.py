@@ -1,4 +1,4 @@
-"""Crawler : découverte (M1), crawl multi-pages (M2) et extraction de signaux."""
+"""Crawler: discovery (M1), multi-page crawl (M2) and signal extraction."""
 
 from seryvon.crawler.crawl import PageFetcher, Sleeper, crawl_site, detect_render_mode
 from seryvon.crawler.discovery import (

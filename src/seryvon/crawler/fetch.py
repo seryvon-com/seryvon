@@ -5,10 +5,10 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Récupération HTTP des pages (httpx async).
+"""HTTP page fetching (httpx async).
 
-Phase 0 : un seul GET sur la home. La concurrence (sémaphore), le respect du
-crawl-delay et le rendu Playwright arrivent en Phase 1 (M1/M2).
+Phase 0: a single GET on the home page. Concurrency (semaphore), crawl-delay
+compliance and Playwright rendering arrive in Phase 1 (M1/M2).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ import httpx
 
 @dataclass(slots=True)
 class FetchResult:
-    """Réponse brute d'une récupération de page."""
+    """Raw response of a page fetch."""
 
     url: str
     final_url: str
@@ -31,10 +31,10 @@ class FetchResult:
 
 @dataclass(slots=True)
 class FetchedResource:
-    """Réponse brute d'une ressource non-HTML (robots.txt, sitemap, éventuellement gzip).
+    """Raw response of a non-HTML resource (robots.txt, sitemap, possibly gzip).
 
-    Contrairement à `FetchResult`, le corps est conservé en `bytes` : les sitemaps
-    peuvent être compressés (`.xml.gz`) et doivent être décompressés avant parsing.
+    Unlike `FetchResult`, the body is kept as `bytes`: sitemaps can be compressed
+    (`.xml.gz`) and must be decompressed before parsing.
     """
 
     url: str
@@ -50,10 +50,10 @@ async def fetch_page(
     user_agent: str,
     timeout: float = 15.0,
 ) -> FetchResult:
-    """Récupère une page en suivant les redirections.
+    """Fetch a page following redirects.
 
-    Lève `httpx.HTTPError` en cas d'échec réseau ; le statut HTTP (y compris 4xx/5xx)
-    est en revanche retourné tel quel pour être scoré par les critères d'indexabilité.
+    Raises `httpx.HTTPError` on a network failure; the HTTP status (including
+    4xx/5xx) is, however, returned as-is so the indexability criteria can score it.
     """
     headers = {"User-Agent": user_agent}
     async with httpx.AsyncClient(
@@ -77,11 +77,11 @@ async def fetch_resource(
     user_agent: str,
     timeout: float = 15.0,
 ) -> FetchedResource:
-    """Récupère une ressource brute (bytes) — robots.txt, sitemap, etc.
+    """Fetch a raw resource (bytes) — robots.txt, sitemap, etc.
 
-    Le corps n'est pas décodé en texte : les sitemaps peuvent être gzippés. Le
-    statut HTTP (y compris 4xx) est retourné tel quel ; un robots.txt absent (404)
-    est interprété par l'appelant comme « tout autorisé » (RFC 9309).
+    The body is not decoded to text: sitemaps may be gzipped. The HTTP status
+    (including 4xx) is returned as-is; a missing robots.txt (404) is interpreted
+    by the caller as "everything allowed" (RFC 9309).
     """
     headers = {"User-Agent": user_agent}
     async with httpx.AsyncClient(

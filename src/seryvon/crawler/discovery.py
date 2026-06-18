@@ -5,17 +5,17 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""M1 Discovery : normalisation du domaine, robots.txt, sitemaps, frontière de crawl.
+"""M1 Discovery: domain normalization, robots.txt, sitemaps, crawl frontier.
 
-Module de la couche *collecte* : il fait des I/O (fetch robots.txt + sitemaps),
-strictement séparé du scoring. La logique de parsing (`normalize_url`,
-`parse_sitemap`, `RobotsTxt`) est pure et testable sans réseau ; seule
-`discover()` orchestre les fetchs, via un `fetch` injectable (déterminisme des
-tests, document 03 §9).
+A *collection*-layer module: it performs I/O (fetch robots.txt + sitemaps),
+strictly separate from scoring. The parsing logic (`normalize_url`,
+`parse_sitemap`, `RobotsTxt`) is pure and testable without a network; only
+`discover()` orchestrates the fetches, via an injectable `fetch` (test
+determinism, document 03 §9).
 
-Conformité robots.txt (ENF-04, critère d'acceptation §8) déléguée à `protego`
-(RFC 9309 : wildcards `*`/`$`, longest-match, crawl-delay, Sitemap). Un robots.txt
-absent => tout autorisé.
+robots.txt compliance (ENF-04, acceptance criterion §8) is delegated to `protego`
+(RFC 9309: `*`/`$` wildcards, longest-match, crawl-delay, Sitemap). A missing
+robots.txt => everything allowed.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from protego import Protego
 
 from seryvon.crawler.fetch import FetchedResource
 
-# Limite de taille d'un sitemap (spec sitemaps.org : 50 Mio non compressés).
+# Sitemap size limit (sitemaps.org spec: 50 MiB uncompressed).
 _MAX_SITEMAP_BYTES = 52_428_800
 _GZIP_MAGIC = b"\x1f\x8b"
 _DEFAULT_PORTS = {"http": "80", "https": "443"}
@@ -39,7 +39,7 @@ _DEFAULT_PORTS = {"http": "80", "https": "443"}
 DEFAULT_MAX_SITEMAP_URLS = 5000
 DEFAULT_MAX_INDEX_DEPTH = 3
 
-# User-agents de bots d'agents IA connus (critère aso.agent_access).
+# User-agents of known AI agent bots (aso.agent_access criterion).
 AGENT_BOTS = (
     "OAI-SearchBot",
     "ChatGPT-User",
@@ -52,26 +52,26 @@ AGENT_BOTS = (
     "Amazonbot",
 )
 
-#: Récupère une ressource brute par URL (injectable pour les tests).
+#: Fetch a raw resource by URL (injectable for tests).
 ResourceFetcher = Callable[[str], Awaitable[FetchedResource]]
 
 
 @dataclass(frozen=True, slots=True)
 class NormalizedUrl:
-    """URL canonique : hôte en minuscules, port par défaut retiré, fragment supprimé."""
+    """Canonical URL: lowercased host, default port removed, fragment stripped."""
 
-    url: str  # URL complète canonique (seed/home)
+    url: str  # full canonical URL (seed/home)
     origin: str  # scheme://host[:port]
     scheme: str
-    host: str  # hôte en minuscules, sans point final
+    host: str  # lowercased host, no trailing dot
 
 
 def normalize_url(raw: str) -> NormalizedUrl:
-    """Normalise une URL ou un domaine nu en forme canonique déterministe.
+    """Normalize a URL or bare domain into a deterministic canonical form.
 
-    - Schéma absent => `https`.
-    - Hôte et schéma en minuscules ; point final de l'hôte retiré.
-    - Port par défaut (80/443) retiré ; chemin vide => `/` ; fragment supprimé.
+    - Missing scheme => `https`.
+    - Host and scheme lowercased; trailing dot of the host removed.
+    - Default port (80/443) removed; empty path => `/`; fragment stripped.
     """
     candidate = raw.strip()
     if "://" not in candidate:
@@ -80,7 +80,7 @@ def normalize_url(raw: str) -> NormalizedUrl:
     scheme = parts.scheme.lower()
     host = (parts.hostname or "").lower().rstrip(".")
     if not host:
-        raise ValueError(f"URL sans hôte exploitable : {raw!r}")
+        raise ValueError(f"URL without a usable host: {raw!r}")
 
     netloc = host
     port = parts.port
@@ -94,9 +94,9 @@ def normalize_url(raw: str) -> NormalizedUrl:
 
 
 class RobotsTxt:
-    """robots.txt parsé (protego), avec sémantique RFC 9309.
+    """Parsed robots.txt (protego), with RFC 9309 semantics.
 
-    Un robots.txt absent ou illisible => tout autorisé (`found=False`).
+    A missing or unreadable robots.txt => everything allowed (`found=False`).
     """
 
     def __init__(self, *, parser: Protego | None, found: bool) -> None:
@@ -105,22 +105,22 @@ class RobotsTxt:
 
     @classmethod
     def parse(cls, text: str) -> RobotsTxt:
-        """Construit depuis le texte d'un robots.txt récupéré."""
+        """Build from the text of a fetched robots.txt."""
         return cls(parser=Protego.parse(text), found=True)
 
     @classmethod
     def allow_all(cls) -> RobotsTxt:
-        """robots.txt absent : aucune restriction (RFC 9309)."""
+        """Missing robots.txt: no restriction (RFC 9309)."""
         return cls(parser=None, found=False)
 
     def can_fetch(self, url: str, user_agent: str) -> bool:
-        """Indique si `user_agent` peut récupérer `url`."""
+        """Whether `user_agent` may fetch `url`."""
         if self._parser is None:
             return True
         return bool(self._parser.can_fetch(url, user_agent))
 
     def crawl_delay(self, user_agent: str) -> float | None:
-        """Délai de politesse déclaré pour `user_agent`, ou None."""
+        """Politeness delay declared for `user_agent`, or None."""
         if self._parser is None:
             return None
         delay = self._parser.crawl_delay(user_agent)
@@ -128,7 +128,7 @@ class RobotsTxt:
 
     @property
     def sitemaps(self) -> list[str]:
-        """Sitemaps déclarés via les lignes `Sitemap:`."""
+        """Sitemaps declared via `Sitemap:` lines."""
         if self._parser is None:
             return []
         return list(self._parser.sitemaps)
@@ -136,7 +136,7 @@ class RobotsTxt:
 
 @dataclass(slots=True)
 class SitemapParseResult:
-    """Résultat du parsing d'un sitemap : URLs (urlset) ou sous-sitemaps (index)."""
+    """Result of parsing a sitemap: URLs (urlset) or sub-sitemaps (index)."""
 
     urls: list[str]
     sitemaps: list[str]
@@ -145,12 +145,12 @@ class SitemapParseResult:
 
 
 def _localname(tag: str) -> str:
-    """Nom local d'une balise XML, namespace retiré, en minuscules."""
+    """Local name of an XML tag, namespace removed, lowercased."""
     return tag.rsplit("}", 1)[-1].lower()
 
 
 def _collect_locs(root: ET.Element, child_tag: str) -> list[str]:
-    """Collecte les `<loc>` des enfants `child_tag` (`url` ou `sitemap`)."""
+    """Collect the `<loc>` values of `child_tag` children (`url` or `sitemap`)."""
     locs: list[str] = []
     for child in root:
         if _localname(child.tag) != child_tag:
@@ -164,21 +164,21 @@ def _collect_locs(root: ET.Element, child_tag: str) -> list[str]:
 
 
 def _gunzip_bounded(data: bytes, max_size: int) -> bytes:
-    """Décompresse du gzip avec une borne stricte (protection anti gzip-bomb)."""
+    """Decompress gzip with a strict bound (gzip-bomb protection)."""
     decompressor = zlib.decompressobj(wbits=16 + zlib.MAX_WBITS)
     out = decompressor.decompress(data, max_size + 1)
     if len(out) > max_size or decompressor.unconsumed_tail:
-        raise OSError("sitemap décompressé trop volumineux")
+        raise OSError("decompressed sitemap too large")
     out += decompressor.flush()
     if len(out) > max_size:
-        raise OSError("sitemap décompressé trop volumineux")
+        raise OSError("decompressed sitemap too large")
     return out
 
 
 def _maybe_gunzip(
     content: bytes, *, content_type: str | None, source_url: str | None
 ) -> bytes | None:
-    """Décompresse si le contenu est gzippé (magic bytes / content-type / extension)."""
+    """Decompress if the content is gzipped (magic bytes / content-type / extension)."""
     is_gzip = content[:2] == _GZIP_MAGIC
     if not is_gzip and content_type and "gzip" in content_type.lower():
         is_gzip = True
@@ -198,10 +198,10 @@ def parse_sitemap(
     content_type: str | None = None,
     source_url: str | None = None,
 ) -> SitemapParseResult:
-    """Parse un sitemap (urlset ou sitemapindex), gzip géré. Pur et déterministe.
+    """Parse a sitemap (urlset or sitemapindex), gzip handled. Pure and deterministic.
 
-    Sécurité : tout DTD/entité est refusé avant parsing (parade XXE / billion laughs) —
-    un sitemap conforme n'en contient jamais. La taille est bornée.
+    Security: any DTD/entity is rejected before parsing (XXE / billion-laughs guard) —
+    a conformant sitemap never contains one. The size is bounded.
     """
     invalid = SitemapParseResult(urls=[], sitemaps=[], is_index=False, valid=False)
 
@@ -214,7 +214,7 @@ def parse_sitemap(
         return invalid
 
     try:
-        # DTD/entités déjà refusés ci-dessus : pas d'expansion d'entité possible.
+        # DTD/entities already rejected above: no entity expansion is possible.
         root = ET.fromstring(raw)
     except ET.ParseError:
         return invalid
@@ -232,7 +232,7 @@ def parse_sitemap(
 
 
 def same_host(url: str, host: str) -> bool:
-    """Vrai si `url` est sur le même hôte (comparaison insensible à la casse)."""
+    """True if `url` is on the same host (case-insensitive comparison)."""
     try:
         parsed_host = (urlsplit(url).hostname or "").lower().rstrip(".")
     except ValueError:
@@ -241,16 +241,16 @@ def same_host(url: str, host: str) -> bool:
 
 
 def blocked_agent_bots(robots: RobotsTxt, url: str) -> list[str]:
-    """Bots d'agents IA (`AGENT_BOTS`) interdits d'accès à `url` par robots.txt."""
+    """AI agent bots (`AGENT_BOTS`) denied access to `url` by robots.txt."""
     return sorted(bot for bot in AGENT_BOTS if not robots.can_fetch(url, bot))
 
 
 @dataclass(slots=True)
 class DiscoveryResult:
-    """Sortie de M1 : tout ce dont le crawler (M2) a besoin pour démarrer.
+    """M1 output: everything the crawler (M2) needs to start.
 
-    `robots` est conservé pour que le crawler vérifie `can_fetch` sur les URLs
-    découvertes en cours de route sans re-récupérer robots.txt.
+    `robots` is kept so the crawler can check `can_fetch` on URLs discovered along
+    the way without re-fetching robots.txt.
     """
 
     home_url: str
@@ -259,11 +259,11 @@ class DiscoveryResult:
     robots: RobotsTxt
     robots_found: bool
     crawl_delay: float | None
-    declared_sitemaps: list[str]  # déclarés (robots) + candidat /sitemap.xml
-    sitemap_urls: list[str]  # URLs same-host extraites des sitemaps, triées
-    sitemap_valid: bool  # au moins un sitemap parsé avec succès
+    declared_sitemaps: list[str]  # declared (robots) + /sitemap.xml candidate
+    sitemap_urls: list[str]  # same-host URLs extracted from the sitemaps, sorted
+    sitemap_valid: bool  # at least one sitemap parsed successfully
     home_allowed: bool
-    frontier: list[str]  # seeds de crawl déterministes : home puis sitemap_urls autorisées
+    frontier: list[str]  # deterministic crawl seeds: home then allowed sitemap_urls
 
 
 async def _run_discovery(
@@ -275,7 +275,7 @@ async def _run_discovery(
     max_sitemap_urls: int,
     max_index_depth: int,
 ) -> DiscoveryResult:
-    """Orchestration de la découverte à partir d'un fetcher (réel ou injecté)."""
+    """Discovery orchestration from a fetcher (real or injected)."""
     # 1. robots.txt
     robots = RobotsTxt.allow_all()
     try:
@@ -287,7 +287,7 @@ async def _run_discovery(
 
     crawl_delay = robots.crawl_delay(user_agent) if respect_robots else None
 
-    # 2. sitemaps : ceux déclarés dans robots + le candidat par défaut.
+    # 2. sitemaps: those declared in robots + the default candidate.
     declared = list(dict.fromkeys([*robots.sitemaps, f"{norm.origin}/sitemap.xml"]))
 
     sitemap_urls: set[str] = set()
@@ -320,7 +320,7 @@ async def _run_discovery(
         queue = next_queue
         depth += 1
 
-    # 3. frontière déterministe : home en tête, puis URLs sitemap autorisées, triées.
+    # 3. deterministic frontier: home first, then allowed sitemap URLs, sorted.
     ordered = sorted(sitemap_urls)[:max_sitemap_urls]
     home_allowed = robots.can_fetch(norm.url, user_agent) if respect_robots else True
     frontier: list[str] = [norm.url] if home_allowed else []
@@ -356,10 +356,10 @@ async def discover(
     max_sitemap_urls: int = DEFAULT_MAX_SITEMAP_URLS,
     max_index_depth: int = DEFAULT_MAX_INDEX_DEPTH,
 ) -> DiscoveryResult:
-    """Exécute M1 Discovery sur une URL et renvoie la frontière de crawl initiale.
+    """Run M1 Discovery on a URL and return the initial crawl frontier.
 
-    Si `fetch` est fourni (tests), il est utilisé tel quel ; sinon un client httpx
-    partagé est ouvert le temps de la découverte.
+    If `fetch` is provided (tests), it is used as-is; otherwise a shared httpx
+    client is opened for the duration of discovery.
     """
     norm = normalize_url(raw_url)
     if fetch is not None:
