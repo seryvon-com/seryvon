@@ -23,7 +23,6 @@ htmlcov/
 .env.*
 !.env.example
 *.key
-CLAUDE.md
 secrets/
 
 # Données locales
