@@ -9,8 +9,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 from sqlalchemy import Engine, create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from seryvon.core.config import get_settings
 
@@ -25,3 +28,17 @@ def get_engine() -> Engine:
 
 
 SessionLocal = sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
+
+
+@contextmanager
+def session_scope() -> Iterator[Session]:
+    """Session transactionnelle : commit si succès, rollback sinon, fermeture garantie."""
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
