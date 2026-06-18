@@ -5,14 +5,14 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Moteur de scoring : exécution des règles, agrégation par pilier, score global.
+"""Scoring engine: rule execution, per-pillar aggregation, global score.
 
-Garde-fous repris du pattern de `scoring.py` (GEO Optimizer, MIT) :
-- score borné [0, 100] ;
-- exclusion des `not_measured` puis renormalisation des poids restants ;
-- score global = moyenne pondérée des piliers MESURÉS, renormalisée.
+Safeguards borrowed from the `scoring.py` pattern (GEO Optimizer, MIT):
+- score clamped to [0, 100];
+- exclusion of `not_measured` then renormalization of the remaining weights;
+- global score = weighted mean of the MEASURED pillars, renormalized.
 
-Le calcul est entièrement déterministe : mêmes signaux + même config => mêmes scores.
+The computation is fully deterministic: same signals + same config => same scores.
 """
 
 from __future__ import annotations
@@ -25,14 +25,14 @@ from seryvon.models.signals import SignalBundle
 
 
 def _clamp(score: float) -> float:
-    """Borne un score dans [0, 100]."""
+    """Clamp a score into [0, 100]."""
     return max(0.0, min(100.0, score))
 
 
 def run_criteria(signals: SignalBundle, config: AuditConfig) -> list[CriterionResult]:
-    """Exécute toutes les règles enregistrées et applique les surcharges de poids.
+    """Run every registered rule and apply the weight overrides.
 
-    Les résultats sont triés par clé pour un ordre de sortie stable (déterminisme).
+    Results are sorted by key for a stable output order (determinism).
     """
     results: list[CriterionResult] = []
     for key in sorted(RULES):
@@ -47,7 +47,7 @@ def run_criteria(signals: SignalBundle, config: AuditConfig) -> list[CriterionRe
 
 
 def score_pillar(pillar: str, results: list[CriterionResult]) -> PillarScore:
-    """Agrège les critères d'un pilier en excluant les `not_measured` et renormalise."""
+    """Aggregate a pillar's criteria, excluding `not_measured`, and renormalize."""
     relevant = [r for r in results if pillar in r.pillars]
     measured = [r for r in relevant if r.status is not Status.NOT_MEASURED]
     excluded = len(relevant) - len(measured)
@@ -69,10 +69,10 @@ def score_global(
     pillar_scores: dict[str, PillarScore],
     config: AuditConfig,
 ) -> float:
-    """Score global = moyenne pondérée des piliers MESURÉS, renormalisée.
+    """Global score = weighted mean of the MEASURED pillars, renormalized.
 
-    Un pilier sans aucun critère mesuré (measured == 0) est exclu du global,
-    et les poids des piliers restants sont renormalisés.
+    A pillar with no measured criterion (measured == 0) is excluded from the
+    global score, and the weights of the remaining pillars are renormalized.
     """
     weights = {**DEFAULT_PILLAR_WEIGHTS, **config.pillar_weights}
     contributing = {

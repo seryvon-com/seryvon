@@ -5,15 +5,15 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Plan d'action priorisé (document 04 §7-8).
+"""Prioritized action plan (document 04 §7-8).
 
-Transforme les `CriterionResult` en `warning`/`critical` en `Issue` priorisés :
-`priorité = (impact × sévérité) / effort`, classés en P1–P4. Pur et déterministe
-(tri stable par priorité décroissante puis clé).
+Turns the `warning`/`critical` `CriterionResult` objects into prioritized
+`Issue` objects: `priority = (impact × severity) / effort`, bucketed into P1–P4.
+Pure and deterministic (stable sort by descending priority then key).
 
-Sévérité : warning=1, critical=2. Impact : poids × nb de piliers, normalisé 1–3.
-Effort : table par type de correction (§8), défaut 2. Les critères `not_measured`
-et `ok` ne génèrent pas d'issue.
+Severity: warning=1, critical=2. Impact: weight × number of pillars, normalized
+to 1–3. Effort: a table per fix type (§8), default 2. `not_measured` and `ok`
+criteria do not generate an issue.
 """
 
 from __future__ import annotations
@@ -24,9 +24,9 @@ from seryvon.models.report import Issue
 
 _DEFAULT_EFFORT = 2
 
-# Effort de correction par critère (1 rapide … 3 lourd), document 04 §8.
+# Fix effort per criterion (1 quick … 3 heavy), document 04 §8.
 _EFFORT: dict[str, int] = {
-    # Méta / structure / schema : ajout simple.
+    # Meta / structure / schema: simple addition.
     "meta.title": 1,
     "meta.description": 1,
     "meta.canonical": 1,
@@ -56,7 +56,7 @@ _EFFORT: dict[str, int] = {
     "aso.ai_discovery": 1,
     "aso.agent_access": 1,
     "aso.openapi": 1,
-    # Contenu / maillage / cohérence : effort moyen.
+    # Content / internal linking / coherence: medium effort.
     "content.depth": 2,
     "content.text_ratio": 2,
     "links.orphans": 2,
@@ -67,14 +67,14 @@ _EFFORT: dict[str, int] = {
     "aeo.kg_presence": 2,
     "aso.brand_coherence": 2,
     "aso.accessible_forms": 2,
-    # Cœur GEO on-page.
+    # GEO on-page core.
     "geo.primary_sources": 1,
     "geo.authors": 1,
     "geo.freshness": 1,
     "geo.noise_ratio": 2,
     "geo.entity_density": 2,
     "geo.cross_platform": 2,
-    # Chantiers lourds : perf, autorité, rendu, endpoints agentiques.
+    # Heavy work: perf, authority, rendering, agentic endpoints.
     "perf.lcp": 3,
     "perf.cls": 3,
     "perf.inp": 3,
@@ -91,7 +91,7 @@ _EFFORT: dict[str, int] = {
     "aso.nlweb": 3,
 }
 
-# Recommandation concise par critère ; fallback générique sinon.
+# Concise recommendation per criterion (product text, kept in French); generic fallback otherwise.
 _RECOMMENDATIONS: dict[str, str] = {
     "meta.title": "Ajouter un <title> unique de 30–60 caractères sur chaque page.",
     "meta.description": "Rédiger une meta description de 120–158 caractères.",
@@ -159,7 +159,7 @@ _SEVERITY_VALUE = {Status.WARNING: 1, Status.CRITICAL: 2}
 
 
 def _impact(result: CriterionResult) -> int:
-    """Impact 1–3 = poids × nb de piliers touchés, normalisé."""
+    """Impact 1–3 = weight × number of affected pillars, normalized."""
     raw = result.weight * len(result.pillars)
     if raw < 1.5:
         return 1
@@ -187,7 +187,7 @@ def _affected_pages(result: CriterionResult) -> list[str]:
 
 
 def build_issues(results: list[CriterionResult]) -> list[Issue]:
-    """Construit le plan d'action priorisé à partir des résultats de critères."""
+    """Build the prioritized action plan from the criterion results."""
     issues: list[Issue] = []
     for result in results:
         if result.status not in (Status.WARNING, Status.CRITICAL):

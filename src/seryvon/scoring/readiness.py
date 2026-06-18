@@ -5,15 +5,15 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Agrégateur de readiness agentique (pilier ASO, document 11 §4.8).
+"""Agentic-readiness aggregator (ASO pillar, document 11 §4.8).
 
-Synthèse pure et déterministe des signaux ASO en un niveau gradué :
-- `advanced` : WebMCP présent ET ≥2 signaux d'action (potentialAction/forms/openapi) ;
-- `ready`    : WebMCP présent OU ≥2 signaux d'action ;
-- `basic`    : ≥1 signal d'action ;
-- `none`     : aucun.
+Pure, deterministic synthesis of the ASO signals into a graded level:
+- `advanced`: WebMCP present AND >=2 action signals (potentialAction/forms/openapi);
+- `ready`   : WebMCP present OR >=2 action signals;
+- `basic`   : >=1 action signal;
+- `none`    : none.
 
-Alimente la table de synthèse `aso_readiness` du rapport (document 05 §2.8).
+Feeds the report's `aso_readiness` summary table (document 05 §2.8).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ _AGENT_READY = (ReadinessLevel.READY, ReadinessLevel.ADVANCED)
 
 
 def compute_aso_readiness(bundle: SignalBundle) -> AsoReadiness:
-    """Dérive la readiness agentique agrégée d'un `SignalBundle`."""
+    """Derive the aggregated agentic readiness of a `SignalBundle`."""
     pages = bundle.pages
     has_webmcp = any(
         p.aso.webmcp.has_register_tool or p.aso.webmcp.has_tool_attributes for p in pages
