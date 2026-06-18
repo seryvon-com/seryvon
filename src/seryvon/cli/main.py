@@ -26,6 +26,8 @@ from rich.table import Table
 from seryvon import __version__
 from seryvon.core.audit import run_audit
 from seryvon.core.config import AuditConfig
+from seryvon.db import repository
+from seryvon.db.base import session_scope
 from seryvon.models.report import AuditReport
 from seryvon.reporting import report_to_html, report_to_json, report_to_markdown
 
@@ -87,6 +89,10 @@ def run(
         bool,
         typer.Option("--quiet", "-q", help="N'émet que le rapport (pas de tableau récapitulatif)."),
     ] = False,
+    persist: Annotated[
+        bool,
+        typer.Option("--persist", help="Persiste le rapport en base (PostgreSQL requis)."),
+    ] = False,
 ) -> None:
     """Lance un audit sur une URL et produit un rapport (JSON et/ou HTML).
 
@@ -102,6 +108,12 @@ def run(
         raise typer.Exit(code=1) from exc
 
     _write_report(report, output, fmt, quiet=quiet)
+
+    if persist:
+        with session_scope() as session:
+            audit_id = repository.persist_report(report, session)
+        if not quiet:
+            console.print(f"[green]Audit persisté :[/green] {audit_id}")
 
     if not quiet:
         _print_summary(report)
@@ -150,6 +162,26 @@ def _print_summary(report) -> None:  # type: ignore[no-untyped-def]
         table.add_row(pillar.upper(), f"{ps.score:.1f}", str(ps.measured), str(ps.excluded))
     console.print(table)
     console.print(f"[bold]Score global :[/bold] {report.score_global:.1f}")
+
+
+@app.command()
+def history(
+    host: Annotated[str, typer.Argument(help="Hôte du domaine (ex. example.com).")],
+) -> None:
+    """Affiche l'historique des audits persistés d'un domaine."""
+    with session_scope() as session:
+        summaries = repository.list_audits(session, host)
+    if not summaries:
+        console.print(f"Aucun audit persisté pour [bold]{host}[/bold].")
+        return
+    table = Table(title=f"Historique — {host}")
+    table.add_column("Date")
+    table.add_column("Score global", justify="right")
+    table.add_column("ID")
+    for summary in summaries:
+        score = "—" if summary.score_global is None else f"{summary.score_global:.1f}"
+        table.add_row(summary.started_at.strftime("%Y-%m-%d %H:%M"), score, str(summary.audit_id))
+    console.print(table)
 
 
 @app.command()

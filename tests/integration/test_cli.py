@@ -6,18 +6,30 @@
 from __future__ import annotations
 
 import json
+import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
+from seryvon.cli import main as cli_main
 from seryvon.cli.main import app
 from seryvon.core import audit as audit_module
 from seryvon.crawler import extract_page_signals
 from seryvon.crawler.discovery import DiscoveryResult, RobotsTxt
+from seryvon.db import repository
+from seryvon.db.repository import AuditSummary
 from seryvon.models.signals import PageSignals
 
 runner = CliRunner()
+
+
+@contextmanager
+def _fake_scope() -> Iterator[object]:
+    yield object()
 
 
 @pytest.fixture(autouse=True)
@@ -98,6 +110,44 @@ def test_run_markdown_output(tmp_path: Path) -> None:
     content = out.read_text(encoding="utf-8")
     assert content.startswith("# Audit Seryvon")
     assert "Plan d'action" in content
+
+
+def test_run_persist_calls_repository(monkeypatch: pytest.MonkeyPatch) -> None:
+    saved: dict[str, object] = {}
+
+    def fake_persist(report: object, session: object) -> uuid.UUID:
+        saved["called"] = True
+        return uuid.uuid4()
+
+    monkeypatch.setattr(cli_main, "session_scope", _fake_scope)
+    monkeypatch.setattr(repository, "persist_report", fake_persist)
+    result = runner.invoke(app, ["run", "https://example.com", "--persist", "-q"])
+    assert result.exit_code == 0
+    assert saved.get("called") is True
+
+
+def test_history_renders_summaries(monkeypatch: pytest.MonkeyPatch) -> None:
+    summaries = [
+        AuditSummary(
+            audit_id=uuid.uuid4(),
+            domain="example.com",
+            score_global=72.0,
+            started_at=datetime(2026, 6, 18, 9, 0, tzinfo=UTC),
+        )
+    ]
+    monkeypatch.setattr(cli_main, "session_scope", _fake_scope)
+    monkeypatch.setattr(repository, "list_audits", lambda session, host: summaries)
+    result = runner.invoke(app, ["history", "example.com"])
+    assert result.exit_code == 0
+    assert "Historique" in result.stdout
+
+
+def test_history_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_main, "session_scope", _fake_scope)
+    monkeypatch.setattr(repository, "list_audits", lambda session, host: [])
+    result = runner.invoke(app, ["history", "example.com"])
+    assert result.exit_code == 0
+    assert "Aucun audit" in result.stdout
 
 
 def test_aso_command_not_yet_implemented() -> None:
