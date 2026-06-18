@@ -48,6 +48,7 @@ async def test_full_audit_produces_report(patched_crawl: None) -> None:
     assert report.tool_version
     assert "seo" in report.pillars
     assert report.pillars["seo"].score > 0  # title présent dans le HTML d'exemple
+    assert report.aso_readiness is not None  # synthèse readiness agentique présente
 
 
 async def test_audit_is_deterministic(patched_crawl: None) -> None:
