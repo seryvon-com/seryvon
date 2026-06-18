@@ -27,7 +27,7 @@ from seryvon import __version__
 from seryvon.core.audit import run_audit
 from seryvon.core.config import AuditConfig
 from seryvon.models.report import AuditReport
-from seryvon.reporting import report_to_html, report_to_json
+from seryvon.reporting import report_to_html, report_to_json, report_to_markdown
 
 
 class OutputFormat(StrEnum):
@@ -35,7 +35,8 @@ class OutputFormat(StrEnum):
 
     json = "json"
     html = "html"
-    both = "both"
+    md = "md"
+    both = "both"  # json + html
 
 
 app = typer.Typer(
@@ -110,31 +111,32 @@ def _write_report(
     report: AuditReport, output: Path | None, fmt: OutputFormat, *, quiet: bool
 ) -> None:
     """Écrit le rapport au(x) format(s) demandé(s), sur fichier ou stdout."""
-    want_json = fmt in (OutputFormat.json, OutputFormat.both)
-    want_html = fmt in (OutputFormat.html, OutputFormat.both)
-    json_payload = report_to_json(report) if want_json else ""
-    html_payload = report_to_html(report) if want_html else ""
+    renderers = {
+        OutputFormat.json: report_to_json,
+        OutputFormat.html: report_to_html,
+        OutputFormat.md: report_to_markdown,
+    }
 
     if output is None:
         if quiet:
-            typer.echo(html_payload if fmt is OutputFormat.html else json_payload)
+            # `both` sur stdout : on émet le JSON (source de vérité).
+            typer.echo(renderers.get(fmt, report_to_json)(report))
         return
 
     if fmt is OutputFormat.both:
-        json_path = output.with_suffix(".json")
-        html_path = output.with_suffix(".html")
-        json_path.write_text(json_payload, encoding="utf-8")
-        html_path.write_text(html_payload, encoding="utf-8")
-        written = [json_path, html_path]
-    elif fmt is OutputFormat.html:
-        output.write_text(html_payload, encoding="utf-8")
-        written = [output]
+        targets = {
+            output.with_suffix(".json"): report_to_json,
+            output.with_suffix(".html"): report_to_html,
+        }
     else:
-        output.write_text(json_payload, encoding="utf-8")
-        written = [output]
+        targets = {output: renderers[fmt]}
+
+    for path, render in targets.items():
+        path.write_text(render(report), encoding="utf-8")
 
     if not quiet:
-        console.print(f"[green]Rapport écrit :[/green] {', '.join(str(p) for p in written)}")
+        written = ", ".join(str(p) for p in targets)
+        console.print(f"[green]Rapport écrit :[/green] {written}")
 
 
 def _print_summary(report) -> None:  # type: ignore[no-untyped-def]

@@ -40,7 +40,13 @@ from seryvon.models.signals import (
     SignalBundle,
     SiteSignals,
 )
-from seryvon.scoring import compute_aso_readiness, run_criteria, score_global, score_pillar
+from seryvon.scoring import (
+    build_issues,
+    compute_aso_readiness,
+    run_criteria,
+    score_global,
+    score_pillar,
+)
 
 
 def _config_digest(config: AuditConfig) -> str:
@@ -174,6 +180,7 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         score_global=overall,
         pillars=pillar_scores,
         criteria=results,
+        issues=build_issues(results),
         aso_readiness=compute_aso_readiness(bundle),
         config_digest=_config_digest(config),
     )

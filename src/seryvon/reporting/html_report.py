@@ -122,6 +122,29 @@ _TEMPLATE = """<!DOCTYPE html>
   </div>
   {% endfor %}
 </section>
+{% if report.issues %}
+<section class="criteria">
+  <h2>Plan d'action — {{ report.issues|length }} problème(s)</h2>
+  <table>
+    <thead><tr>
+      <th>Priorité</th><th>Critère</th><th>Sévérité</th>
+      <th>Impact</th><th>Effort</th><th>Recommandation</th>
+    </tr></thead>
+    <tbody>
+    {% for issue in report.issues %}
+      <tr>
+        <td>{{ issue.priority_bucket }}</td>
+        <td class="key">{{ issue.criterion_key }}</td>
+        <td><span class="badge {{ issue.severity }}">{{ issue.severity }}</span></td>
+        <td class="num">{{ issue.impact }}</td>
+        <td class="num">{{ issue.effort }}</td>
+        <td>{{ issue.recommendation }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
 {% for s in sections %}
 <section class="criteria">
   <h2>{{ s.pillar }} — {{ s.rows|length }} critère(s)</h2>

@@ -91,6 +91,15 @@ def test_run_both_formats(tmp_path: Path) -> None:
     json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
 
 
+def test_run_markdown_output(tmp_path: Path) -> None:
+    out = tmp_path / "report.md"
+    result = runner.invoke(app, ["run", "https://example.com", "-o", str(out), "-f", "md"])
+    assert result.exit_code == 0
+    content = out.read_text(encoding="utf-8")
+    assert content.startswith("# Audit Seryvon")
+    assert "Plan d'action" in content
+
+
 def test_aso_command_not_yet_implemented() -> None:
     result = runner.invoke(app, ["aso", "https://example.com"])
     assert result.exit_code == 2
