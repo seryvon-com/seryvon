@@ -47,6 +47,8 @@ def compute_aso_readiness(bundle: SignalBundle) -> AsoReadiness:
         level = ReadinessLevel.NONE
 
     endpoints = bundle.external.ai_discovery_endpoints or {}
+    brand = bundle.external.brand_coherence
+    brand_score = round(sum(brand.values()) / len(brand) * 100, 2) if brand else None
     return AsoReadiness(
         readiness_level=level,
         agent_ready=level in _AGENT_READY,
@@ -54,6 +56,6 @@ def compute_aso_readiness(bundle: SignalBundle) -> AsoReadiness:
         has_action_schema=has_action_schema,
         ai_discovery_endpoints=sum(1 for ok in endpoints.values() if ok),
         has_nlweb=bundle.external.nlweb_status == "conformant",
-        brand_coherence_score=None,  # alimenté par le connecteur Wikidata (slice 7)
+        brand_coherence_score=brand_score,
         blocked_agent_bots=list(bundle.site.blocked_agent_bots),
     )

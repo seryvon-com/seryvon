@@ -272,6 +272,39 @@ class AsoNlwebCriterion(Criterion):
 
 
 @register
+class AsoBrandCoherenceCriterion(Criterion):
+    """Cohérence cross-surface (`aso.brand_coherence`) : site vs Wikidata (tag aeo)."""
+
+    key = "aso.brand_coherence"
+    pillars: ClassVar[list[str]] = ["aso", "aeo"]
+    weight = 1.3
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        brand = signals.external.brand_coherence
+        if not brand:
+            return CriterionResult.not_measured(
+                self.key,
+                self.pillars,
+                self.weight,
+                "Cohérence de marque non mesurée (entité Wikidata absente ou désactivée).",
+            )
+        score = round(sum(brand.values()) / len(brand) * 100, 2)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={"brand_coherence": brand},
+            score=score,
+            status=status_from_score(score),
+            threshold={"target": "nom + description cohérents (site/Wikidata)"},
+            explanation=f"Cohérence de marque : {score}% (site vs Wikidata).",
+            evidence={"source": "Wikidata"},
+            weight=self.weight,
+        )
+
+
+@register
 class AsoAgentAccessCriterion(Criterion):
     """Accès des crawlers d'agents (`aso.agent_access`) : robots.txt n'interdit pas les bots."""
 

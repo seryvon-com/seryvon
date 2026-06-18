@@ -18,11 +18,14 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
+from urllib.parse import urlsplit
 
 from seryvon import PILLARS, __version__
 from seryvon.connectors import (
+    brand_coherence,
     fetch_openpagerank,
     fetch_pagespeed,
+    fetch_wikidata,
     probe_ai_discovery,
     probe_nlweb,
 )
@@ -72,6 +75,41 @@ async def _collect_external(
     return external
 
 
+_TITLE_SEPARATORS = ("|", "—", "–", "·", ":", "-")
+
+
+def _brand_name(home: PageSignals) -> str | None:
+    """Nom de marque pour la recherche Wikidata (décision D11)."""
+    site_name = home.open_graph.get("og:site_name")
+    if site_name and site_name.strip():
+        return site_name.strip()
+    if home.title:
+        for sep in _TITLE_SEPARATORS:
+            if sep in home.title:
+                first = home.title.split(sep)[0].strip()
+                if first:
+                    return first
+        return home.title.strip()
+    host = (urlsplit(home.url).hostname or "").removeprefix("www.")
+    return host.split(".")[0] or None
+
+
+async def _collect_brand(
+    home: PageSignals | None, settings: Settings
+) -> tuple[bool | None, dict[str, float] | None]:
+    """Collecte Wikidata : (kg_presence, brand_coherence). None si désactivé/indéterminé."""
+    if not settings.wikidata_enabled or home is None:
+        return None, None
+    name = _brand_name(home)
+    if not name:
+        return None, None
+    result = await fetch_wikidata(name, timeout=settings.request_timeout)
+    if not result.found:
+        return False, None
+    description = home.meta_description or home.open_graph.get("og:description")
+    return True, brand_coherence(name, description, result)
+
+
 async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
     """Exécute un audit sur l'URL fournie et renvoie le rapport.
 
@@ -105,6 +143,9 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         discovery.origin, timeout=settings.request_timeout
     )
     external.nlweb_status = await probe_nlweb(discovery.origin, timeout=settings.request_timeout)
+    external.kg_presence, external.brand_coherence = await _collect_brand(
+        pages[0] if pages else None, settings
+    )
     bundle = SignalBundle(
         domain=discovery.domain,
         signal_schema_version=SIGNAL_SCHEMA_VERSION,

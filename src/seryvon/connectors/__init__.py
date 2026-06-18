@@ -12,14 +12,24 @@ from seryvon.connectors.openpagerank import (
     parse_openpagerank,
 )
 from seryvon.connectors.pagespeed import PageSpeedResult, fetch_pagespeed, parse_pagespeed
+from seryvon.connectors.wikidata import (
+    WikidataResult,
+    brand_coherence,
+    fetch_wikidata,
+    parse_wikidata,
+)
 
 __all__ = [
     "OpenPageRankResult",
     "PageSpeedResult",
+    "WikidataResult",
+    "brand_coherence",
     "fetch_openpagerank",
     "fetch_pagespeed",
+    "fetch_wikidata",
     "parse_openpagerank",
     "parse_pagespeed",
+    "parse_wikidata",
     "probe_ai_discovery",
     "probe_nlweb",
 ]

@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     # not_measured.
     opr_api_key: str = Field(default="", validation_alias="OPR_API_KEY")
 
+    # Wikidata (gratuit, sans clé). Désactivable => aeo.kg_presence /
+    # aso.brand_coherence not_measured.
+    wikidata_enabled: bool = True
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -21,8 +21,14 @@ def _stub_agentic_probes(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _no_nlweb(origin: str, **kwargs: object) -> str:
         return "absent"
 
+    async def _no_wikidata(name: str, **kwargs: object) -> object:
+        from seryvon.connectors.wikidata import WikidataResult
+
+        return WikidataResult(found=False)
+
     monkeypatch.setattr(audit_module, "probe_ai_discovery", _no_discovery, raising=False)
     monkeypatch.setattr(audit_module, "probe_nlweb", _no_nlweb, raising=False)
+    monkeypatch.setattr(audit_module, "fetch_wikidata", _no_wikidata, raising=False)
 
 
 @pytest.fixture
