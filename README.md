@@ -33,9 +33,9 @@ Criteria that cannot be measured (e.g. a missing API key) are marked
 ## Project status
 
 🚧 **Active development.** The deterministic scoring engine covers all five
-pillars (61 registered criteria), backed by a multi-page async crawler, on-page
-signal extraction, JSON/HTML/Markdown reporting and optional PostgreSQL
-persistence. LLM citation tracking (GEO/AEO, bring-your-own-key) is in progress.
+pillars, backed by a multi-page async crawler, on-page signal extraction,
+JSON/HTML/Markdown reporting and optional PostgreSQL persistence. LLM citation
+tracking (GEO/AEO, bring-your-own-key) is in progress.
 
 Current deliverables:
 
@@ -80,7 +80,7 @@ mypy src              # static typing
 pytest                # tests + coverage
 ```
 
-Scoring-engine coverage is kept **> 80%** (requirement ENF-06).
+The scoring engine is kept under thorough automated test coverage.
 
 ---
 
