@@ -7,17 +7,20 @@
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
 """Interface en ligne de commande (Typer).
 
-Phase 0 : `seryvon run <url>` crawle la home et émet un rapport JSON (livrable
-de jalon, document 06, Phase 0). Les commandes `aso`, `compare`, `history`, `ci`
-(document 02, §3.1) sont déclarées en squelette pour fixer la surface CLI.
+`seryvon run <url>` crawle le site et émet un rapport (JSON/HTML/Markdown) ;
+`seryvon aso <url>` n'audite que le pilier ASO (module M11) ; `seryvon history
+<host>` relit les audits persistés. `compare`, `ci` (document 02, §3.1) restent
+des squelettes pour fixer la surface CLI.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
+import sys
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -28,6 +31,7 @@ from seryvon.core.audit import run_audit
 from seryvon.core.config import AuditConfig
 from seryvon.db import repository
 from seryvon.db.base import session_scope
+from seryvon.models.enums import Status
 from seryvon.models.report import AuditReport
 from seryvon.reporting import report_to_html, report_to_json, report_to_markdown
 
@@ -56,6 +60,14 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit
 
 
+def _force_utf8_output() -> None:
+    """Force stdout/stderr en UTF-8 (consoles Windows cp1252 : caractères FR, ≥, —)."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8")
+
+
 @app.callback()
 def main(
     _version: Annotated[
@@ -66,6 +78,7 @@ def main(
     ] = False,
 ) -> None:
     """Point d'entrée global."""
+    _force_utf8_output()
 
 
 @app.command()
@@ -185,10 +198,98 @@ def history(
 
 
 @app.command()
-def aso(url: Annotated[str, typer.Argument(help="URL à auditer (ASO seul).")]) -> None:
-    """Audit du pilier ASO seul (rapide, statique). — implémenté en Phase 2."""
-    console.print("[yellow]Commande `aso` prévue en Phase 2 (module M11).[/yellow]")
-    raise typer.Exit(code=2)
+def aso(
+    url: Annotated[str, typer.Argument(help="URL à auditer (pilier ASO seul).")],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Fichier de sortie JSON (sinon affichage console)."),
+    ] = None,
+    config: Annotated[
+        Path | None,
+        typer.Option(
+            "--config", "-c", help="Fichier YAML de configuration (pondérations, seuils)."
+        ),
+    ] = None,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="N'émet que le JSON ASO (pas de carte récapitulative)."),
+    ] = False,
+) -> None:
+    """Audit du pilier ASO seul : aptitude agentique (WebMCP, actions, AI discovery).
+
+    Réutilise le pipeline complet (crawl + scoring déterministe) puis ne présente
+    que le pilier ASO et sa carte de readiness agentique (module M11, document 11).
+    """
+    audit_config = AuditConfig.from_yaml(config) if config else AuditConfig.default()
+
+    try:
+        report = asyncio.run(run_audit(url, audit_config))
+    except Exception as exc:
+        console.print(f"[red]Échec de l'audit :[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    if output is not None:
+        output.write_text(_aso_json(report), encoding="utf-8")
+        if not quiet:
+            console.print(f"[green]Rapport ASO écrit :[/green] {output}")
+    elif quiet:
+        typer.echo(_aso_json(report))
+
+    if not quiet:
+        _print_aso_summary(report)
+
+
+def _aso_payload(report: AuditReport) -> dict[str, Any]:
+    """Sous-ensemble ASO du rapport (vue focalisée, déterministe)."""
+    readiness = report.aso_readiness
+    return {
+        "domain": report.domain,
+        "tool_version": report.tool_version,
+        "aso": report.pillars["aso"].model_dump(mode="json"),
+        "aso_readiness": readiness.model_dump(mode="json") if readiness else None,
+        "criteria": [c.model_dump(mode="json") for c in report.criteria if "aso" in c.pillars],
+    }
+
+
+def _aso_json(report: AuditReport) -> str:
+    """Sérialise la vue ASO en JSON (caractères FR préservés, clés stables)."""
+    return json.dumps(_aso_payload(report), ensure_ascii=False, indent=2)
+
+
+def _print_aso_summary(report: AuditReport) -> None:
+    """Affiche la carte de readiness agentique puis les critères du pilier ASO."""
+    aso = report.pillars["aso"]
+    readiness = report.aso_readiness
+
+    if readiness is not None:
+        card = Table(title=f"ASO — {report.domain}", show_header=False)
+        card.add_column("Indicateur")
+        card.add_column("Valeur")
+        card.add_row("Readiness", readiness.readiness_level.value)
+        card.add_row("Agent-ready", "oui" if readiness.agent_ready else "non")
+        card.add_row("WebMCP", "oui" if readiness.has_webmcp else "non")
+        card.add_row("Schéma d'action", "oui" if readiness.has_action_schema else "non")
+        card.add_row("Endpoints AI discovery", str(readiness.ai_discovery_endpoints))
+        card.add_row("NLWeb", "oui" if readiness.has_nlweb else "non")
+        brand = readiness.brand_coherence_score
+        card.add_row("Cohérence de marque", "—" if brand is None else f"{brand:.1f}")
+        if readiness.blocked_agent_bots:
+            card.add_row("Bots agents bloqués", ", ".join(readiness.blocked_agent_bots))
+        console.print(card)
+
+    table = Table(title="Critères ASO")
+    table.add_column("Critère")
+    table.add_column("Statut")
+    table.add_column("Score", justify="right")
+    for c in report.criteria:
+        if "aso" not in c.pillars:
+            continue
+        score = "—" if c.status is Status.NOT_MEASURED else f"{c.score:.0f}"
+        table.add_row(c.key, c.status.value, score)
+    console.print(table)
+    console.print(
+        f"[bold]Score ASO :[/bold] {aso.score:.1f} ({aso.measured} mesurés, {aso.excluded} exclus)"
+    )
 
 
 @app.command()

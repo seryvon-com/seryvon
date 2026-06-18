@@ -150,6 +150,27 @@ def test_history_empty(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "Aucun audit" in result.stdout
 
 
-def test_aso_command_not_yet_implemented() -> None:
+def test_aso_outputs_readiness() -> None:
     result = runner.invoke(app, ["aso", "https://example.com"])
-    assert result.exit_code == 2
+    assert result.exit_code == 0
+    assert "ASO" in result.stdout
+    assert "Score ASO" in result.stdout
+
+
+def test_aso_quiet_outputs_json() -> None:
+    result = runner.invoke(app, ["aso", "https://example.com", "--quiet"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["domain"] == "example.com"
+    assert payload["aso"]["pillar"] == "aso"
+    assert "aso_readiness" in payload
+    assert payload["criteria"], "au moins un critère ASO attendu"
+    assert all("aso" in c["pillars"] for c in payload["criteria"])
+
+
+def test_aso_writes_output_file(tmp_path: Path) -> None:
+    out = tmp_path / "aso.json"
+    result = runner.invoke(app, ["aso", "https://example.com", "-o", str(out)])
+    assert result.exit_code == 0
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["aso"]["pillar"] == "aso"
