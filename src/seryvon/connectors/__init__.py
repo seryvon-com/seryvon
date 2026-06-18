@@ -1,8 +1,8 @@
-"""Connecteurs d'APIs externes (BYOK) : PageSpeed Insights, OpenPageRank, etc.
+"""External API connectors (BYOK): PageSpeed Insights, OpenPageRank, etc.
 
-Couche de collecte : chaque connecteur fait des I/O et renvoie une structure
-pure, mappée dans `ExternalSignals`. Un connecteur non configuré (pas de clé) =>
-critères dépendants `not_measured` (jamais d'estimation).
+Collection layer: each connector performs I/O and returns a pure structure,
+mapped into `ExternalSignals`. An unconfigured connector (no key) => dependent
+criteria `not_measured` (never estimated).
 """
 
 from seryvon.connectors.ai_discovery import probe_ai_discovery, probe_nlweb

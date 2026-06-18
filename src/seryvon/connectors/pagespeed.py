@@ -5,17 +5,17 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Connecteur PageSpeed Insights (Core Web Vitals + Lighthouse), BYOK gratuit.
+"""PageSpeed Insights connector (Core Web Vitals + Lighthouse), free BYOK.
 
-Source des Core Web Vitals : les **données terrain CrUX** exposées par PSI dans
-`loadingExperience.metrics` (LCP/CLS/INP réels). Si un site n'a pas assez de
-trafic, ce bloc est absent => `core_web_vitals = None` => critères `perf.*`
-`not_measured` (jamais d'estimation, document 01 §6.2). Le score Lighthouse
-provient du test labo (`lighthouseResult.categories.performance.score`, 0–1).
+Source of the Core Web Vitals: the **CrUX field data** exposed by PSI in
+`loadingExperience.metrics` (real LCP/CLS/INP). If a site lacks enough traffic,
+that block is absent => `core_web_vitals = None` => `perf.*` criteria
+`not_measured` (never estimated, document 01 §6.2). The Lighthouse score comes
+from the lab test (`lighthouseResult.categories.performance.score`, 0–1).
 
-Le parsing (`parse_pagespeed`) est pur et déterministe ; seul `fetch_pagespeed`
-fait l'I/O (client httpx injectable pour les tests). Décision D4 : appel sur la
-home seule, stratégie `mobile` par défaut.
+Parsing (`parse_pagespeed`) is pure and deterministic; only `fetch_pagespeed`
+performs the I/O (injectable httpx client for tests). Decision D4: call on the
+home page only, `mobile` strategy by default.
 """
 
 from __future__ import annotations
@@ -26,13 +26,13 @@ from typing import Any
 import httpx
 
 PSI_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
-# CrUX exprime le CLS en centièmes (5 => 0.05) ; on revient à l'échelle standard.
+# CrUX expresses CLS in hundredths (5 => 0.05); we convert back to the standard scale.
 _CLS_SCALE = 100.0
 
 
 @dataclass(slots=True)
 class PageSpeedResult:
-    """Signaux PSI extraits ; `None` => métrique indisponible (-> not_measured)."""
+    """Extracted PSI signals; `None` => metric unavailable (-> not_measured)."""
 
     core_web_vitals: dict[str, float] | None = None
     lighthouse_performance: float | None = None
@@ -44,7 +44,7 @@ def _percentile(metrics: dict[str, Any], key: str) -> float | None:
 
 
 def _parse_field_metrics(loading_experience: dict[str, Any]) -> dict[str, float] | None:
-    """Extrait LCP (ms), CLS (ratio) et INP (ms) des données terrain CrUX."""
+    """Extract LCP (ms), CLS (ratio) and INP (ms) from the CrUX field data."""
     metrics = loading_experience.get("metrics", {})
     cwv: dict[str, float] = {}
     lcp = _percentile(metrics, "LARGEST_CONTENTFUL_PAINT_MS")
@@ -60,13 +60,13 @@ def _parse_field_metrics(loading_experience: dict[str, Any]) -> dict[str, float]
 
 
 def _parse_lighthouse(lighthouse_result: dict[str, Any]) -> float | None:
-    """Extrait le score de performance Lighthouse (0–1)."""
+    """Extract the Lighthouse performance score (0–1)."""
     score = lighthouse_result.get("categories", {}).get("performance", {}).get("score")
     return float(score) if isinstance(score, int | float) else None
 
 
 def parse_pagespeed(payload: dict[str, Any]) -> PageSpeedResult:
-    """Transforme une réponse PSI v5 en `PageSpeedResult`. Pur et déterministe."""
+    """Turn a PSI v5 response into a `PageSpeedResult`. Pure and deterministic."""
     return PageSpeedResult(
         core_web_vitals=_parse_field_metrics(payload.get("loadingExperience", {})),
         lighthouse_performance=_parse_lighthouse(payload.get("lighthouseResult", {})),
@@ -81,10 +81,10 @@ async def fetch_pagespeed(
     timeout: float = 30.0,
     client: httpx.AsyncClient | None = None,
 ) -> PageSpeedResult:
-    """Interroge PSI pour `url` et renvoie les signaux. Erreur => résultat vide.
+    """Query PSI for `url` and return the signals. Error => empty result.
 
-    Dégradation gracieuse (ENF-03) : toute erreur réseau/HTTP/JSON renvoie un
-    `PageSpeedResult` vide, qui se traduit en critères `perf.*` `not_measured`.
+    Graceful degradation (ENF-03): any network/HTTP/JSON error returns an empty
+    `PageSpeedResult`, which maps to `perf.*` criteria being `not_measured`.
     """
     params = {"url": url, "strategy": strategy, "category": "performance", "key": api_key}
     own_client = client is None

@@ -5,16 +5,16 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Sondes de découverte agentique (pilier ASO) — fetchs légers, gratuits.
+"""Agentic discovery probes (ASO pillar) — lightweight, free fetches.
 
-AI Discovery (transposé d'`audit_ai_discovery.py`, GEO Optimizer MIT — voir
-NOTICE) : 4 endpoints validés (HTTP 200 + JSON conforme aux longueurs minimales
-du document 11 §4.3). NLWeb : sonde heuristique de la convention `/ask`
-(le standard n'a pas de chemin de découverte universel — à raffiner).
+AI Discovery (adapted from `audit_ai_discovery.py`, GEO Optimizer MIT — see
+NOTICE): 4 validated endpoints (HTTP 200 + JSON meeting the minimum lengths of
+document 11 §4.3). NLWeb: heuristic probe of the `/ask` convention (the standard
+has no universal discovery path — to be refined).
 
-Validators purs et déterministes ; seuls les `probe_*` font de l'I/O (client
-httpx injectable pour les tests). Toute erreur => endpoint invalide / NLWeb absent
-(dégradation gracieuse, ENF-03).
+Pure, deterministic validators; only the `probe_*` functions perform I/O
+(injectable httpx client for tests). Any error => invalid endpoint / NLWeb absent
+(graceful degradation, ENF-03).
 """
 
 from __future__ import annotations
@@ -28,14 +28,14 @@ _NLWEB_PATH = "/ask"
 
 
 # --------------------------------------------------------------------------- #
-# Validators purs (document 11 §4.3)                                           #
+# Pure validators (document 11 §4.3)                                           #
 # --------------------------------------------------------------------------- #
 def _str_len(value: Any) -> int:
     return len(str(value).strip()) if isinstance(value, str) else 0
 
 
 def valid_summary(data: Any) -> bool:
-    """`/ai/summary.json` : name ≥ 3 car., description ≥ 20 car."""
+    """`/ai/summary.json`: name >= 3 chars, description >= 20 chars."""
     return (
         isinstance(data, dict)
         and _str_len(data.get("name")) >= 3
@@ -44,7 +44,7 @@ def valid_summary(data: Any) -> bool:
 
 
 def valid_service(data: Any) -> bool:
-    """`/ai/service.json` : name ≥ 3 car. + capabilities non vide."""
+    """`/ai/service.json`: name >= 3 chars + non-empty capabilities."""
     if not isinstance(data, dict):
         return False
     caps = data.get("capabilities")
@@ -52,7 +52,7 @@ def valid_service(data: Any) -> bool:
 
 
 def valid_faq(data: Any) -> bool:
-    """`/ai/faq.json` : liste non vide ; chaque item question ≥ 10, answer ≥ 20."""
+    """`/ai/faq.json`: non-empty list; each item question >= 10, answer >= 20."""
     items = data
     if isinstance(data, dict):
         items = data.get("faq") or data.get("questions")
@@ -69,7 +69,7 @@ def valid_faq(data: Any) -> bool:
 
 
 # --------------------------------------------------------------------------- #
-# I/O (client injectable)                                                      #
+# I/O (injectable client)                                                      #
 # --------------------------------------------------------------------------- #
 async def _get(client: httpx.AsyncClient, url: str) -> httpx.Response | None:
     try:
@@ -93,7 +93,7 @@ async def probe_ai_discovery(
     timeout: float = 15.0,
     client: httpx.AsyncClient | None = None,
 ) -> dict[str, bool]:
-    """Sonde les 4 endpoints de découverte IA. Renvoie {clé: valide}."""
+    """Probe the 4 AI discovery endpoints. Returns {key: valid}."""
     own_client = client is None
     if client is None:
         client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
@@ -116,7 +116,7 @@ async def probe_nlweb(
     timeout: float = 15.0,
     client: httpx.AsyncClient | None = None,
 ) -> str:
-    """Sonde l'endpoint NLWeb (`/ask`). Renvoie 'conformant' / 'present' / 'absent'."""
+    """Probe the NLWeb endpoint (`/ask`). Returns 'conformant' / 'present' / 'absent'."""
     own_client = client is None
     if client is None:
         client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)

@@ -5,15 +5,15 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Connecteur Wikidata (gratuit, sans clé) — présence KG + brand coherence.
+"""Wikidata connector (free, keyless) — KG presence + brand coherence.
 
-Interroge `wbsearchentities` pour trouver l'entité d'une marque (`aeo.kg_presence`)
-puis compare nom + description site vs Wikidata (`aso.brand_coherence`). Décision
-D12 : en Phase 2 seules 2 surfaces (site, Wikidata) ; la cible « ≥3 surfaces »
-(LinkedIn/Crunchbase) est en backlog. La comparaison est une heuristique de
-recouvrement de tokens (volontairement simple).
+Queries `wbsearchentities` to find a brand's entity (`aeo.kg_presence`), then
+compares the site name + description against Wikidata (`aso.brand_coherence`).
+Decision D12: in Phase 2 only 2 surfaces (site, Wikidata); the ">=3 surfaces"
+target (LinkedIn/Crunchbase) is in the backlog. The comparison is a token-overlap
+heuristic (deliberately simple).
 
-Parsing/comparaison purs et déterministes ; seul `fetch_wikidata` fait l'I/O.
+Parsing/comparison are pure and deterministic; only `fetch_wikidata` performs I/O.
 """
 
 from __future__ import annotations
@@ -25,13 +25,13 @@ from typing import Any
 import httpx
 
 WIKIDATA_ENDPOINT = "https://www.wikidata.org/w/api.php"
-_NAME_OVERLAP_MIN = 0.5  # recouvrement de tokens du nom le plus court
-_DESC_JACCARD_MIN = 0.1  # similarité minimale des descriptions
+_NAME_OVERLAP_MIN = 0.5  # token overlap of the shorter name
+_DESC_JACCARD_MIN = 0.1  # minimum similarity of the descriptions
 
 
 @dataclass(slots=True)
 class WikidataResult:
-    """Entité Wikidata la plus pertinente pour une recherche (ou aucune)."""
+    """Most relevant Wikidata entity for a search (or none)."""
 
     found: bool = False
     entity_id: str | None = None
@@ -44,7 +44,7 @@ def _opt_str(value: Any) -> str | None:
 
 
 def parse_wikidata(payload: dict[str, Any]) -> WikidataResult:
-    """Extrait la première entité d'une réponse `wbsearchentities`. Pur."""
+    """Extract the first entity from a `wbsearchentities` response. Pure."""
     results = payload.get("search")
     if isinstance(results, list) and results:
         top = results[0]
@@ -65,10 +65,10 @@ def _tokens(text: str | None) -> set[str]:
 def brand_coherence(
     site_name: str | None, site_description: str | None, result: WikidataResult
 ) -> dict[str, float]:
-    """Cohérence nom/description entre le site et l'entité Wikidata (2 surfaces, D12).
+    """Name/description coherence between the site and the Wikidata entity (2 surfaces, D12).
 
-    Renvoie {"name": 0/1, "description": 0/1} (1 = cohérent). Heuristique de
-    recouvrement de tokens.
+    Returns {"name": 0/1, "description": 0/1} (1 = coherent). Token-overlap
+    heuristic.
     """
     name_a, name_b = _tokens(site_name), _tokens(result.label)
     shorter = min(len(name_a), len(name_b)) or 1
@@ -88,7 +88,7 @@ async def fetch_wikidata(
     timeout: float = 15.0,
     client: httpx.AsyncClient | None = None,
 ) -> WikidataResult:
-    """Recherche l'entité Wikidata d'une marque. Erreur => aucune entité (ENF-03)."""
+    """Search the Wikidata entity for a brand. Error => no entity (ENF-03)."""
     params: dict[str, str | int] = {
         "action": "wbsearchentities",
         "search": name,
