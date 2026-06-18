@@ -16,7 +16,8 @@ Le `signal_schema_version` est incrémenté à chaque évolution de structure
 (2 = bloc `aso` ; 3 = signaux M3.1 OG/Twitter/hreflang/liens/`site` ;
 4 = signaux M3.2 GSO/AEO on-page + ASO statique peuplé ;
 5 = accès des bots d'agents dans `site` ; 6 = statut NLWeb dans `external` ;
-7 = signaux M3.3 cœur GEO on-page + `audited_at`).
+7 = signaux M3.3 cœur GEO on-page + `audited_at` ;
+8 = métriques de citation LLM agrégées dans `external` (M4, Phase 3)).
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 7
+SIGNAL_SCHEMA_VERSION = 8
 
 
 class WebMcpSignals(BaseModel):
@@ -105,6 +106,37 @@ class PageSignals(BaseModel):
     aso: AsoSignals = Field(default_factory=AsoSignals)
 
 
+class EngineCitationMetrics(BaseModel):
+    """Métriques de citation ventilées pour un moteur (document 07 §9)."""
+
+    citation_rate: float = 0.0  # 0–1 : réponses retrieval citant le domaine
+    mention_rate: float = 0.0  # 0–1 : réponses mentionnant la marque
+    citation_confidence: float = 0.0  # 0–1 : constance sur K répétitions
+    average_position: float | None = None  # rang moyen quand cité
+
+
+class CitationMetrics(BaseModel):
+    """Métriques de citation LLM agrégées (M4, document 07 §9).
+
+    Produit déterministe de l'agrégateur (`seryvon.citation.aggregate`) à partir
+    des `LlmResponse` collectées. `citation_rate` (mode *retrieval*) alimente
+    `geo.citation_rate` ET `aeo.llm_citation` ; `knowledge_presence` (mention en
+    mode nu) est purement informatif (pas de critère dédié, document 04).
+    """
+
+    citation_rate: float = 0.0  # 0–1 : domaine cité (retrieval)
+    mention_rate: float = 0.0  # 0–1 : marque mentionnée (tous modes)
+    citation_confidence: float = 0.0  # 0–1 : stabilité sur K répétitions
+    share_of_voice: float | None = None  # domaine / (domaine + concurrents)
+    knowledge_presence: float | None = None  # mention en mode nu (notoriété), informatif
+    average_position: float | None = None
+    per_engine: dict[str, EngineCitationMetrics] = Field(default_factory=dict)
+    engines: list[str] = Field(default_factory=list)
+    prompt_count: int = 0
+    repetitions: int = 0
+    prompt_set_version: int | None = None  # traçabilité temporelle (document 08 §8)
+
+
 class ExternalSignals(BaseModel):
     """Signaux issus d'APIs externes (PSI, OpenPageRank, LLM, SERP, GSC...).
 
@@ -117,7 +149,7 @@ class ExternalSignals(BaseModel):
     open_page_rank: float | None = None
     referring_domains: int | None = None
     kg_presence: bool | None = None
-    llm_citations: dict[str, float] | None = None
+    citation_metrics: CitationMetrics | None = None
     ai_overview_presence: float | None = None
     ai_discovery_endpoints: dict[str, bool] | None = None
     nlweb_status: str | None = None  # "conformant" / "present" / "absent"

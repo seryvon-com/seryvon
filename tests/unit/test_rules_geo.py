@@ -9,12 +9,15 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from seryvon.models.enums import Status
-from seryvon.models.signals import PageSignals, SignalBundle
+from seryvon.models.signals import CitationMetrics, ExternalSignals, PageSignals, SignalBundle
 from seryvon.scoring.rules.geo import (
     GeoAuthorsCriterion,
+    GeoCitationConfidenceCriterion,
+    GeoCitationRateCriterion,
     GeoCrossPlatformCriterion,
     GeoEntityDensityCriterion,
     GeoFreshnessCriterion,
+    GeoMentionRateCriterion,
     GeoNoiseRatioCriterion,
     GeoPrimarySourcesCriterion,
 )
@@ -92,3 +95,40 @@ def test_freshness_not_measured_without_reference_or_date() -> None:
         _page(content_date="pas-une-date"), audited_at=datetime(2026, 6, 1, tzinfo=UTC)
     )
     assert GeoFreshnessCriterion().evaluate(bad_date).status is Status.NOT_MEASURED
+
+
+def _with_metrics(**kwargs: object) -> SignalBundle:
+    return SignalBundle(
+        domain="ex.com",
+        external=ExternalSignals(citation_metrics=CitationMetrics(**kwargs)),  # type: ignore[arg-type]
+    )
+
+
+def test_citation_rate_not_measured_without_keys() -> None:
+    assert GeoCitationRateCriterion().evaluate(_bundle(_page())).status is Status.NOT_MEASURED
+
+
+def test_citation_rate_scored_from_metrics() -> None:
+    bundle = _with_metrics(
+        citation_rate=0.42, engines=["perplexity"], prompt_count=10, repetitions=5
+    )
+    result = GeoCitationRateCriterion().evaluate(bundle)
+    assert result.score == 42.0
+    assert result.pillars == ["geo"]
+    assert result.weight == 2.0
+
+
+def test_mention_rate_scored_from_metrics() -> None:
+    bundle = _with_metrics(mention_rate=0.6)
+    result = GeoMentionRateCriterion().evaluate(bundle)
+    assert result.score == 60.0
+    assert result.weight == 1.0
+    assert GeoMentionRateCriterion().evaluate(_bundle(_page())).status is Status.NOT_MEASURED
+
+
+def test_citation_confidence_scored_from_metrics() -> None:
+    bundle = _with_metrics(citation_confidence=0.8, repetitions=5)
+    result = GeoCitationConfidenceCriterion().evaluate(bundle)
+    assert result.score == 80.0
+    assert result.weight == 0.8
+    assert GeoCitationConfidenceCriterion().evaluate(_bundle(_page())).status is Status.NOT_MEASURED

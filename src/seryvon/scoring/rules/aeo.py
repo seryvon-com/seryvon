@@ -265,7 +265,11 @@ class AeoKgPresenceCriterion(Criterion):
 
 @register
 class AeoLlmCitationCriterion(Criterion):
-    """Citation par les answer engines (`aeo.llm_citation`) — mesuré par M4 (Phase 3)."""
+    """Citation par les answer engines (`aeo.llm_citation`) — mesuré par M4 (Phase 3).
+
+    Lit la *retrieval citation* agrégée (`external.citation_metrics.citation_rate`),
+    signal partagé avec `geo.citation_rate` mais rattaché au pilier AEO.
+    """
 
     key = "aeo.llm_citation"
     pillars: ClassVar[list[str]] = ["aeo"]
@@ -274,25 +278,27 @@ class AeoLlmCitationCriterion(Criterion):
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
     ) -> CriterionResult:
-        citations = signals.external.llm_citations
-        if not citations:
+        cm = signals.external.citation_metrics
+        if cm is None:
             return CriterionResult.not_measured(
                 self.key,
                 self.pillars,
                 self.weight,
-                "Citation tracking LLM non disponible (Phase 3).",
+                "Citation tracking LLM non disponible (clé API BYOK requise).",
             )
-        rate = sum(citations.values()) / len(citations)
-        score = round(min(100.0, max(0.0, rate * 100)), 2)
-        raw: dict[str, Any] = {"llm_citations": dict(citations)}
+        score = round(cm.citation_rate * 100, 2)
+        raw: dict[str, Any] = {"citation_rate": cm.citation_rate, "engines": cm.engines}
         return CriterionResult(
             key=self.key,
             pillars=self.pillars,
             raw_value=raw,
             score=score,
             status=status_from_score(score),
-            threshold={"formula": "% citation moyen sur answer engines"},
+            threshold={"formula": "% réponses retrieval citant le domaine"},
             explanation=f"Taux de citation answer engines : {score}%.",
-            evidence={"source": "M4 citation tracking"},
+            evidence={
+                "source": "M4 citation tracking",
+                "per_engine": {k: v.model_dump() for k, v in cm.per_engine.items()},
+            },
             weight=self.weight,
         )

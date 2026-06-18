@@ -6,7 +6,12 @@
 from __future__ import annotations
 
 from seryvon.models.enums import Status
-from seryvon.models.signals import ExternalSignals, PageSignals, SignalBundle
+from seryvon.models.signals import (
+    CitationMetrics,
+    ExternalSignals,
+    PageSignals,
+    SignalBundle,
+)
 from seryvon.scoring.rules.aeo import (
     AeoAboutPageCriterion,
     AeoAnswerDirectnessCriterion,
@@ -80,7 +85,10 @@ def test_kg_presence_not_measured_by_default() -> None:
 def test_llm_citation_not_measured_by_default() -> None:
     assert AeoLlmCitationCriterion().evaluate(_pages(_page())).status is Status.NOT_MEASURED
     measured = SignalBundle(
-        domain="ex.com", external=ExternalSignals(llm_citations={"openai": 0.4, "perplexity": 0.6})
+        domain="ex.com",
+        external=ExternalSignals(
+            citation_metrics=CitationMetrics(citation_rate=0.5, engines=["openai", "perplexity"])
+        ),
     )
     assert AeoLlmCitationCriterion().evaluate(measured).score == 50.0
 

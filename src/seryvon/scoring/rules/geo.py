@@ -10,7 +10,8 @@
 Cœur GEO on-page (Phase 2.6) : `geo.ssr` (heuristique render_mode, D10),
 `noise_ratio`, `entity_density`, `primary_sources`, `authors`, `cross_platform`,
 `freshness`. La fraîcheur lit `SignalBundle.audited_at` (référence figée, DG2 →
-déterminisme). Les critères de citation LLM (`geo.citation_*`) arrivent en Phase 3.
+déterminisme). Citation LLM (Phase 3, M4) : `geo.citation_rate`, `mention_rate`,
+`citation_confidence` lisent `external.citation_metrics` (`not_measured` sans clé BYOK).
 """
 
 from __future__ import annotations
@@ -272,5 +273,107 @@ class GeoFreshnessCriterion(Criterion):
             threshold={"fresh_days": _FRESH_DAYS},
             explanation=f"Contenu le plus récent daté de {age} jour(s).",
             evidence={"source": "dates JSON-LD vs date d'audit"},
+            weight=self.weight,
+        )
+
+
+# Critères de citation LLM (M4, Phase 3) : lisent les métriques agrégées et
+# déterministes de `external.citation_metrics`. Sans clé BYOK => `not_measured`.
+_CITATION_NOT_MEASURED = "Citation tracking LLM non disponible (clé API BYOK requise)."
+
+
+@register
+class GeoCitationRateCriterion(Criterion):
+    """Taux de citation LLM (`geo.citation_rate`) : % de réponses retrieval citant le domaine."""
+
+    key = "geo.citation_rate"
+    pillars: ClassVar[list[str]] = ["geo"]
+    weight = 2.0
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        cm = signals.external.citation_metrics
+        if cm is None:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, _CITATION_NOT_MEASURED
+            )
+        score = round(cm.citation_rate * 100, 2)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={"citation_rate": cm.citation_rate, "engines": cm.engines},
+            score=score,
+            status=status_from_score(score),
+            threshold={"formula": "% réponses retrieval citant le domaine"},
+            explanation=f"Taux de citation LLM : {score}% "
+            f"({cm.prompt_count} prompt(s) × {cm.repetitions} rép. × {len(cm.engines)} moteur(s)).",
+            evidence={"source": "M4 citation tracking", "average_position": cm.average_position},
+            weight=self.weight,
+        )
+
+
+@register
+class GeoMentionRateCriterion(Criterion):
+    """Taux de mention LLM (`geo.mention_rate`) : % de réponses mentionnant la marque."""
+
+    key = "geo.mention_rate"
+    pillars: ClassVar[list[str]] = ["geo"]
+    weight = 1.0
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        cm = signals.external.citation_metrics
+        if cm is None:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, _CITATION_NOT_MEASURED
+            )
+        score = round(cm.mention_rate * 100, 2)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={
+                "mention_rate": cm.mention_rate,
+                "knowledge_presence": cm.knowledge_presence,
+            },
+            score=score,
+            status=status_from_score(score),
+            threshold={"formula": "% réponses mentionnant la marque"},
+            explanation=f"Taux de mention de marque : {score}%.",
+            evidence={"source": "M4 citation tracking"},
+            weight=self.weight,
+        )
+
+
+@register
+class GeoCitationConfidenceCriterion(Criterion):
+    """Stabilité de citation (`geo.citation_confidence`) : constance sur K répétitions."""
+
+    key = "geo.citation_confidence"
+    pillars: ClassVar[list[str]] = ["geo"]
+    weight = 0.8
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        cm = signals.external.citation_metrics
+        if cm is None:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, _CITATION_NOT_MEASURED
+            )
+        score = round(cm.citation_confidence * 100, 2)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={
+                "citation_confidence": cm.citation_confidence,
+                "repetitions": cm.repetitions,
+            },
+            score=score,
+            status=status_from_score(score),
+            threshold={"formula": "constance de citation sur K répétitions"},
+            explanation=f"Stabilité de citation : {score}% sur {cm.repetitions} répétition(s).",
+            evidence={"source": "M4 citation tracking"},
             weight=self.weight,
         )
