@@ -23,6 +23,7 @@ from seryvon import PILLARS, __version__
 from seryvon.connectors import fetch_openpagerank, fetch_pagespeed
 from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
+from seryvon.crawler.discovery import AGENT_BOTS, blocked_agent_bots
 from seryvon.models.report import AuditReport
 from seryvon.models.signals import (
     SIGNAL_SCHEMA_VERSION,
@@ -103,6 +104,8 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
             crawl_delay=discovery.crawl_delay,
             sitemap_valid=discovery.sitemap_valid,
             sitemap_url_count=len(discovery.sitemap_urls),
+            blocked_agent_bots=blocked_agent_bots(discovery.robots, discovery.home_url),
+            agent_bots_checked=len(AGENT_BOTS),
         ),
         external=external,
     )

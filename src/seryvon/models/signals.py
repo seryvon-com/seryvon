@@ -14,14 +14,15 @@ scores — propriété testée explicitement (document 03, §9).
 
 Le `signal_schema_version` est incrémenté à chaque évolution de structure
 (2 = bloc `aso` ; 3 = signaux M3.1 OG/Twitter/hreflang/liens/`site` ;
-4 = signaux M3.2 GSO/AEO on-page + ASO statique peuplé).
+4 = signaux M3.2 GSO/AEO on-page + ASO statique peuplé ;
+5 = accès des bots d'agents dans `site`).
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 4
+SIGNAL_SCHEMA_VERSION = 5
 
 
 class WebMcpSignals(BaseModel):
@@ -120,6 +121,9 @@ class SiteSignals(BaseModel):
     crawl_delay: float | None = None
     sitemap_valid: bool = False  # au moins un sitemap récupéré et parsé
     sitemap_url_count: int = 0  # nombre d'URLs same-host extraites des sitemaps
+    # Accès des bots d'agents (aso.agent_access) — dérivé de robots.txt par M1.
+    blocked_agent_bots: list[str] = Field(default_factory=list)
+    agent_bots_checked: int = 0  # nombre de bots d'agents testés (dénominateur)
 
 
 class SignalBundle(BaseModel):

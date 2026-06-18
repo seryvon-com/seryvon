@@ -39,6 +39,19 @@ _DEFAULT_PORTS = {"http": "80", "https": "443"}
 DEFAULT_MAX_SITEMAP_URLS = 5000
 DEFAULT_MAX_INDEX_DEPTH = 3
 
+# User-agents de bots d'agents IA connus (critère aso.agent_access).
+AGENT_BOTS = (
+    "OAI-SearchBot",
+    "ChatGPT-User",
+    "GPTBot",
+    "PerplexityBot",
+    "ClaudeBot",
+    "Claude-Web",
+    "Google-Extended",
+    "CCBot",
+    "Amazonbot",
+)
+
 #: Récupère une ressource brute par URL (injectable pour les tests).
 ResourceFetcher = Callable[[str], Awaitable[FetchedResource]]
 
@@ -225,6 +238,11 @@ def same_host(url: str, host: str) -> bool:
     except ValueError:
         return False
     return parsed_host == host
+
+
+def blocked_agent_bots(robots: RobotsTxt, url: str) -> list[str]:
+    """Bots d'agents IA (`AGENT_BOTS`) interdits d'accès à `url` par robots.txt."""
+    return sorted(bot for bot in AGENT_BOTS if not robots.can_fetch(url, bot))
 
 
 @dataclass(slots=True)
