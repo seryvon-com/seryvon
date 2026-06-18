@@ -12,13 +12,16 @@ headings, contenu, JSON-LD types, liens (cibles internes), images.
 M3.2 (Phase 2) : analyse JSON-LD enrichie (potentialAction, schemas d'action,
 auteurs/credentials, dates), comptages on-page (tables, listes de définition,
 titres-questions, paragraphe d'accroche) et signaux ASO statiques (WebMCP,
-formulaires agent-usables, OpenAPI). L'extraction est PURE (HTML -> PageSignals,
-sans I/O), donc testable sur fixtures et reproductible.
+formulaires agent-usables, OpenAPI).
+M3.3 (cœur GEO) : ratio contenu principal/bruit, entités estimées (heuristique),
+domaines sortants, date de contenu, plateformes cross-surface. L'extraction est
+PURE (HTML -> PageSignals, sans I/O), donc testable sur fixtures et reproductible.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from urllib.parse import urldefrag, urljoin, urlsplit
 
@@ -72,6 +75,21 @@ _ACTION_SCHEMA_TYPES = {"Product", "Service", "Event", "HowTo"}
 _AUTHOR_CREDENTIAL_KEYS = ("jobTitle", "knowsAbout", "sameAs", "affiliation", "award", "alumniOf")
 # Indices d'URL d'API documentée (pilier ASO).
 _OPENAPI_HINTS = ("openapi", "swagger", "api-docs")
+# Entité estimée (heuristique GEO, DG1) : token capitalisé alphabétique, longueur ≥ 3.
+_ENTITY_RE = re.compile(r"\b[A-ZÀ-Ý][\wÀ-ÿ]{2,}\b")
+# Plateformes cross-surface reconnues (pilier GEO/ASO) : fragment d'hôte -> nom.
+_PLATFORM_HOSTS = {
+    "twitter.com": "twitter",
+    "x.com": "twitter",
+    "linkedin.com": "linkedin",
+    "facebook.com": "facebook",
+    "instagram.com": "instagram",
+    "youtube.com": "youtube",
+    "github.com": "github",
+    "tiktok.com": "tiktok",
+    "pinterest.com": "pinterest",
+    "mastodon": "mastodon",
+}
 
 
 @dataclass(slots=True)
@@ -84,6 +102,8 @@ class _JsonLdAnalysis:
     has_author: bool
     author_has_credentials: bool
     has_structured_dates: bool
+    content_date: str | None
+    same_as: list[str]
 
 
 def _type_names(node: dict[str, object]) -> list[str]:
@@ -117,6 +137,8 @@ def _analyze_jsonld(tree: HTMLParser) -> _JsonLdAnalysis:
     """
     types: set[str] = set()
     potential_actions: set[str] = set()
+    same_as: set[str] = set()
+    dates: list[str] = []
     has_author = False
     author_has_credentials = False
     has_dates = False
@@ -132,8 +154,16 @@ def _analyze_jsonld(tree: HTMLParser) -> _JsonLdAnalysis:
                     author_has_credentials = True
             if "author" in node:
                 has_author = True
-            if "datePublished" in node or "dateModified" in node:
-                has_dates = True
+            for date_key in ("datePublished", "dateModified"):
+                value = node.get(date_key)
+                if isinstance(value, str):
+                    has_dates = True
+                    dates.append(value)
+            same = node.get("sameAs")
+            if isinstance(same, str):
+                same_as.add(same)
+            elif isinstance(same, list):
+                same_as.update(x for x in same if isinstance(x, str))
             action = node.get("potentialAction")
             if action is not None:
                 potential_actions.update(_collect_types(action))
@@ -160,6 +190,8 @@ def _analyze_jsonld(tree: HTMLParser) -> _JsonLdAnalysis:
         has_author=has_author,
         author_has_credentials=author_has_credentials,
         has_structured_dates=has_dates,
+        content_date=max(dates) if dates else None,
+        same_as=sorted(same_as),
     )
 
 
@@ -285,6 +317,32 @@ def extract_page_signals(
     lead = main.css_first("p") if main else None
     lead_paragraph_words = len(lead.text(strip=True).split()) if lead else 0
 
+    # Signaux M3.3 (cœur GEO).
+    main_node = tree.css_first("main") or tree.css_first("article")
+    if main_node is not None:
+        main_words = len(main_node.text(separator=" ", strip=True).split())
+    else:
+        boilerplate = sum(
+            len(node.text(separator=" ", strip=True).split())
+            for selector in ("nav", "header", "footer", "aside")
+            for node in tree.css(selector)
+        )
+        main_words = max(0, word_count - boilerplate)
+    main_text_ratio = round(main_words / word_count, 4) if word_count else None
+    entity_count = len(set(_ENTITY_RE.findall(visible_text)))
+    external_link_domains = sorted(
+        {_host(link) for link in all_links if _host(link) and _host(link) != page_host}
+    )
+    candidate_hosts = [*external_link_domains, *(_host(u) for u in jsonld.same_as)]
+    social_platforms = sorted(
+        {
+            name
+            for host in candidate_hosts
+            for fragment, name in _PLATFORM_HOSTS.items()
+            if fragment in host
+        }
+    )
+
     return PageSignals(
         url=url,
         status_code=status_code,
@@ -313,5 +371,10 @@ def extract_page_signals(
         has_author=jsonld.has_author,
         author_has_credentials=jsonld.author_has_credentials,
         has_structured_dates=jsonld.has_structured_dates,
+        main_text_ratio=main_text_ratio,
+        entity_count=entity_count,
+        external_link_domains=external_link_domains,
+        content_date=jsonld.content_date,
+        social_platforms=social_platforms,
         aso=_aso_signals(tree, html, jsonld),
     )

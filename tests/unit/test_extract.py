@@ -196,3 +196,59 @@ def test_extract_aso_absent_by_default(sample_html: str) -> None:
     assert aso.action_schema_types == []
     assert aso.agent_usable_forms == 0
     assert aso.openapi_links == []
+
+
+# --------------------------------------------------------------------------- #
+# M3.3 — signaux cœur GEO on-page                                             #
+# --------------------------------------------------------------------------- #
+_GEO_HTML = """<html><head>
+<script type="application/ld+json">
+{"@type":"Article","datePublished":"2026-05-01","dateModified":"2026-06-10",
+ "author":{"@type":"Person","name":"Marie Curie"},
+ "sameAs":["https://twitter.com/acme","https://www.linkedin.com/company/acme"]}
+</script>
+</head>
+<body>
+<nav>Accueil Produits Contact Blog</nav>
+<main>
+<h1>Guide Complet</h1>
+<p>Paris et Berlin sont des Villes Européennes importantes pour Acme Corporation.</p>
+<a href="https://doi.org/10.1000/xyz">Source</a>
+<a href="https://github.com/acme">GitHub</a>
+</main>
+<footer>Mentions Copyright Acme</footer>
+</body></html>"""
+
+
+def test_extract_content_date_is_latest() -> None:
+    s = extract_page_signals("https://example.com/", _GEO_HTML)
+    assert s.content_date == "2026-06-10"  # max(datePublished, dateModified)
+
+
+def test_extract_external_link_domains() -> None:
+    s = extract_page_signals("https://example.com/", _GEO_HTML)
+    assert s.external_link_domains == ["doi.org", "github.com"]
+
+
+def test_extract_social_platforms() -> None:
+    # github (lien) + twitter/linkedin (sameAs JSON-LD).
+    s = extract_page_signals("https://example.com/", _GEO_HTML)
+    assert s.social_platforms == ["github", "linkedin", "twitter"]
+
+
+def test_extract_entity_count_heuristic() -> None:
+    s = extract_page_signals("https://example.com/", _GEO_HTML)
+    assert s.entity_count >= 5  # heuristique : tokens capitalisés distincts
+
+
+def test_extract_main_text_ratio_excludes_boilerplate() -> None:
+    s = extract_page_signals("https://example.com/", _GEO_HTML)
+    assert s.main_text_ratio is not None
+    assert 0.0 < s.main_text_ratio < 1.0  # nav + footer hors contenu principal
+
+
+def test_extract_main_text_ratio_without_main_landmark() -> None:
+    html = "<html><body><nav>Menu Accueil Contact</nav><p>" + ("mot " * 20) + "</p></body></html>"
+    s = extract_page_signals("https://example.com/", html)
+    assert s.main_text_ratio is not None
+    assert s.main_text_ratio < 1.0  # boilerplate <nav> retiré du contenu

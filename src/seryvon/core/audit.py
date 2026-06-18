@@ -155,6 +155,7 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
     bundle = SignalBundle(
         domain=discovery.domain,
         signal_schema_version=SIGNAL_SCHEMA_VERSION,
+        audited_at=started,
         pages=pages,
         site=SiteSignals(
             robots_found=discovery.robots_found,

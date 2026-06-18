@@ -15,14 +15,17 @@ scores — propriété testée explicitement (document 03, §9).
 Le `signal_schema_version` est incrémenté à chaque évolution de structure
 (2 = bloc `aso` ; 3 = signaux M3.1 OG/Twitter/hreflang/liens/`site` ;
 4 = signaux M3.2 GSO/AEO on-page + ASO statique peuplé ;
-5 = accès des bots d'agents dans `site` ; 6 = statut NLWeb dans `external`).
+5 = accès des bots d'agents dans `site` ; 6 = statut NLWeb dans `external` ;
+7 = signaux M3.3 cœur GEO on-page + `audited_at`).
 """
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 6
+SIGNAL_SCHEMA_VERSION = 7
 
 
 class WebMcpSignals(BaseModel):
@@ -92,6 +95,13 @@ class PageSignals(BaseModel):
     author_has_credentials: bool = False  # Person avec credentials (jobTitle, sameAs…)
     has_structured_dates: bool = False  # datePublished / dateModified en JSON-LD
 
+    # Signaux on-page M3.3 (cœur GEO) — alimentent le pilier GEO.
+    main_text_ratio: float | None = None  # contenu principal / texte total (noise_ratio)
+    entity_count: int = 0  # entités distinctes estimées (heuristique, DG1)
+    external_link_domains: list[str] = Field(default_factory=list)  # domaines sortants distincts
+    content_date: str | None = None  # date structurée la plus récente (ISO 8601) pour freshness
+    social_platforms: list[str] = Field(default_factory=list)  # plateformes liées (sameAs/sociaux)
+
     aso: AsoSignals = Field(default_factory=AsoSignals)
 
 
@@ -132,6 +142,8 @@ class SignalBundle(BaseModel):
 
     domain: str
     signal_schema_version: int = SIGNAL_SCHEMA_VERSION
+    # Date de référence de l'audit (figée) : base déterministe de geo.freshness (DG2).
+    audited_at: datetime | None = None
     pages: list[PageSignals] = Field(default_factory=list)
     site: SiteSignals = Field(default_factory=SiteSignals)
     external: ExternalSignals = Field(default_factory=ExternalSignals)
