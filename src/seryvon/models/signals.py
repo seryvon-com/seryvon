@@ -15,14 +15,14 @@ scores — propriété testée explicitement (document 03, §9).
 Le `signal_schema_version` est incrémenté à chaque évolution de structure
 (2 = bloc `aso` ; 3 = signaux M3.1 OG/Twitter/hreflang/liens/`site` ;
 4 = signaux M3.2 GSO/AEO on-page + ASO statique peuplé ;
-5 = accès des bots d'agents dans `site`).
+5 = accès des bots d'agents dans `site` ; 6 = statut NLWeb dans `external`).
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 5
+SIGNAL_SCHEMA_VERSION = 6
 
 
 class WebMcpSignals(BaseModel):
@@ -110,6 +110,7 @@ class ExternalSignals(BaseModel):
     llm_citations: dict[str, float] | None = None
     ai_overview_presence: float | None = None
     ai_discovery_endpoints: dict[str, bool] | None = None
+    nlweb_status: str | None = None  # "conformant" / "present" / "absent"
     blocked_agent_bots: list[str] | None = None
     brand_coherence: dict[str, float] | None = None
 

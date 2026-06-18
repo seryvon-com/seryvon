@@ -10,6 +10,21 @@ import pytest
 from seryvon.models.signals import PageSignals, SignalBundle
 
 
+@pytest.fixture(autouse=True)
+def _stub_agentic_probes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Neutralise les sondes réseau ASO (ai discovery / NLWeb) dans tous les tests."""
+    from seryvon.core import audit as audit_module
+
+    async def _no_discovery(origin: str, **kwargs: object) -> dict[str, bool]:
+        return {}
+
+    async def _no_nlweb(origin: str, **kwargs: object) -> str:
+        return "absent"
+
+    monkeypatch.setattr(audit_module, "probe_ai_discovery", _no_discovery, raising=False)
+    monkeypatch.setattr(audit_module, "probe_nlweb", _no_nlweb, raising=False)
+
+
 @pytest.fixture
 def sample_html() -> str:
     """HTML minimal mais réaliste, avec title optimal et un bloc JSON-LD."""

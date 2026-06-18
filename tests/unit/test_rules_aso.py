@@ -6,12 +6,21 @@
 from __future__ import annotations
 
 from seryvon.models.enums import Status
-from seryvon.models.signals import AsoSignals, PageSignals, SignalBundle, SiteSignals, WebMcpSignals
+from seryvon.models.signals import (
+    AsoSignals,
+    ExternalSignals,
+    PageSignals,
+    SignalBundle,
+    SiteSignals,
+    WebMcpSignals,
+)
 from seryvon.scoring.rules.aso import (
     AsoAccessibleFormsCriterion,
     AsoActionSchemaCriterion,
     AsoAgentAccessCriterion,
+    AsoAiDiscoveryCriterion,
     AsoMcpReadinessCriterion,
+    AsoNlwebCriterion,
     AsoOpenApiCriterion,
     AsoPotentialActionsCriterion,
 )
@@ -112,3 +121,40 @@ def test_agent_access_degressive() -> None:
 def test_agent_access_not_measured_when_unchecked() -> None:
     bundle = SignalBundle(domain="ex.com", site=SiteSignals(agent_bots_checked=0))
     assert AsoAgentAccessCriterion().evaluate(bundle).status is Status.NOT_MEASURED
+
+
+# --------------------------------------------------------------------------- #
+# aso.ai_discovery / aso.nlweb (sondes légères)                               #
+# --------------------------------------------------------------------------- #
+def test_ai_discovery_ratio() -> None:
+    two_valid = SignalBundle(
+        domain="ex.com",
+        external=ExternalSignals(
+            ai_discovery_endpoints={"ai_txt": True, "summary": True, "faq": False, "service": False}
+        ),
+    )
+    assert AsoAiDiscoveryCriterion().evaluate(two_valid).score == 50.0  # 2/4
+    full = SignalBundle(
+        domain="ex.com",
+        external=ExternalSignals(
+            ai_discovery_endpoints={"ai_txt": True, "summary": True, "faq": True, "service": True}
+        ),
+    )
+    assert AsoAiDiscoveryCriterion().evaluate(full).score == 100.0
+
+
+def test_ai_discovery_not_measured_when_not_probed() -> None:
+    assert (
+        AsoAiDiscoveryCriterion().evaluate(SignalBundle(domain="ex.com")).status
+        is Status.NOT_MEASURED
+    )
+
+
+def test_nlweb_levels() -> None:
+    def _bundle_nlweb(status: str) -> SignalBundle:
+        return SignalBundle(domain="ex.com", external=ExternalSignals(nlweb_status=status))
+
+    assert AsoNlwebCriterion().evaluate(_bundle_nlweb("conformant")).score == 100
+    assert AsoNlwebCriterion().evaluate(_bundle_nlweb("present")).score == 50
+    assert AsoNlwebCriterion().evaluate(_bundle_nlweb("absent")).score == 0
+    assert AsoNlwebCriterion().evaluate(SignalBundle(domain="ex.com")).status is Status.NOT_MEASURED

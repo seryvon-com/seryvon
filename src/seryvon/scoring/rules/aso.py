@@ -25,6 +25,7 @@ from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
 
+_AI_DISCOVERY_ENDPOINTS = 4  # ai.txt + /ai/summary|faq|service.json (document 11 §4.3)
 # Actions JSON-LD réellement « exécutables » par un agent (vs simple SearchAction).
 _EXECUTABLE_ACTIONS = {
     "BuyAction",
@@ -205,6 +206,67 @@ class AsoOpenApiCriterion(Criterion):
             threshold={"present": "lien openapi/swagger/api-docs"},
             explanation=f"API documentée exposée : {links}." if links else "Aucune API documentée.",
             evidence=_HTML_SOURCE,
+            weight=self.weight,
+        )
+
+
+@register
+class AsoAiDiscoveryCriterion(Criterion):
+    """Endpoints de découverte IA (`aso.ai_discovery`) : (valides / 4) × 100."""
+
+    key = "aso.ai_discovery"
+    pillars: ClassVar[list[str]] = ["aso"]
+    weight = 1.4
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        endpoints = signals.external.ai_discovery_endpoints
+        if endpoints is None:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, "Endpoints de découverte IA non sondés."
+            )
+        valid = sum(1 for ok in endpoints.values() if ok)
+        score = round(valid / _AI_DISCOVERY_ENDPOINTS * 100, 2)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={"endpoints": endpoints, "valid": valid},
+            score=score,
+            status=status_from_score(score),
+            threshold={"endpoints": _AI_DISCOVERY_ENDPOINTS},
+            explanation=f"{valid}/{_AI_DISCOVERY_ENDPOINTS} endpoint(s) de découverte IA valides.",
+            evidence={"source": "ai.txt + /ai/*.json"},
+            weight=self.weight,
+        )
+
+
+@register
+class AsoNlwebCriterion(Criterion):
+    """NLWeb readiness (`aso.nlweb`) : conforme (100) / présent (50) / absent (0)."""
+
+    key = "aso.nlweb"
+    pillars: ClassVar[list[str]] = ["aso"]
+    weight = 1.0
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        status = signals.external.nlweb_status
+        if status is None:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, "Endpoint NLWeb non sondé."
+            )
+        score = {"conformant": 100.0, "present": 50.0, "absent": 0.0}.get(status, 0.0)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={"nlweb": status},
+            score=score,
+            status=status_from_score(score),
+            threshold={"levels": "conformant/present/absent"},
+            explanation=f"Endpoint NLWeb : {status}.",
+            evidence={"source": "sonde /ask"},
             weight=self.weight,
         )
 

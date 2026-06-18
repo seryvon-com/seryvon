@@ -5,6 +5,7 @@ pure, mappée dans `ExternalSignals`. Un connecteur non configuré (pas de clé)
 critères dépendants `not_measured` (jamais d'estimation).
 """
 
+from seryvon.connectors.ai_discovery import probe_ai_discovery, probe_nlweb
 from seryvon.connectors.openpagerank import (
     OpenPageRankResult,
     fetch_openpagerank,
@@ -19,4 +20,6 @@ __all__ = [
     "fetch_pagespeed",
     "parse_openpagerank",
     "parse_pagespeed",
+    "probe_ai_discovery",
+    "probe_nlweb",
 ]

@@ -20,7 +20,12 @@ import json
 from datetime import UTC, datetime
 
 from seryvon import PILLARS, __version__
-from seryvon.connectors import fetch_openpagerank, fetch_pagespeed
+from seryvon.connectors import (
+    fetch_openpagerank,
+    fetch_pagespeed,
+    probe_ai_discovery,
+    probe_nlweb,
+)
 from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.crawler.discovery import AGENT_BOTS, blocked_agent_bots
@@ -95,6 +100,11 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         timeout=settings.request_timeout,
     )
     external = await _collect_external(discovery.domain, pages, settings)
+    # Sondes de découverte agentique (gratuites, sans clé) — pilier ASO.
+    external.ai_discovery_endpoints = await probe_ai_discovery(
+        discovery.origin, timeout=settings.request_timeout
+    )
+    external.nlweb_status = await probe_nlweb(discovery.origin, timeout=settings.request_timeout)
     bundle = SignalBundle(
         domain=discovery.domain,
         signal_schema_version=SIGNAL_SCHEMA_VERSION,
