@@ -5,11 +5,11 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Règles du pilier AEO (Answer Engine Optimization), document 04 §5.
+"""AEO pillar rules (Answer Engine Optimization), document 04 §5.
 
-Critères on-page mesurables (crédibilité auteur, About, définitions, dates,
-tableaux, réponse directe). `aeo.kg_presence` (Wikidata) est `not_measured`
-jusqu'au connecteur de la slice 7 ; `aeo.llm_citation` jusqu'au M4 (Phase 3).
+Measurable on-page criteria (author credibility, About, definitions, dates,
+tables, direct answer). `aeo.kg_presence` (Wikidata) is `not_measured` until the
+slice-7 connector; `aeo.llm_citation` until M4 (Phase 3).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
 
-# Indices d'URL/titre d'une page « À propos / transparence éditoriale ».
+# URL/title hints of an "About / editorial transparency" page.
 _ABOUT_HINTS = (
     "about",
     "propos",
@@ -32,13 +32,13 @@ _ABOUT_HINTS = (
     "équipe",
     "mentions",
 )
-_LEAD_MIN_WORDS = 20  # paragraphe d'accroche « réponse directe »
+_LEAD_MIN_WORDS = 20  # "direct answer" lead paragraph
 
 
 def _flag(
     *, key: str, pillars: list[str], weight: float, present: bool, label: str
 ) -> CriterionResult:
-    """Résultat de présence binaire (100/0) traçable."""
+    """Traceable binary-presence result (100/0)."""
     score = 100.0 if present else 0.0
     return CriterionResult(
         key=key,
@@ -59,7 +59,7 @@ def _is_about_page(page: PageSignals) -> bool:
 
 @register
 class AeoAuthorCredentialsCriterion(Criterion):
-    """Credentials d'auteur (`aeo.author_credentials`) : auteur identifiable + qualifié."""
+    """Author credentials (`aeo.author_credentials`): identifiable + qualified author."""
 
     key = "aeo.author_credentials"
     pillars: ClassVar[list[str]] = ["aeo"]
@@ -97,7 +97,7 @@ class AeoAuthorCredentialsCriterion(Criterion):
 
 @register
 class AeoAboutPageCriterion(Criterion):
-    """Transparence éditoriale (`aeo.about_page`) : présence d'une page À propos."""
+    """Editorial transparency (`aeo.about_page`): presence of an About page."""
 
     key = "aeo.about_page"
     pillars: ClassVar[list[str]] = ["aeo"]
@@ -127,7 +127,7 @@ class AeoAboutPageCriterion(Criterion):
 
 @register
 class AeoDefinedTermsCriterion(Criterion):
-    """Définitions atomiques (`aeo.defined_terms`) : DefinedTerm ou glossaire <dl>."""
+    """Atomic definitions (`aeo.defined_terms`): DefinedTerm or <dl> glossary."""
 
     key = "aeo.defined_terms"
     pillars: ClassVar[list[str]] = ["aeo"]
@@ -155,7 +155,7 @@ class AeoDefinedTermsCriterion(Criterion):
 
 @register
 class AeoDatesStructuredCriterion(Criterion):
-    """Dates structurées (`aeo.dates_structured`) : datePublished/dateModified (tag geo)."""
+    """Structured dates (`aeo.dates_structured`): datePublished/dateModified (geo tag)."""
 
     key = "aeo.dates_structured"
     pillars: ClassVar[list[str]] = ["aeo", "geo"]
@@ -180,7 +180,7 @@ class AeoDatesStructuredCriterion(Criterion):
 
 @register
 class AeoComparisonTablesCriterion(Criterion):
-    """Tableaux comparatifs (`aeo.comparison_tables`)."""
+    """Comparison tables (`aeo.comparison_tables`)."""
 
     key = "aeo.comparison_tables"
     pillars: ClassVar[list[str]] = ["aeo"]
@@ -205,7 +205,7 @@ class AeoComparisonTablesCriterion(Criterion):
 
 @register
 class AeoAnswerDirectnessCriterion(Criterion):
-    """Réponses directes (`aeo.answer_directness`) : paragraphe-réponse en tête (tag gso)."""
+    """Direct answers (`aeo.answer_directness`): lead answer paragraph up top (gso tag)."""
 
     key = "aeo.answer_directness"
     pillars: ClassVar[list[str]] = ["aeo", "gso"]
@@ -236,10 +236,10 @@ class AeoAnswerDirectnessCriterion(Criterion):
 
 @register
 class AeoKgPresenceCriterion(Criterion):
-    """Présence dans le graphe de connaissances (`aeo.kg_presence`) — Wikidata.
+    """Knowledge-graph presence (`aeo.kg_presence`) — Wikidata.
 
-    `not_measured` tant que le connecteur Wikidata n'est pas câblé (slice 7).
-    Tags geo + aso : l'entité KG est ce qu'un agent résout en premier.
+    `not_measured` until the Wikidata connector is wired (slice 7). Tags geo + aso:
+    the KG entity is what an agent resolves first.
     """
 
     key = "aeo.kg_presence"
@@ -265,10 +265,10 @@ class AeoKgPresenceCriterion(Criterion):
 
 @register
 class AeoLlmCitationCriterion(Criterion):
-    """Citation par les answer engines (`aeo.llm_citation`) — mesuré par M4 (Phase 3).
+    """Citation by answer engines (`aeo.llm_citation`) — measured by M4 (Phase 3).
 
-    Lit la *retrieval citation* agrégée (`external.citation_metrics.citation_rate`),
-    signal partagé avec `geo.citation_rate` mais rattaché au pilier AEO.
+    Reads the aggregated *retrieval citation* (`external.citation_metrics.citation_rate`),
+    a signal shared with `geo.citation_rate` but attached to the AEO pillar.
     """
 
     key = "aeo.llm_citation"

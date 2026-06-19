@@ -5,12 +5,12 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Règles de performance (Core Web Vitals + Lighthouse), alimentées par PSI.
+"""Performance rules (Core Web Vitals + Lighthouse), fed by PSI.
 
-Critères `perf.*` du document 04 §2. Ils ne lisent que `signals.external`
-(rempli par le connecteur PageSpeed Insights) ; absents => `not_measured`
-(jamais d'estimation). Seuils = bandes officielles Google (good / needs-
-improvement / poor). Multi-piliers seo + gso (la perf compte pour les deux).
+`perf.*` criteria from document 04 §2. They read only `signals.external`
+(filled by the PageSpeed Insights connector); absent => `not_measured` (never
+estimated). Thresholds = Google's official bands (good / needs-improvement /
+poor). Multi-pillar seo + gso (performance counts for both).
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ _PSI_SOURCE: dict[str, Any] = {"source": "PageSpeed Insights (CrUX field data)"}
 
 
 class CoreWebVitalCriterion(Criterion):
-    """Base d'un Core Web Vital : 100 si ≤ `good`, 50 si ≤ `poor`, 0 sinon."""
+    """Base of a Core Web Vital: 100 if <= `good`, 50 if <= `poor`, 0 otherwise."""
 
     metric: ClassVar[str]
     good: ClassVar[float]
@@ -65,7 +65,7 @@ class CoreWebVitalCriterion(Criterion):
 
 @register
 class PerfLcpCriterion(CoreWebVitalCriterion):
-    """Largest Contentful Paint (`perf.lcp`) : bon ≤ 2500 ms."""
+    """Largest Contentful Paint (`perf.lcp`): good <= 2500 ms."""
 
     key = "perf.lcp"
     pillars: ClassVar[list[str]] = ["seo", "gso"]
@@ -78,7 +78,7 @@ class PerfLcpCriterion(CoreWebVitalCriterion):
 
 @register
 class PerfClsCriterion(CoreWebVitalCriterion):
-    """Cumulative Layout Shift (`perf.cls`) : bon ≤ 0.1."""
+    """Cumulative Layout Shift (`perf.cls`): good <= 0.1."""
 
     key = "perf.cls"
     pillars: ClassVar[list[str]] = ["seo", "gso"]
@@ -90,7 +90,7 @@ class PerfClsCriterion(CoreWebVitalCriterion):
 
 @register
 class PerfInpCriterion(CoreWebVitalCriterion):
-    """Interaction to Next Paint (`perf.inp`) : bon ≤ 200 ms."""
+    """Interaction to Next Paint (`perf.inp`): good <= 200 ms."""
 
     key = "perf.inp"
     pillars: ClassVar[list[str]] = ["seo", "gso"]
@@ -103,7 +103,7 @@ class PerfInpCriterion(CoreWebVitalCriterion):
 
 @register
 class PerfLighthouseCriterion(Criterion):
-    """Score de performance Lighthouse (`perf.lighthouse`) : score labo ×100."""
+    """Lighthouse performance score (`perf.lighthouse`): lab score ×100."""
 
     key = "perf.lighthouse"
     pillars: ClassVar[list[str]] = ["seo", "gso"]

@@ -5,20 +5,20 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Catalogue des règles de scoring du pilier SEO (document 04, §2).
+"""Catalog of SEO pillar scoring rules (document 04, §2).
 
-Agrégation multi-pages :
-- critères *page-level* (title, description, h1, schema…) : score = moyenne des
-  scores par page (`PageCriterion`) ; `not_measured` si aucune page crawlée ;
-- critères *site-level* (unicité des titles, orphelines, indexabilité, HTTPS,
-  sitemap, alt) : calcul direct sur l'ensemble du crawl.
+Multi-page aggregation:
+- *page-level* criteria (title, description, h1, schema…): score = mean of the
+  per-page scores (`PageCriterion`); `not_measured` if no page was crawled;
+- *site-level* criteria (title uniqueness, orphans, indexability, HTTPS,
+  sitemap, alt): computed directly over the whole crawl.
 
-Déterminisme : `evaluate(signals, thresholds)` ne lit que le `SignalBundle` et
-les seuils (aucune I/O) ; les sorties (listes d'évidence) sont triées. Les seuils
-surchargeables passent par `thresholds` (ex. `content.depth.target_words`).
+Determinism: `evaluate(signals, thresholds)` reads only the `SignalBundle` and
+the thresholds (no I/O); outputs (evidence lists) are sorted. Overridable
+thresholds flow through `thresholds` (e.g. `content.depth.target_words`).
 
-`struct.schema` porte les tags multi-piliers gso/aeo/aso (Phase 2) ; les règles
-`perf.*` (module `perf.py`) portent seo + gso.
+`struct.schema` carries the multi-pillar tags gso/aeo/aso (Phase 2); the `perf.*`
+rules (module `perf.py`) carry seo + gso.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig
 from seryvon.models.enums import STATUS_OK_THRESHOLD, status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
 
-# Seuils par défaut (document 04, §2).
+# Default thresholds (document 04, §2).
 TITLE_MIN_LEN, TITLE_MAX_LEN = 30, 60
 DESC_MIN_LEN, DESC_MAX_LEN = 120, 158
 CONTENT_MIN_WORDS = 800
@@ -46,23 +46,23 @@ _MAX_EVIDENCE = 10  # nombre max d'URLs listées en évidence
 
 
 def _mean(values: list[float]) -> float:
-    """Moyenne arrondie d'une liste de scores (0.0 si vide)."""
+    """Rounded mean of a list of scores (0.0 if empty)."""
     return round(sum(values) / len(values), 2) if values else 0.0
 
 
 def _is_indexable(meta_robots: str | None) -> bool:
-    """Indexable si aucune directive `noindex` n'est présente."""
+    """Indexable if no `noindex` directive is present."""
     return meta_robots is None or "noindex" not in meta_robots.lower()
 
 
 # --------------------------------------------------------------------------- #
-# Base des critères page-level                                                 #
+# Page-level criteria base                                                     #
 # --------------------------------------------------------------------------- #
 class PageCriterion(Criterion):
-    """Critère évalué par page ; score d'audit = moyenne des scores par page.
+    """Criterion evaluated per page; audit score = mean of the per-page scores.
 
-    Sous-classer et implémenter `score_page` (formule du document 04).
-    `not_measured` si aucune page n'a été crawlée.
+    Subclass and implement `score_page` (formula from document 04).
+    `not_measured` if no page was crawled.
     """
 
     threshold: ClassVar[dict[str, Any]] = {}
@@ -78,7 +78,7 @@ class PageCriterion(Criterion):
         *,
         threshold: dict[str, Any] | None = None,
     ) -> CriterionResult:
-        """Moyenne des scores par page + évidence des pages non conformes."""
+        """Mean of the per-page scores + evidence of the non-conformant pages."""
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
@@ -110,11 +110,11 @@ class PageCriterion(Criterion):
 
 
 # --------------------------------------------------------------------------- #
-# Métadonnées                                                                  #
+# Metadata                                                                     #
 # --------------------------------------------------------------------------- #
 @register
 class MetaTitleCriterion(PageCriterion):
-    """Présence et longueur de la balise <title> (`meta.title`)."""
+    """Presence and length of the <title> tag (`meta.title`)."""
 
     key = "meta.title"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -134,7 +134,7 @@ class MetaTitleCriterion(PageCriterion):
 
 @register
 class MetaDescriptionCriterion(PageCriterion):
-    """Présence et longueur de la meta description (`meta.description`)."""
+    """Presence and length of the meta description (`meta.description`)."""
 
     key = "meta.description"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -154,7 +154,7 @@ class MetaDescriptionCriterion(PageCriterion):
 
 @register
 class MetaCanonicalCriterion(PageCriterion):
-    """Présence et validité de la balise canonical (`meta.canonical`)."""
+    """Presence and validity of the canonical tag (`meta.canonical`)."""
 
     key = "meta.canonical"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -171,7 +171,7 @@ class MetaCanonicalCriterion(PageCriterion):
 
 @register
 class MetaRobotsCriterion(PageCriterion):
-    """Directive meta robots : la page est-elle indexable (`meta.robots`) ?"""
+    """Meta robots directive: is the page indexable (`meta.robots`)?"""
 
     key = "meta.robots"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -185,7 +185,7 @@ class MetaRobotsCriterion(PageCriterion):
 
 @register
 class MetaTitleUniqueCriterion(Criterion):
-    """Unicité des titles sur l'ensemble des pages (`meta.title_unique`)."""
+    """Title uniqueness across all pages (`meta.title_unique`)."""
 
     key = "meta.title_unique"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -215,11 +215,11 @@ class MetaTitleUniqueCriterion(Criterion):
 
 
 # --------------------------------------------------------------------------- #
-# Métadonnées sociales                                                         #
+# Social metadata                                                              #
 # --------------------------------------------------------------------------- #
 @register
 class OpenGraphCriterion(PageCriterion):
-    """Complétude des balises Open Graph (`og.complete`)."""
+    """Completeness of the Open Graph tags (`og.complete`)."""
 
     key = "og.complete"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -234,7 +234,7 @@ class OpenGraphCriterion(PageCriterion):
 
 @register
 class TwitterCardCriterion(PageCriterion):
-    """Présence des Twitter Cards (`twitter.cards`)."""
+    """Presence of the Twitter Cards (`twitter.cards`)."""
 
     key = "twitter.cards"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -250,11 +250,11 @@ class TwitterCardCriterion(PageCriterion):
 
 
 # --------------------------------------------------------------------------- #
-# Structure sémantique                                                         #
+# Semantic structure                                                           #
 # --------------------------------------------------------------------------- #
 @register
 class StructH1Criterion(PageCriterion):
-    """Unicité du H1 (`struct.h1`) : exactement un par page."""
+    """H1 uniqueness (`struct.h1`): exactly one per page."""
 
     key = "struct.h1"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -270,9 +270,9 @@ class StructH1Criterion(PageCriterion):
 
 @register
 class StructHierarchyCriterion(PageCriterion):
-    """Cohérence de la hiérarchie Hn (`struct.hierarchy`).
+    """Heading hierarchy coherence (`struct.hierarchy`).
 
-    Cohérente = exactement un H1 et aucun niveau sauté (h2 -> h4 interdit).
+    Coherent = exactly one H1 and no skipped level (h2 -> h4 forbidden).
     """
 
     key = "struct.hierarchy"
@@ -292,11 +292,11 @@ class StructHierarchyCriterion(PageCriterion):
 
 
 # --------------------------------------------------------------------------- #
-# Contenu                                                                      #
+# Content                                                                      #
 # --------------------------------------------------------------------------- #
 @register
 class ContentDepthCriterion(PageCriterion):
-    """Profondeur de contenu (`content.depth`) : ≥ 800 mots = optimal."""
+    """Content depth (`content.depth`): >= 800 words = optimal."""
 
     key = "content.depth"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -306,7 +306,7 @@ class ContentDepthCriterion(PageCriterion):
 
     @staticmethod
     def _target_words(thresholds: ThresholdConfig | None) -> float:
-        """Seuil de mots : surcharge `content.depth.target_words` ou défaut 800."""
+        """Word threshold: `content.depth.target_words` override or default 800."""
         section = thresholds.get("content.depth") if thresholds else None
         value = section.get("target_words") if section else None
         if isinstance(value, int | float) and value > 0:
@@ -326,7 +326,7 @@ class ContentDepthCriterion(PageCriterion):
 
 @register
 class ContentTextRatioCriterion(PageCriterion):
-    """Ratio texte/code (`content.text_ratio`) : ≥ 0.15 = optimal."""
+    """Text/code ratio (`content.text_ratio`): >= 0.15 = optimal."""
 
     key = "content.text_ratio"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -343,10 +343,10 @@ class ContentTextRatioCriterion(PageCriterion):
 
 @register
 class StructSchemaCriterion(PageCriterion):
-    """Présence de données structurées JSON-LD (`struct.schema`).
+    """Presence of JSON-LD structured data (`struct.schema`).
 
-    Multi-piliers : la donnée structurée est la fondation que SEO, GSO, AEO et
-    les agents (ASO) consomment.
+    Multi-pillar: structured data is the foundation that SEO, GSO, AEO and agents
+    (ASO) all consume.
     """
 
     key = "struct.schema"
@@ -360,11 +360,11 @@ class StructSchemaCriterion(PageCriterion):
 
 
 # --------------------------------------------------------------------------- #
-# Maillage interne                                                             #
+# Internal linking                                                             #
 # --------------------------------------------------------------------------- #
 @register
 class LinksInternalCriterion(PageCriterion):
-    """Volume de liens internes par page (`links.internal`) : 3 à 100."""
+    """Internal link volume per page (`links.internal`): 3 to 100."""
 
     key = "links.internal"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -378,15 +378,15 @@ class LinksInternalCriterion(PageCriterion):
             return 100.0
         if count == 0:
             return 0.0
-        return 60.0  # trop peu (< 3) ou trop (> 100)
+        return 60.0  # too few (< 3) or too many (> 100)
 
 
 @register
 class LinksOrphansCriterion(Criterion):
-    """Pages orphelines (`links.orphans`) : sans lien interne entrant.
+    """Orphan pages (`links.orphans`): without an inbound internal link.
 
-    `not_measured` si moins de deux pages (pas de maillage à évaluer). La home
-    (première page) n'est jamais considérée orpheline.
+    `not_measured` if fewer than two pages (no link graph to evaluate). The home
+    (first page) is never considered an orphan.
     """
 
     key = "links.orphans"
@@ -421,13 +421,13 @@ class LinksOrphansCriterion(Criterion):
 
 
 # --------------------------------------------------------------------------- #
-# Accessibilité technique                                                      #
+# Technical accessibility                                                      #
 # --------------------------------------------------------------------------- #
 @register
 class ImgAltCriterion(Criterion):
-    """Couverture des attributs alt (`img.alt`) : % d'images avec alt.
+    """Alt-attribute coverage (`img.alt`): % of images with alt.
 
-    `not_measured` si le site ne contient aucune image.
+    `not_measured` if the site contains no image.
     """
 
     key = "img.alt"
@@ -458,11 +458,11 @@ class ImgAltCriterion(Criterion):
 
 
 # --------------------------------------------------------------------------- #
-# Crawl & indexabilité                                                         #
+# Crawl & indexability                                                         #
 # --------------------------------------------------------------------------- #
 @register
 class CrawlIndexableCriterion(Criterion):
-    """Indexabilité (`crawl.indexable`) : % de pages HTTP 200 et sans noindex."""
+    """Indexability (`crawl.indexable`): % of pages that are HTTP 200 and not noindex."""
 
     key = "crawl.indexable"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -493,7 +493,7 @@ class CrawlIndexableCriterion(Criterion):
 
 @register
 class CrawlSitemapCriterion(Criterion):
-    """Présence et validité d'un sitemap (`crawl.sitemap`)."""
+    """Presence and validity of a sitemap (`crawl.sitemap`)."""
 
     key = "crawl.sitemap"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -526,7 +526,7 @@ class CrawlSitemapCriterion(Criterion):
 
 @register
 class CrawlHttpsCriterion(Criterion):
-    """Sécurisation HTTPS (`crawl.https`) : % de pages servies en HTTPS."""
+    """HTTPS security (`crawl.https`): % of pages served over HTTPS."""
 
     key = "crawl.https"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -557,7 +557,7 @@ class CrawlHttpsCriterion(Criterion):
 
 @register
 class CrawlRedirectsCriterion(PageCriterion):
-    """Chaînes de redirection (`crawl.redirects`) : ≤ 1 saut = optimal."""
+    """Redirect chains (`crawl.redirects`): <= 1 hop = optimal."""
 
     key = "crawl.redirects"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -572,14 +572,14 @@ class CrawlRedirectsCriterion(PageCriterion):
 
 
 # --------------------------------------------------------------------------- #
-# Internationalisation                                                         #
+# Internationalization                                                         #
 # --------------------------------------------------------------------------- #
 @register
 class HreflangCriterion(Criterion):
-    """Cohérence hreflang (`i18n.hreflang`).
+    """hreflang coherence (`i18n.hreflang`).
 
-    `not_measured` si aucun hreflang n'est déclaré (site monolingue présumé,
-    décision validée). Sinon : cohérent si `x-default` est présent.
+    `not_measured` if no hreflang is declared (assumed monolingual site, validated
+    decision). Otherwise: coherent if `x-default` is present.
     """
 
     key = "i18n.hreflang"

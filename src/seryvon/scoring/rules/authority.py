@@ -5,14 +5,14 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Règles d'autorité de domaine (sous-domaine SEO « backlinks & autorité »).
+"""Domain-authority rules (SEO "backlinks & authority" sub-area).
 
-- `authority.opr` : proxy d'autorité OpenPageRank (0–10 -> ×10). `not_measured`
-  sans clé OPR.
-- `authority.backlinks` : domaines référents, échelle log normalisée. Aucune
-  source gratuite n'est câblée en v0.1 (Common Crawl en backlog) -> la règle lit
-  `external.referring_domains`, qui reste `None` => `not_measured` (décision D3,
-  jamais d'estimation). La règle est néanmoins prête pour un futur connecteur.
+- `authority.opr`: OpenPageRank authority proxy (0–10 -> ×10). `not_measured`
+  without an OPR key.
+- `authority.backlinks`: referring domains, normalized log scale. No free source
+  is wired in v0.1 (Common Crawl in the backlog) -> the rule reads
+  `external.referring_domains`, which stays `None` => `not_measured` (decision D3,
+  never estimated). The rule is nonetheless ready for a future connector.
 """
 
 from __future__ import annotations
@@ -24,13 +24,13 @@ from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import SignalBundle
 
-# Échelle log : ~10 000 domaines référents -> score 100 (log10(10001) ≈ 4).
+# Log scale: ~10,000 referring domains -> score 100 (log10(10001) ≈ 4).
 _BACKLINKS_LOG_FACTOR = 25.0
 
 
 @register
 class AuthorityOprCriterion(Criterion):
-    """Autorité de domaine via OpenPageRank (`authority.opr`) : PageRank ×10."""
+    """Domain authority via OpenPageRank (`authority.opr`): PageRank ×10."""
 
     key = "authority.opr"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -60,10 +60,10 @@ class AuthorityOprCriterion(Criterion):
 
 @register
 class AuthorityBacklinksCriterion(Criterion):
-    """Domaines référents (`authority.backlinks`), échelle log normalisée.
+    """Referring domains (`authority.backlinks`), normalized log scale.
 
-    `not_measured` en v0.1 : aucune source de backlinks gratuite n'est câblée
-    (décision D3). La règle est prête pour un connecteur ultérieur (Common Crawl).
+    `not_measured` in v0.1: no free backlink source is wired (decision D3). The
+    rule is ready for a later connector (Common Crawl).
     """
 
     key = "authority.backlinks"

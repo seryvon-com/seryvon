@@ -5,16 +5,16 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Règles du pilier ASO (Agentic Search Optimization) — statique, document 04 §6.
+"""ASO pillar rules (Agentic Search Optimization) — static, document 04 §6.
 
-Le différenciateur : aptitude d'un site à être découvert, parsé et choisi par des
-agents autonomes. Logique de readiness transposée de `audit_webmcp.py`
-(GEO Optimizer, MIT — Juan Camilo Auriti ; voir NOTICE). Tous les signaux sont
-extraits par M3.2 (bloc `AsoSignals`) ou dérivés de robots.txt (M1) — zéro fetch.
+The differentiator: a site's ability to be discovered, parsed and chosen by
+autonomous agents. The readiness logic is adapted from `audit_webmcp.py`
+(GEO Optimizer, MIT — Juan Camilo Auriti; see NOTICE). All signals are extracted
+by M3.2 (the `AsoSignals` block) or derived from robots.txt (M1) — zero fetch.
 
-Slice 4 : mcp_readiness, potential_actions, action_schema, accessible_forms,
-openapi, agent_access. Les critères à fetch (ai_discovery, nlweb) et brand_coherence
-(Wikidata) arrivent aux slices suivantes ; `aso.agent_selection_rate` est v2.
+Slice 4: mcp_readiness, potential_actions, action_schema, accessible_forms,
+openapi, agent_access. The fetch-based criteria (ai_discovery, nlweb) and
+brand_coherence (Wikidata) come in later slices; `aso.agent_selection_rate` is v2.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from seryvon.models.enums import status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
 
 _AI_DISCOVERY_ENDPOINTS = 4  # ai.txt + /ai/summary|faq|service.json (document 11 §4.3)
-# Actions JSON-LD réellement « exécutables » par un agent (vs simple SearchAction).
+# JSON-LD actions truly "executable" by an agent (vs a plain SearchAction).
 _EXECUTABLE_ACTIONS = {
     "BuyAction",
     "OrderAction",
@@ -38,7 +38,7 @@ _HTML_SOURCE = {"source": "HTML/DOM parsing"}
 
 
 def _union(pages: list[PageSignals], attr: str) -> list[str]:
-    """Union triée et dédupliquée d'un champ liste de l'`AsoSignals` de chaque page."""
+    """Sorted, deduplicated union of a list field of each page's `AsoSignals`."""
     values: set[str] = set()
     for page in pages:
         values.update(getattr(page.aso, attr))
@@ -47,7 +47,7 @@ def _union(pages: list[PageSignals], attr: str) -> list[str]:
 
 @register
 class AsoMcpReadinessCriterion(Criterion):
-    """Readiness WebMCP (`aso.mcp_readiness`) : API impérative ou attributs déclaratifs."""
+    """WebMCP readiness (`aso.mcp_readiness`): imperative API or declarative attributes."""
 
     key = "aso.mcp_readiness"
     pillars: ClassVar[list[str]] = ["aso"]
@@ -85,7 +85,7 @@ class AsoMcpReadinessCriterion(Criterion):
 
 @register
 class AsoPotentialActionsCriterion(Criterion):
-    """Actions exécutables (`aso.potential_actions`) : potentialAction JSON-LD."""
+    """Executable actions (`aso.potential_actions`): JSON-LD potentialAction."""
 
     key = "aso.potential_actions"
     pillars: ClassVar[list[str]] = ["aso"]
@@ -122,7 +122,7 @@ class AsoPotentialActionsCriterion(Criterion):
 
 @register
 class AsoActionSchemaCriterion(Criterion):
-    """Schemas d'action riches (`aso.action_schema`) : Product/Service/Event/HowTo."""
+    """Rich action schemas (`aso.action_schema`): Product/Service/Event/HowTo."""
 
     key = "aso.action_schema"
     pillars: ClassVar[list[str]] = ["aso", "gso"]
@@ -152,7 +152,7 @@ class AsoActionSchemaCriterion(Criterion):
 
 @register
 class AsoAccessibleFormsCriterion(Criterion):
-    """Formulaires agent-usables (`aso.accessible_forms`) : inputs labellisés + action."""
+    """Agent-usable forms (`aso.accessible_forms`): labelled inputs + action."""
 
     key = "aso.accessible_forms"
     pillars: ClassVar[list[str]] = ["aso"]
@@ -182,7 +182,7 @@ class AsoAccessibleFormsCriterion(Criterion):
 
 @register
 class AsoOpenApiCriterion(Criterion):
-    """API documentée exposée (`aso.openapi`) : liens openapi/swagger/api-docs."""
+    """Exposed documented API (`aso.openapi`): openapi/swagger/api-docs links."""
 
     key = "aso.openapi"
     pillars: ClassVar[list[str]] = ["aso"]
@@ -212,7 +212,7 @@ class AsoOpenApiCriterion(Criterion):
 
 @register
 class AsoAiDiscoveryCriterion(Criterion):
-    """Endpoints de découverte IA (`aso.ai_discovery`) : (valides / 4) × 100."""
+    """AI discovery endpoints (`aso.ai_discovery`): (valid / 4) × 100."""
 
     key = "aso.ai_discovery"
     pillars: ClassVar[list[str]] = ["aso"]
@@ -243,7 +243,7 @@ class AsoAiDiscoveryCriterion(Criterion):
 
 @register
 class AsoNlwebCriterion(Criterion):
-    """NLWeb readiness (`aso.nlweb`) : conforme (100) / présent (50) / absent (0)."""
+    """NLWeb readiness (`aso.nlweb`): conformant (100) / present (50) / absent (0)."""
 
     key = "aso.nlweb"
     pillars: ClassVar[list[str]] = ["aso"]
@@ -273,7 +273,7 @@ class AsoNlwebCriterion(Criterion):
 
 @register
 class AsoBrandCoherenceCriterion(Criterion):
-    """Cohérence cross-surface (`aso.brand_coherence`) : site vs Wikidata (tag aeo)."""
+    """Cross-surface coherence (`aso.brand_coherence`): site vs Wikidata (aeo tag)."""
 
     key = "aso.brand_coherence"
     pillars: ClassVar[list[str]] = ["aso", "aeo"]
@@ -306,7 +306,7 @@ class AsoBrandCoherenceCriterion(Criterion):
 
 @register
 class AsoAgentAccessCriterion(Criterion):
-    """Accès des crawlers d'agents (`aso.agent_access`) : robots.txt n'interdit pas les bots."""
+    """Agent crawler access (`aso.agent_access`): robots.txt does not block the bots."""
 
     key = "aso.agent_access"
     pillars: ClassVar[list[str]] = ["aso", "geo"]

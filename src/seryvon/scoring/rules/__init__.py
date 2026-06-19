@@ -5,10 +5,10 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Modules de règles. Les importer ici suffit à les auto-enregistrer (@register).
+"""Rule modules. Importing them here is enough to self-register them (@register).
 
-À mesure que de nouveaux modules de règles sont ajoutés (geo, gso, aeo, aso),
-il suffit de les importer dans ce fichier — le moteur les découvre via `RULES`.
+As new rule modules are added (geo, gso, aeo, aso), simply import them in this
+file — the engine discovers them via `RULES`.
 """
 
 from seryvon.scoring.rules import aeo, aso, authority, geo, gso, perf, seo

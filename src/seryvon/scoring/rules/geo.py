@@ -5,13 +5,13 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Règles du pilier GEO (Generative Engine Optimization), document 04 §3.
+"""GEO pillar rules (Generative Engine Optimization), document 04 §3.
 
-Cœur GEO on-page (Phase 2.6) : `geo.ssr` (heuristique render_mode, D10),
+GEO on-page core (Phase 2.6): `geo.ssr` (render_mode heuristic, D10),
 `noise_ratio`, `entity_density`, `primary_sources`, `authors`, `cross_platform`,
-`freshness`. La fraîcheur lit `SignalBundle.audited_at` (référence figée, DG2 →
-déterminisme). Citation LLM (Phase 3, M4) : `geo.citation_rate`, `mention_rate`,
-`citation_confidence` lisent `external.citation_metrics` (`not_measured` sans clé BYOK).
+`freshness`. Freshness reads `SignalBundle.audited_at` (frozen reference, DG2 ->
+determinism). LLM citation (Phase 3, M4): `geo.citation_rate`, `mention_rate`,
+`citation_confidence` read `external.citation_metrics` (`not_measured` without a BYOK key).
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import SignalBundle
 
-# Seuils du cœur GEO on-page (document 04 §3).
+# GEO on-page core thresholds (document 04 §3).
 _NOISE_RATIO_TARGET = 0.20
 _ENTITY_DENSITY_MIN = 0.02
 _ENTITY_DENSITY_MAX = 0.20
@@ -45,7 +45,7 @@ def _parse_date(value: str) -> date | None:
 
 @register
 class GeoSsrCriterion(Criterion):
-    """Rendu SSR vs CSR (`geo.ssr`) : part des pages servies en rendu serveur."""
+    """Server-side vs client-side rendering (`geo.ssr`): share of server-rendered pages."""
 
     key = "geo.ssr"
     pillars: ClassVar[list[str]] = ["geo", "aeo", "aso"]
@@ -76,7 +76,7 @@ class GeoSsrCriterion(Criterion):
 
 @register
 class GeoNoiseRatioCriterion(Criterion):
-    """Ratio contenu/bruit (`geo.noise_ratio`) : ≥ 0.20 = optimal."""
+    """Content/noise ratio (`geo.noise_ratio`): >= 0.20 = optimal."""
 
     key = "geo.noise_ratio"
     pillars: ClassVar[list[str]] = ["geo"]
@@ -110,7 +110,7 @@ class GeoNoiseRatioCriterion(Criterion):
 
 @register
 class GeoEntityDensityCriterion(Criterion):
-    """Densité d'entités (`geo.entity_density`) : normalisée sur plage cible (heuristique)."""
+    """Entity density (`geo.entity_density`): normalized over a target range (heuristic)."""
 
     key = "geo.entity_density"
     pillars: ClassVar[list[str]] = ["geo"]
@@ -122,7 +122,7 @@ class GeoEntityDensityCriterion(Criterion):
             return round(density / _ENTITY_DENSITY_MIN * 100, 2)
         if density <= _ENTITY_DENSITY_MAX:
             return 100.0
-        return 60.0  # trop dense (probable bruit/listes)
+        return 60.0  # too dense (likely noise/lists)
 
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
@@ -148,7 +148,7 @@ class GeoEntityDensityCriterion(Criterion):
 
 @register
 class GeoPrimarySourcesCriterion(Criterion):
-    """Sources primaires (`geo.primary_sources`) : ≥1 lien sortant par page (tag aeo)."""
+    """Primary sources (`geo.primary_sources`): >=1 outbound link per page (aeo tag)."""
 
     key = "geo.primary_sources"
     pillars: ClassVar[list[str]] = ["geo", "aeo"]
@@ -179,7 +179,7 @@ class GeoPrimarySourcesCriterion(Criterion):
 
 @register
 class GeoAuthorsCriterion(Criterion):
-    """Auteurs identifiables (`geo.authors`) : présence d'un auteur structuré (tag aeo)."""
+    """Identifiable authors (`geo.authors`): presence of a structured author (aeo tag)."""
 
     key = "geo.authors"
     pillars: ClassVar[list[str]] = ["geo", "aeo"]
@@ -210,7 +210,7 @@ class GeoAuthorsCriterion(Criterion):
 
 @register
 class GeoCrossPlatformCriterion(Criterion):
-    """Présence cross-plateforme (`geo.cross_platform`) : ≥4 plateformes = 100 (tag aso)."""
+    """Cross-platform presence (`geo.cross_platform`): >=4 platforms = 100 (aso tag)."""
 
     key = "geo.cross_platform"
     pillars: ClassVar[list[str]] = ["geo", "aso"]
@@ -241,9 +241,9 @@ class GeoCrossPlatformCriterion(Criterion):
 
 @register
 class GeoFreshnessCriterion(Criterion):
-    """Fraîcheur (`geo.freshness`) : contenu < 90 j = optimal (tag aeo).
+    """Freshness (`geo.freshness`): content < 90 days = optimal (aeo tag).
 
-    Âge calculé vs `SignalBundle.audited_at` (référence figée, déterminisme DG2).
+    Age computed against `SignalBundle.audited_at` (frozen reference, DG2 determinism).
     """
 
     key = "geo.freshness"
@@ -277,14 +277,14 @@ class GeoFreshnessCriterion(Criterion):
         )
 
 
-# Critères de citation LLM (M4, Phase 3) : lisent les métriques agrégées et
-# déterministes de `external.citation_metrics`. Sans clé BYOK => `not_measured`.
+# LLM citation criteria (M4, Phase 3): read the aggregated, deterministic metrics
+# from `external.citation_metrics`. Without a BYOK key => `not_measured`.
 _CITATION_NOT_MEASURED = "Citation tracking LLM non disponible (clé API BYOK requise)."
 
 
 @register
 class GeoCitationRateCriterion(Criterion):
-    """Taux de citation LLM (`geo.citation_rate`) : % de réponses retrieval citant le domaine."""
+    """LLM citation rate (`geo.citation_rate`): % of retrieval responses citing the domain."""
 
     key = "geo.citation_rate"
     pillars: ClassVar[list[str]] = ["geo"]
@@ -315,7 +315,7 @@ class GeoCitationRateCriterion(Criterion):
 
 @register
 class GeoMentionRateCriterion(Criterion):
-    """Taux de mention LLM (`geo.mention_rate`) : % de réponses mentionnant la marque."""
+    """LLM mention rate (`geo.mention_rate`): % of responses mentioning the brand."""
 
     key = "geo.mention_rate"
     pillars: ClassVar[list[str]] = ["geo"]
@@ -348,7 +348,7 @@ class GeoMentionRateCriterion(Criterion):
 
 @register
 class GeoCitationConfidenceCriterion(Criterion):
-    """Stabilité de citation (`geo.citation_confidence`) : constance sur K répétitions."""
+    """Citation stability (`geo.citation_confidence`): consistency over K repetitions."""
 
     key = "geo.citation_confidence"
     pillars: ClassVar[list[str]] = ["geo"]
