@@ -5,10 +5,10 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Tâches d'audit (file CPU-bound).
+"""Audit tasks (CPU-bound queue).
 
-Enveloppe l'orchestrateur synchrone `run_audit` pour exécution via Celery.
-La persistance des résultats en base est branchée en Phase 1.
+Wraps the synchronous `run_audit` orchestrator for execution via Celery.
+Persisting the results to the database is wired in Phase 1.
 """
 
 from __future__ import annotations
@@ -23,6 +23,6 @@ from seryvon.tasks.app import celery_app
 
 @celery_app.task(name="seryvon.tasks.audit.run_audit_task")  # type: ignore[untyped-decorator]
 def run_audit_task(url: str) -> dict[str, Any]:
-    """Exécute un audit et renvoie le rapport sérialisé (dict)."""
+    """Run an audit and return the serialized report (dict)."""
     report = asyncio.run(run_audit(url, AuditConfig.default()))
     return report.model_dump(mode="json")

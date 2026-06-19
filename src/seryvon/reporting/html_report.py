@@ -5,15 +5,16 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Export HTML du rapport (décision D5).
+"""HTML export of the report (decision D5).
 
-Rapport autonome (CSS inline) dérivé du JSON source de vérité : score global,
-jauges des 5 piliers, puis table des critères groupés par pilier avec statut,
-score, seuil, explication et evidence (traçabilité visible — exigence O4).
+Self-contained report (inline CSS) derived from the JSON source of truth: global
+score, gauges for the 5 pillars, then a table of criteria grouped by pillar with
+status, score, threshold, explanation and evidence (visible traceability —
+requirement O4). The rendered report text itself stays in French (product output).
 
-Sécurité : `autoescape=True` est impératif — le rapport incorpore du contenu
-tiers crawlé (titles, URLs, valeurs mesurées) qui pourrait contenir du HTML
-malveillant. Le rendu est déterministe (mêmes données => même HTML).
+Security: `autoescape=True` is mandatory — the report embeds crawled third-party
+content (titles, URLs, measured values) that could contain malicious HTML. The
+rendering is deterministic (same data => same HTML).
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ _STATUS_CSS: dict[Status, str] = {
 
 
 def _band(score: float) -> str:
-    """Classe CSS d'un score agrégé (mêmes seuils que les statuts)."""
+    """CSS class of an aggregate score (same thresholds as the statuses)."""
     if score >= STATUS_OK_THRESHOLD:
         return "ok"
     if score >= STATUS_WARNING_THRESHOLD:
@@ -177,7 +178,7 @@ _TEMPLATE = """<!DOCTYPE html>
 
 
 def report_to_html(report: AuditReport) -> str:
-    """Rend un rapport d'audit en page HTML autonome et déterministe."""
+    """Render an audit report as a self-contained, deterministic HTML page."""
     pillars = [
         {
             "name": name.upper(),

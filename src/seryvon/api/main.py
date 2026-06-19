@@ -5,12 +5,12 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""API REST (FastAPI).
+"""REST API (FastAPI).
 
-`/health`, puis le cycle d'audit persisté : `POST /audits` lance et **persiste**
-un audit (header `Location: /audits/{id}`), `GET /audits/{id}` relit un rapport,
-`GET /audits?domain=…` renvoie l'historique d'un domaine. L'exécution asynchrone
-via Celery (statut/polling) arrive en slice B3.
+`/health`, then the persisted audit cycle: `POST /audits` runs and **persists** an
+audit (`Location: /audits/{id}` header), `GET /audits/{id}` reloads a report,
+`GET /audits?domain=…` returns a domain's history. Asynchronous execution via
+Celery (status/polling) comes in slice B3.
 """
 
 from __future__ import annotations
@@ -33,24 +33,24 @@ from seryvon.models.report import AuditReport
 app = FastAPI(
     title="Seryvon API",
     version=__version__,
-    summary="Audit déterministe SEO / GEO / GSO / AEO / ASO.",
+    summary="Deterministic SEO / GEO / GSO / AEO / ASO audit.",
 )
 
 
 def get_session() -> Iterator[Session]:
-    """Dépendance FastAPI : session transactionnelle par requête."""
+    """FastAPI dependency: a transactional session per request."""
     with session_scope() as session:
         yield session
 
 
 class AuditRequest(BaseModel):
-    """Corps de requête pour lancer un audit."""
+    """Request body to launch an audit."""
 
     url: HttpUrl
 
 
 class AuditSummaryOut(BaseModel):
-    """Résumé d'audit pour l'historique."""
+    """Audit summary for the history."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -62,7 +62,7 @@ class AuditSummaryOut(BaseModel):
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    """Sonde de disponibilité."""
+    """Liveness probe."""
     return {"status": "ok", "version": __version__}
 
 
@@ -70,7 +70,7 @@ def health() -> dict[str, str]:
 async def create_audit(
     request: AuditRequest, response: Response, session: Session = Depends(get_session)
 ) -> AuditReport:
-    """Lance un audit (synchrone), le persiste et renvoie le rapport complet."""
+    """Run an audit (synchronous), persist it and return the full report."""
     report = await run_audit(str(request.url), AuditConfig.default())
     audit_id = repository.persist_report(report, session)
     response.headers["Location"] = f"/audits/{audit_id}"
@@ -79,10 +79,10 @@ async def create_audit(
 
 @app.get("/audits/{audit_id}", response_model=AuditReport)
 def get_audit(audit_id: uuid.UUID, session: Session = Depends(get_session)) -> AuditReport:
-    """Relit un rapport d'audit persisté (404 si introuvable)."""
+    """Reload a persisted audit report (404 if not found)."""
     report = repository.load_report(session, audit_id)
     if report is None:
-        raise HTTPException(status_code=404, detail="Audit introuvable")
+        raise HTTPException(status_code=404, detail="Audit not found")
     return report
 
 
@@ -90,5 +90,5 @@ def get_audit(audit_id: uuid.UUID, session: Session = Depends(get_session)) -> A
 def list_audits(
     domain: str, session: Session = Depends(get_session)
 ) -> list[repository.AuditSummary]:
-    """Historique des audits d'un domaine (plus récent en premier)."""
+    """Audit history of a domain (most recent first)."""
     return repository.list_audits(session, domain)

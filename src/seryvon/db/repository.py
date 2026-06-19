@@ -5,12 +5,12 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Couche repository : persistance et relecture des rapports d'audit (M8).
+"""Repository layer: persisting and reloading audit reports (M8).
 
-Mappe l'`AuditReport` (Pydantic, source de vérité) vers/depuis les lignes ORM
-(document 05). Hors du pipeline pur `run_audit` (décision DB3) : la persistance
-est opt-in et ne touche jamais au scoring. Les pages/signaux ne sont pas persistés
-ici (le rapport ne les porte pas ; snapshot de re-scoring = amélioration backlog).
+Maps the `AuditReport` (Pydantic, source of truth) to/from the ORM rows
+(document 05). Outside the pure `run_audit` pipeline (decision DB3): persistence
+is opt-in and never touches scoring. Pages/signals are not persisted here (the
+report does not carry them; a re-scoring snapshot is a backlog improvement).
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from seryvon.models.report import AsoReadiness, AuditReport, Issue, PillarScore
 
 @dataclass(slots=True)
 class AuditSummary:
-    """Résumé d'audit pour l'historique (sans le détail des critères)."""
+    """Audit summary for the history (without the criteria detail)."""
 
     audit_id: uuid.UUID
     domain: str
@@ -48,7 +48,7 @@ def _get_or_create_domain(session: Session, host: str) -> m.Domain:
 
 
 def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
-    """Persiste un rapport (domaine + audit + critères/piliers/issues/readiness)."""
+    """Persist a report (domain + audit + criteria/pillars/issues/readiness)."""
     domain = _get_or_create_domain(session, report.domain)
     audit = m.Audit(
         domain_id=domain.id,
@@ -111,7 +111,7 @@ def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
 
 
 def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
-    """Reconstruit un `AuditReport` depuis la base (None si introuvable)."""
+    """Rebuild an `AuditReport` from the database (None if not found)."""
     audit = session.get(m.Audit, audit_id)
     if audit is None:
         return None
@@ -180,7 +180,7 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
 
 
 def list_audits(session: Session, host: str) -> list[AuditSummary]:
-    """Historique des audits d'un domaine, du plus récent au plus ancien."""
+    """Audit history of a domain, most recent first."""
     rows = session.scalars(
         select(m.Audit)
         .join(m.Domain)

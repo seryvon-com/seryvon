@@ -5,7 +5,7 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Couche de persistance : base déclarative et fabrique de sessions."""
+"""Persistence layer: declarative base and session factory."""
 
 from __future__ import annotations
 
@@ -19,11 +19,11 @@ from seryvon.core.config import get_settings
 
 
 class Base(DeclarativeBase):
-    """Base déclarative commune à tous les modèles ORM."""
+    """Declarative base shared by all ORM models."""
 
 
 def get_engine() -> Engine:
-    """Crée l'engine SQLAlchemy depuis la config."""
+    """Create the SQLAlchemy engine from the config."""
     return create_engine(get_settings().database_url, future=True)
 
 
@@ -32,7 +32,7 @@ SessionLocal = sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit
 
 @contextmanager
 def session_scope() -> Iterator[Session]:
-    """Session transactionnelle : commit si succès, rollback sinon, fermeture garantie."""
+    """Transactional session: commit on success, rollback otherwise, guaranteed close."""
     session = SessionLocal()
     try:
         yield session

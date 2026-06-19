@@ -5,12 +5,12 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Interface en ligne de commande (Typer).
+"""Command-line interface (Typer).
 
-`seryvon run <url>` crawle le site et émet un rapport (JSON/HTML/Markdown) ;
-`seryvon aso <url>` n'audite que le pilier ASO (module M11) ; `seryvon history
-<host>` relit les audits persistés. `compare`, `ci` (document 02, §3.1) restent
-des squelettes pour fixer la surface CLI.
+`seryvon run <url>` crawls the site and emits a report (JSON/HTML/Markdown);
+`seryvon aso <url>` audits only the ASO pillar (module M11); `seryvon history
+<host>` reloads the persisted audits. `compare`, `ci` (document 02, §3.1) remain
+skeletons to fix the CLI surface. User-facing help and output stay in French.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ def _version_callback(value: bool) -> None:
 
 
 def _force_utf8_output() -> None:
-    """Force stdout/stderr en UTF-8 (consoles Windows cp1252 : caractères FR, ≥, —)."""
+    """Force stdout/stderr to UTF-8 (Windows cp1252 consoles: FR characters, ≥, —)."""
     for stream in (sys.stdout, sys.stderr):
         reconfigure = getattr(stream, "reconfigure", None)
         if callable(reconfigure):
@@ -135,7 +135,7 @@ def run(
 def _write_report(
     report: AuditReport, output: Path | None, fmt: OutputFormat, *, quiet: bool
 ) -> None:
-    """Écrit le rapport au(x) format(s) demandé(s), sur fichier ou stdout."""
+    """Write the report in the requested format(s), to a file or stdout."""
     renderers = {
         OutputFormat.json: report_to_json,
         OutputFormat.html: report_to_html,
@@ -144,7 +144,7 @@ def _write_report(
 
     if output is None:
         if quiet:
-            # `both` sur stdout : on émet le JSON (source de vérité).
+            # `both` on stdout: emit the JSON (source of truth).
             typer.echo(renderers.get(fmt, report_to_json)(report))
         return
 
@@ -165,7 +165,7 @@ def _write_report(
 
 
 def _print_summary(report) -> None:  # type: ignore[no-untyped-def]
-    """Affiche un récapitulatif lisible des scores par pilier."""
+    """Print a readable summary of the per-pillar scores."""
     table = Table(title=f"Audit — {report.domain}")
     table.add_column("Pilier")
     table.add_column("Score", justify="right")
@@ -240,7 +240,7 @@ def aso(
 
 
 def _aso_payload(report: AuditReport) -> dict[str, Any]:
-    """Sous-ensemble ASO du rapport (vue focalisée, déterministe)."""
+    """ASO subset of the report (focused, deterministic view)."""
     readiness = report.aso_readiness
     return {
         "domain": report.domain,
@@ -252,12 +252,12 @@ def _aso_payload(report: AuditReport) -> dict[str, Any]:
 
 
 def _aso_json(report: AuditReport) -> str:
-    """Sérialise la vue ASO en JSON (caractères FR préservés, clés stables)."""
+    """Serialize the ASO view to JSON (FR characters preserved, stable keys)."""
     return json.dumps(_aso_payload(report), ensure_ascii=False, indent=2)
 
 
 def _print_aso_summary(report: AuditReport) -> None:
-    """Affiche la carte de readiness agentique puis les critères du pilier ASO."""
+    """Print the agentic-readiness card then the ASO pillar criteria."""
     aso = report.pillars["aso"]
     readiness = report.aso_readiness
 

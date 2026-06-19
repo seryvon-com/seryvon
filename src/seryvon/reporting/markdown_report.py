@@ -5,10 +5,11 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Export Markdown du rapport (dérivé du JSON source de vérité).
+"""Markdown export of the report (derived from the JSON source of truth).
 
-Rendu déterministe : score global, scores par pilier, readiness agentique,
-plan d'action priorisé (P1–P4) et détail des critères groupés par pilier.
+Deterministic rendering: global score, per-pillar scores, agentic readiness,
+prioritized action plan (P1–P4) and criteria detail grouped by pillar. The
+rendered report text itself stays in French (product output).
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ _PILLAR_ORDER = ("seo", "geo", "gso", "aeo", "aso")
 
 
 def _cell(value: object) -> str:
-    """Échappe une valeur pour une cellule de tableau Markdown."""
+    """Escape a value for a Markdown table cell."""
     return str(value).replace("|", r"\|").replace("\n", " ")
 
 
@@ -96,7 +97,7 @@ def _criterion_row(criterion: CriterionResult) -> str:
 
 
 def report_to_markdown(report: AuditReport) -> str:
-    """Rend un rapport d'audit en Markdown déterministe."""
+    """Render an audit report as deterministic Markdown."""
     generated = (report.finished_at or report.started_at).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
         f"# Audit Seryvon — {report.domain}",

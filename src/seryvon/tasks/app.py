@@ -5,14 +5,14 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Application Celery et routage des files.
+"""Celery application and queue routing.
 
-Conformément au document 03, §6, deux files distinctes :
-- `cpu`  : crawl, rendu, scoring, ASO statique ;
-- `io`   : appels LLM/SERP (IO-bound).
+Per document 03, §6, two distinct queues:
+- `cpu`: crawl, rendering, scoring, static ASO;
+- `io` : LLM/SERP calls (IO-bound).
 
-Un worker bloqué sur un appel LLM ne doit pas monopoliser un cœur CPU.
-En Phase 0, une seule tâche de démonstration (`run_audit_task`) est exposée.
+A worker blocked on an LLM call must not monopolize a CPU core.
+In Phase 0, a single demo task (`run_audit_task`) is exposed.
 """
 
 from __future__ import annotations

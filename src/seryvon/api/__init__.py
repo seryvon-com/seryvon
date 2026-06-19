@@ -1,4 +1,4 @@
-"""API REST FastAPI."""
+"""FastAPI REST API."""
 
 from seryvon.api.main import app
 

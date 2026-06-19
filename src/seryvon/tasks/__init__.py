@@ -1,4 +1,4 @@
-"""Orchestration asynchrone (Celery)."""
+"""Asynchronous orchestration (Celery)."""
 
 from seryvon.tasks.app import celery_app
 

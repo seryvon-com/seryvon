@@ -5,12 +5,12 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Modèles ORM (document 05 — modèle de données).
+"""ORM models (document 05 — data model).
 
-Phase 0 : tables du cœur d'audit (domain, audit, page, page_signal,
-criterion_result, pillar_score, issue, aso_readiness). Les tables de citation
-tracking, rank tracking et comparaison concurrentielle (documents 05, 07, 10)
-sont ajoutées dans leurs phases respectives.
+Phase 0: audit-core tables (domain, audit, page, page_signal, criterion_result,
+pillar_score, issue, aso_readiness). The citation-tracking, rank-tracking and
+competitive-comparison tables (documents 05, 07, 10) are added in their
+respective phases.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ def _uuid_pk() -> Mapped[uuid.UUID]:
 
 
 class Domain(Base):
-    """Domaine audité (document 05, §2.1)."""
+    """Audited domain (document 05, §2.1)."""
 
     __tablename__ = "domain"
 
@@ -56,7 +56,7 @@ class Domain(Base):
 
 
 class Audit(Base):
-    """Exécution d'audit (document 05, §2.2)."""
+    """Audit run (document 05, §2.2)."""
 
     __tablename__ = "audit"
 
@@ -90,7 +90,7 @@ class Audit(Base):
 
 
 class Page(Base):
-    """Page crawlée d'un audit (document 05, §2.3)."""
+    """Crawled page of an audit (document 05, §2.3)."""
 
     __tablename__ = "page"
 
@@ -109,7 +109,7 @@ class Page(Base):
 
 
 class PageSignalRow(Base):
-    """Signaux d'une page, JSONB (internal inclut le bloc `aso`, document 05, §2.4)."""
+    """A page's signals, JSONB (internal includes the `aso` block, document 05, §2.4)."""
 
     __tablename__ = "page_signal"
 
@@ -125,7 +125,7 @@ class PageSignalRow(Base):
 
 
 class CriterionResultRow(Base):
-    """Résultat d'un critère persisté (document 05, §2.5)."""
+    """Persisted criterion result (document 05, §2.5)."""
 
     __tablename__ = "criterion_result"
 
@@ -147,7 +147,7 @@ class CriterionResultRow(Base):
 
 
 class PillarScoreRow(Base):
-    """Score agrégé d'un pilier (document 05, §2.6 — 5 valeurs possibles)."""
+    """Aggregated pillar score (document 05, §2.6 — 5 possible values)."""
 
     __tablename__ = "pillar_score"
 
@@ -164,7 +164,7 @@ class PillarScoreRow(Base):
 
 
 class IssueRow(Base):
-    """Problème priorisé (document 05, §2.7)."""
+    """Prioritized issue (document 05, §2.7)."""
 
     __tablename__ = "issue"
 
@@ -185,7 +185,7 @@ class IssueRow(Base):
 
 
 class AsoReadinessRow(Base):
-    """Synthèse de readiness agentique (document 05, §2.8 — NOUVELLE TABLE)."""
+    """Agentic-readiness summary (document 05, §2.8 — NEW TABLE)."""
 
     __tablename__ = "aso_readiness"
 

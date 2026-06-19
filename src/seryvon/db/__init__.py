@@ -1,4 +1,4 @@
-"""Couche de persistance (SQLAlchemy 2.0 + Alembic)."""
+"""Persistence layer (SQLAlchemy 2.0 + Alembic)."""
 
 from seryvon.db.base import Base, SessionLocal, get_engine
 

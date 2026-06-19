@@ -5,12 +5,11 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Orchestrateur d'audit.
+"""Audit orchestrator.
 
-Chaîne verticale complète (vertical slice, document 06) : M1 Discovery ->
-M2 Crawl multi-pages -> extraction de signaux -> scoring 5 piliers -> rapport
-JSON. L'exécution via Celery arrive plus tard ; cet orchestrateur asynchrone
-reste la référence de test.
+Full vertical chain (vertical slice, document 06): M1 Discovery -> M2 multi-page
+crawl -> signal extraction -> 5-pillar scoring -> JSON report. Execution via
+Celery comes later; this asynchronous orchestrator remains the test reference.
 """
 
 from __future__ import annotations
@@ -50,7 +49,7 @@ from seryvon.scoring import (
 
 
 def _config_digest(config: AuditConfig) -> str:
-    """Empreinte stable de la config (reproductibilité — document 05, §8)."""
+    """Stable fingerprint of the config (reproducibility — document 05, §8)."""
     payload = json.dumps(config.model_dump(), sort_keys=True).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()[:16]
 
@@ -58,10 +57,10 @@ def _config_digest(config: AuditConfig) -> str:
 async def _collect_external(
     domain: str, pages: list[PageSignals], settings: Settings
 ) -> ExternalSignals:
-    """Collecte les signaux externes (PSI, OpenPageRank). BYOK : sans clé, aucun appel.
+    """Collect the external signals (PSI, OpenPageRank). BYOK: no key, no call.
 
-    Décision D4 : PageSpeed Insights sur la home seule. Sans clé, les critères
-    dépendants restent `not_measured` (dégradation gracieuse, ENF-03).
+    Decision D4: PageSpeed Insights on the home page only. Without a key, the
+    dependent criteria stay `not_measured` (graceful degradation, ENF-03).
     """
     external = ExternalSignals()
     if settings.psi_api_key and pages:
@@ -85,7 +84,7 @@ _TITLE_SEPARATORS = ("|", "—", "–", "·", ":", "-")
 
 
 def _brand_name(home: PageSignals) -> str | None:
-    """Nom de marque pour la recherche Wikidata (décision D11)."""
+    """Brand name for the Wikidata search (decision D11)."""
     site_name = home.open_graph.get("og:site_name")
     if site_name and site_name.strip():
         return site_name.strip()
@@ -103,7 +102,7 @@ def _brand_name(home: PageSignals) -> str | None:
 async def _collect_brand(
     home: PageSignals | None, settings: Settings
 ) -> tuple[bool | None, dict[str, float] | None]:
-    """Collecte Wikidata : (kg_presence, brand_coherence). None si désactivé/indéterminé."""
+    """Collect Wikidata: (kg_presence, brand_coherence). None if disabled/undetermined."""
     if not settings.wikidata_enabled or home is None:
         return None, None
     name = _brand_name(home)
@@ -117,12 +116,12 @@ async def _collect_brand(
 
 
 async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
-    """Exécute un audit sur l'URL fournie et renvoie le rapport.
+    """Run an audit on the given URL and return the report.
 
-    Étapes : discovery (robots/sitemaps/frontière) -> crawl multi-pages ->
-    extraction signaux -> exécution des règles -> agrégation par pilier ->
-    score global -> assemblage du rapport. Un site injoignable produit un
-    rapport (pages vides), jamais une exception (ENF-03).
+    Steps: discovery (robots/sitemaps/frontier) -> multi-page crawl -> signal
+    extraction -> rule execution -> per-pillar aggregation -> global score ->
+    report assembly. An unreachable site produces a report (empty pages), never an
+    exception (ENF-03).
     """
     settings = get_settings()
     config = config or AuditConfig.default()
@@ -144,7 +143,7 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         timeout=settings.request_timeout,
     )
     external = await _collect_external(discovery.domain, pages, settings)
-    # Sondes de découverte agentique (gratuites, sans clé) — pilier ASO.
+    # Agentic discovery probes (free, keyless) — ASO pillar.
     external.ai_discovery_endpoints = await probe_ai_discovery(
         discovery.origin, timeout=settings.request_timeout
     )
