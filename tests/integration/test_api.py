@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests de l'API FastAPI. /health sans DB ; endpoints d'audit gated (Postgres)."""
+"""Tests for the FastAPI API. /health without DB; audit endpoints gated (Postgres)."""
 
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def _mock_crawl(monkeypatch: pytest.MonkeyPatch, sample_html: str) -> None:
 @pytest.fixture
 def db_client(_mock_crawl: None) -> Iterator[TestClient]:
     if not _TEST_DB:
-        pytest.skip("SERYVON_TEST_DATABASE_URL non défini (Postgres requis)")
+        pytest.skip("SERYVON_TEST_DATABASE_URL not set (Postgres required)")
     engine = create_engine(_TEST_DB, future=True)
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)

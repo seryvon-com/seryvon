@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests des règles authority.* (OpenPageRank + backlinks)."""
+"""Tests for the authority.* rules (OpenPageRank + backlinks)."""
 
 from __future__ import annotations
 
@@ -28,13 +28,13 @@ def test_opr_not_measured_without_key() -> None:
 
 
 def test_backlinks_not_measured_by_default() -> None:
-    # v0.1 : aucune source de domaines référents -> referring_domains None (D3).
+    # v0.1: no referring-domains source -> referring_domains None (D3).
     result = AuthorityBacklinksCriterion().evaluate(_bundle())
     assert result.status is Status.NOT_MEASURED
 
 
 def test_backlinks_log_scale_when_present() -> None:
-    # La règle est prête pour un futur connecteur : échelle log.
+    # The rule is ready for a future connector: log scale.
     assert AuthorityBacklinksCriterion().evaluate(_bundle(referring=0)).score == 0.0
     assert AuthorityBacklinksCriterion().evaluate(_bundle(referring=100)).score == 50.11
     assert AuthorityBacklinksCriterion().evaluate(_bundle(referring=10000)).score == 100.0

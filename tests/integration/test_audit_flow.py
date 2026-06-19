@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Test d'intégration du flux d'audit (discovery + crawl mockés, pas de réseau)."""
+"""Integration test of the audit flow (discovery + crawl mocked, no network)."""
 
 from __future__ import annotations
 
@@ -47,12 +47,12 @@ async def test_full_audit_produces_report(patched_crawl: None) -> None:
     assert report.domain == "example.com"
     assert report.tool_version
     assert "seo" in report.pillars
-    assert report.pillars["seo"].score > 0  # title présent dans le HTML d'exemple
-    assert report.aso_readiness is not None  # synthèse readiness agentique présente
+    assert report.pillars["seo"].score > 0  # title present in the sample HTML
+    assert report.aso_readiness is not None  # agentic-readiness summary present
 
 
 async def test_audit_is_deterministic(patched_crawl: None) -> None:
-    """Deux audits du même site -> mêmes scores (variance nulle)."""
+    """Two audits of the same site -> same scores (zero variance)."""
     a = await run_audit("https://example.com")
     b = await run_audit("https://example.com")
     assert a.score_global == b.score_global
@@ -61,7 +61,7 @@ async def test_audit_is_deterministic(patched_crawl: None) -> None:
 
 
 async def test_audit_unreachable_site_is_graceful(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Site injoignable : aucune page crawlée -> rapport produit, pas d'exception (ENF-03)."""
+    """Unreachable site: no page crawled -> report produced, no exception (ENF-03)."""
 
     async def fake_discover(url: str, **kwargs: object) -> DiscoveryResult:
         return _fake_discovery()
@@ -74,5 +74,5 @@ async def test_audit_unreachable_site_is_graceful(monkeypatch: pytest.MonkeyPatc
 
     report = await run_audit("https://unreachable.example")
     assert report.domain == "example.com"
-    # Aucun signal : meta.title absent -> SEO scoré à 0, mais le rapport existe.
+    # No signal: meta.title absent -> SEO scored 0, but the report exists.
     assert report.pillars["seo"].score == 0.0

@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests du plan d'action priorisé (issues)."""
+"""Tests for the prioritized action plan (issues)."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def test_only_warning_and_critical_generate_issues() -> None:
 
 
 def test_priority_formula_and_bucket() -> None:
-    # meta.title critical : impact 2 (1.5×1), sévérité 2, effort 1 -> 4.0 -> P1.
+    # meta.title critical: impact 2 (1.5×1), severity 2, effort 1 -> 4.0 -> P1.
     issue = build_issues([_result("meta.title", Status.CRITICAL, weight=1.5)])[0]
     assert issue.severity is Severity.CRITICAL
     assert issue.impact == 2

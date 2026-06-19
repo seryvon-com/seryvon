@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests du moteur de scoring : agrégation, renormalisation, garde-fous."""
+"""Tests for the scoring engine: aggregation, renormalization, safeguards."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ PILLARS = ("seo", "geo", "gso", "aeo", "aso")
 
 
 def _rich_bundle() -> SignalBundle:
-    """Bundle multi-pages représentatif, avec signaux internes + externes."""
+    """Representative multi-page bundle, with internal + external signals."""
     return SignalBundle(
         domain="ex.com",
         pages=[
@@ -117,7 +117,7 @@ def test_score_pillar_all_not_measured() -> None:
 
 
 def test_score_global_excludes_unmeasured_pillars() -> None:
-    """Les piliers sans critère mesuré (measured == 0) sont exclus et renormalisés."""
+    """Pillars with no measured criterion (measured == 0) are excluded and renormalized."""
     cfg = AuditConfig.default()
     pillars = {
         "seo": PillarScore(pillar="seo", score=80.0, measured=5, excluded=0),
@@ -142,7 +142,7 @@ def test_score_clamped_to_range(bundle_with_title: SignalBundle) -> None:
 
 
 def test_scoring_is_deterministic_on_rich_bundle() -> None:
-    """Déterminisme rejoué : un même SignalBundle reproduit exactement les scores."""
+    """Determinism replayed: the same SignalBundle reproduces the scores exactly."""
     bundle = _rich_bundle()
     cfg = AuditConfig.default()
 
@@ -157,7 +157,7 @@ def test_scoring_is_deterministic_on_rich_bundle() -> None:
 
 
 def test_run_criteria_applies_threshold_override() -> None:
-    """La section thresholds: du YAML est transmise aux règles par le moteur."""
+    """The YAML thresholds: section is passed to the rules by the engine."""
     bundle = SignalBundle(
         domain="ex.com",
         pages=[PageSignals(url="https://ex.com/", status_code=200, word_count=800)],

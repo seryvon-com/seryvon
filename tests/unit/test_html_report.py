@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests du rendu HTML : contenu, échappement (XSS), déterminisme."""
+"""HTML rendering tests: content, escaping (XSS), determinism."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def test_html_contains_core_data() -> None:
 def test_html_unmeasured_pillar_shows_dash() -> None:
     html = report_to_html(_report())
     assert "GEO" in html
-    assert "—" in html  # pilier non mesuré
+    assert "—" in html  # unmeasured pillar
 
 
 def test_html_escapes_untrusted_content() -> None:
@@ -67,7 +67,7 @@ def test_html_escapes_untrusted_content() -> None:
         weight=1.5,
     )
     html = report_to_html(_report([malicious]))
-    # Aucune balise active ne doit subsister : tout est échappé.
+    # No active tag must remain: everything is escaped.
     assert "<script>alert" not in html
     assert "<img src=x onerror" not in html
     assert "&lt;script&gt;" in html

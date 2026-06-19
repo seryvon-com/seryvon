@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests du cœur GEO on-page (noise_ratio, entity_density, sources, auteurs,
+"""Tests for the GEO on-page core (noise_ratio, entity_density, sources, authors,
 cross-platform, freshness)."""
 
 from __future__ import annotations
@@ -38,13 +38,13 @@ def test_noise_ratio() -> None:
 
 
 def test_entity_density() -> None:
-    # 50 entités sur 500 mots = 0.10 -> dans la plage cible -> 100.
+    # 50 entities over 500 words = 0.10 -> within the target range -> 100.
     good = _page(entity_count=50, word_count=500)
     assert GeoEntityDensityCriterion().evaluate(_bundle(good)).score == 100
-    # 2 entités sur 500 mots = 0.004 -> sous la plage -> proportionnel (20).
+    # 2 entities over 500 words = 0.004 -> below the range -> proportional (20).
     sparse = _page(entity_count=2, word_count=500)
     assert GeoEntityDensityCriterion().evaluate(_bundle(sparse)).score == 20
-    # 200 entités sur 500 mots = 0.40 -> trop dense -> 60.
+    # 200 entities over 500 words = 0.40 -> too dense -> 60.
     dense = _page(entity_count=200, word_count=500)
     assert GeoEntityDensityCriterion().evaluate(_bundle(dense)).score == 60
     assert GeoEntityDensityCriterion().evaluate(_bundle(_page())).status is Status.NOT_MEASURED

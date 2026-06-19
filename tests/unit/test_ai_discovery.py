@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests des sondes ASO : AI discovery (4 endpoints) + NLWeb."""
+"""Tests for the ASO probes: AI discovery (4 endpoints) + NLWeb."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ def test_valid_service() -> None:
 def test_valid_faq() -> None:
     good = [{"question": "Quelle est la question ?", "answer": "Une réponse assez longue ici."}]
     assert valid_faq(good) is True
-    assert valid_faq({"faq": good}) is True  # forme enveloppée
+    assert valid_faq({"faq": good}) is True  # wrapped form
     assert valid_faq([{"question": "court", "answer": "court"}]) is False
     assert valid_faq([]) is False
 

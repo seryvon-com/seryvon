@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests du connecteur Wikidata + règle aso.brand_coherence."""
+"""Tests for the Wikidata connector + the aso.brand_coherence rule."""
 
 from __future__ import annotations
 

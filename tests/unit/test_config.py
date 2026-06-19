@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests de la configuration (défauts, chargement YAML, surcharges)."""
+"""Tests for the configuration (defaults, YAML loading, overrides)."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ crawl:
     )
     cfg = AuditConfig.from_yaml(yaml_path)
     assert cfg.pillar_weights["aso"] == 0.25
-    # Les autres poids restent aux valeurs par défaut.
+    # The other weights stay at their default values.
     assert cfg.pillar_weights["seo"] == 0.30
     assert cfg.criteria_overrides["meta.title"]["weight"] == 3.0
     assert cfg.crawl.max_pages == 50

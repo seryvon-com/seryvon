@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests de la CLI (fetch mocké)."""
+"""CLI tests (fetch mocked)."""
 
 from __future__ import annotations
 
@@ -164,7 +164,7 @@ def test_aso_quiet_outputs_json() -> None:
     assert payload["domain"] == "example.com"
     assert payload["aso"]["pillar"] == "aso"
     assert "aso_readiness" in payload
-    assert payload["criteria"], "au moins un critère ASO attendu"
+    assert payload["criteria"], "at least one ASO criterion expected"
     assert all("aso" in c["pillars"] for c in payload["criteria"])
 
 

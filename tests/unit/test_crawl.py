@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests M2 Crawler : BFS multi-pages, limites, robots, déterminisme, SSR/CSR."""
+"""M2 crawler tests: multi-page BFS, limits, robots, determinism, SSR/CSR."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def page(*links: str, body: str = "Contenu de la page de démonstration.") -> st
 
 
 def make_fetcher(pages: dict[str, str], *, status: int = 200) -> PageFetcher:
-    """Fetcher en mémoire : URL connue -> page ; URL inconnue -> erreur réseau."""
+    """In-memory fetcher: known URL -> page; unknown URL -> network error."""
 
     async def _fetch(url: str) -> FetchResult:
         if url not in pages:
@@ -164,7 +164,7 @@ async def test_crawl_stays_on_same_host() -> None:
 async def test_crawl_dedupes_pages() -> None:
     pages = {
         HOME: page("/a", "/a", "/b"),
-        "https://example.com/a": page("/b"),  # /b référencée deux fois
+        "https://example.com/a": page("/b"),  # /b referenced twice
         "https://example.com/b": page("/a"),  # cycle
     }
     urls = await _crawl(pages)
@@ -186,7 +186,7 @@ async def test_crawl_handles_fetch_errors_gracefully() -> None:
     pages = {
         HOME: page("/a", "/missing"),
         "https://example.com/a": page(),
-        # /missing absent du dict -> le fetcher lève -> page ignorée
+        # /missing absent from the dict -> the fetcher raises -> page ignored
     }
     urls = await _crawl(pages)
     assert urls == [HOME, "https://example.com/a"]
@@ -194,7 +194,7 @@ async def test_crawl_handles_fetch_errors_gracefully() -> None:
 
 async def test_crawl_is_deterministic() -> None:
     pages = {
-        HOME: page("/c", "/a", "/b"),  # ordre des liens volontairement désordonné
+        HOME: page("/c", "/a", "/b"),  # link order deliberately shuffled
         "https://example.com/a": page(),
         "https://example.com/b": page(),
         "https://example.com/c": page(),

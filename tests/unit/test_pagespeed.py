@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests du connecteur PageSpeed Insights (parsing pur + fetch via MockTransport)."""
+"""Tests for the PageSpeed Insights connector (pure parsing + fetch via MockTransport)."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def test_parse_full_response() -> None:
 def test_parse_without_field_data() -> None:
     payload = {"lighthouseResult": {"categories": {"performance": {"score": 0.5}}}}
     result = parse_pagespeed(payload)
-    assert result.core_web_vitals is None  # pas de données terrain CrUX
+    assert result.core_web_vitals is None  # no CrUX field data
     assert result.lighthouse_performance == 0.5
 
 
@@ -107,7 +107,7 @@ async def test_fetch_invalid_json_returns_empty() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# BYOK : lecture de la clé via PSI_API_KEY                                     #
+# BYOK: key read via PSI_API_KEY                                               #
 # --------------------------------------------------------------------------- #
 def test_settings_reads_psi_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PSI_API_KEY", "abc123")

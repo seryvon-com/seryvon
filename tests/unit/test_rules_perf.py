@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests des règles perf.* (Core Web Vitals + Lighthouse) sur leurs paliers."""
+"""Tests for the perf.* rules (Core Web Vitals + Lighthouse) across their tiers."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def test_inp_bands() -> None:
 
 def test_cwv_not_measured_without_data() -> None:
     assert PerfLcpCriterion().evaluate(_bundle(None)).status is Status.NOT_MEASURED
-    # Données terrain présentes mais sans la métrique visée -> not_measured aussi.
+    # Field data present but without the target metric -> not_measured as well.
     assert PerfInpCriterion().evaluate(_bundle({"lcp": 2000})).status is Status.NOT_MEASURED
 
 

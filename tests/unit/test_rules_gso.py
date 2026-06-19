@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests des règles GSO on-page (présence de schemas, Q-R, CWV éligibilité)."""
+"""Tests for the on-page GSO rules (schema presence, Q&A, CWV eligibility)."""
 
 from __future__ import annotations
 
@@ -89,7 +89,7 @@ def test_longtail_and_ai_overview_not_measured() -> None:
 
 
 def test_ai_overview_score_when_present() -> None:
-    # Règle prête pour le connecteur SERP (Phase 4) : presence -> %.
+    # Rule ready for the SERP connector (Phase 4): presence -> %.
     bundle = SignalBundle(domain="ex.com", external=ExternalSignals(ai_overview_presence=0.6))
     assert GsoAiOverviewCriterion().evaluate(bundle).score == 60.0
 

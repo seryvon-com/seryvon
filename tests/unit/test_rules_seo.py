@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests de la règle SEO `meta.title` — tous les paliers de seuils."""
+"""Tests for the SEO rule `meta.title` — all threshold tiers."""
 
 from __future__ import annotations
 
@@ -100,7 +100,7 @@ def test_page_criterion_not_measured_without_pages() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Métadonnées                                                                  #
+# Metadata                                                                     #
 # --------------------------------------------------------------------------- #
 def test_description_paliers() -> None:
     optimal = "x" * 130
@@ -134,7 +134,7 @@ def test_title_unique() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Métadonnées sociales                                                         #
+# Social metadata                                                              #
 # --------------------------------------------------------------------------- #
 def test_open_graph_completeness() -> None:
     full = _page(
@@ -199,7 +199,7 @@ def test_content_depth() -> None:
 
 def test_content_depth_threshold_override() -> None:
     bundle = _pages(_page(word_count=800))
-    assert ContentDepthCriterion().evaluate(bundle).score == 100.0  # défaut 800 mots
+    assert ContentDepthCriterion().evaluate(bundle).score == 100.0  # default 800 words
     overridden = ContentDepthCriterion().evaluate(bundle, {"content.depth": {"target_words": 1600}})
     assert overridden.score == 50.0  # 800 / 1600
     assert overridden.threshold == {"min_words": 1600}
@@ -235,7 +235,7 @@ def test_links_orphans_not_measured_single_page() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Accessibilité                                                                #
+# Accessibility                                                                #
 # --------------------------------------------------------------------------- #
 def test_img_alt_ratio() -> None:
     bundle = _pages(

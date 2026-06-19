@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests de l'agrégateur de citation LLM (parser + métriques + déterminisme)."""
+"""Tests for the LLM citation aggregator (parser + metrics + determinism)."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def test_registrable_domain_variants() -> None:
     assert registrable_domain("example.com") == "example.com"
     assert registrable_domain("") is None
     assert registrable_domain("   ") is None
-    assert registrable_domain("//") is None  # hôte vide après parsing
+    assert registrable_domain("//") is None  # empty host after parsing
     assert registrable_domain(None) is None
 
 
@@ -39,11 +39,11 @@ def test_brand_mentioned_case_and_accents() -> None:
     assert not brand_mentioned("a rival product", "Example")
     assert not brand_mentioned("examples are useful", "Example")  # borne de mot
     assert not brand_mentioned("", "Example")
-    assert not brand_mentioned("du texte", "   ")  # marque vide après normalisation
+    assert not brand_mentioned("du texte", "   ")  # brand empty after normalization
 
 
 def _cit(ref: str, position: int | None = None) -> LlmCitation:
-    """Citation par URL si `ref` ressemble à une URL, sinon par domaine."""
+    """Citation by URL if `ref` looks like a URL, otherwise by domain."""
     if "/" in ref or ref.startswith("http"):
         return LlmCitation(url=ref, position=position)
     return LlmCitation(domain=ref, position=position)
@@ -97,10 +97,10 @@ def test_aggregate_overall_metrics() -> None:
         _scenario(), target_domain="example.com", brand="Example", competitors=["rival.com"]
     )
     assert metrics is not None
-    assert metrics.citation_rate == 0.75  # 3/4 réponses retrieval citent example.com
-    assert metrics.mention_rate == 0.8  # 4/5 réponses mentionnent la marque
-    assert metrics.knowledge_presence == 1.0  # 1/1 réponse mode nu mentionne la marque
-    assert metrics.citation_confidence == 0.75  # moyenne (0.5, 1.0) des groupes cités
+    assert metrics.citation_rate == 0.75  # 3/4 retrieval responses cite example.com
+    assert metrics.mention_rate == 0.8  # 4/5 responses mention the brand
+    assert metrics.knowledge_presence == 1.0  # 1/1 bare-mode response mentions the brand
+    assert metrics.citation_confidence == 0.75  # mean (0.5, 1.0) of the cited groups
     assert metrics.share_of_voice == 0.6  # 3 citations cible / 5 (cible + concurrent)
     assert metrics.average_position == 1.33  # positions 1, 1, 2
     assert metrics.engines == ["openai", "perplexity"]
@@ -115,7 +115,7 @@ def test_aggregate_per_engine_breakdown() -> None:
     assert perplexity.citation_rate == 0.75
     assert perplexity.average_position == 1.33
     openai = metrics.per_engine["openai"]
-    assert openai.citation_rate == 0.0  # aucune réponse retrieval
+    assert openai.citation_rate == 0.0  # no retrieval response
     assert openai.mention_rate == 1.0
 
 
@@ -133,11 +133,11 @@ def test_aggregate_target_never_cited() -> None:
     assert metrics.citation_rate == 0.0
     assert metrics.citation_confidence == 0.0
     assert metrics.average_position is None
-    assert metrics.share_of_voice is None  # aucun concurrent déclaré
+    assert metrics.share_of_voice is None  # no competitor declared
 
 
 def test_aggregate_invalid_target_and_empty_citation() -> None:
-    # Cible vide => target None ; une citation sans url/domaine est ignorée.
+    # Empty target => target None; a citation without url/domain is ignored.
     responses = [
         _resp("perplexity", "p1", 1, web=True, citations=[LlmCitation(), _cit("rival.com", 1)])
     ]

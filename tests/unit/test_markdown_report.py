@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests du rendu Markdown : contenu, échappement, déterminisme."""
+"""Markdown rendering tests: content, escaping, determinism."""
 
 from __future__ import annotations
 

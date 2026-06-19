@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests des règles AEO on-page + geo.ssr."""
+"""Tests for the on-page AEO rules + geo.ssr."""
 
 from __future__ import annotations
 

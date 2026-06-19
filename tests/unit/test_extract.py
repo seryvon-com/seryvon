@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests de l'extraction de signaux internes."""
+"""Tests for internal signal extraction."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def test_extract_links_and_images(sample_html: str) -> None:
 
 
 def test_extract_is_deterministic(sample_html: str) -> None:
-    """Même HTML -> mêmes signaux (propriété de reproductibilité)."""
+    """Same HTML -> same signals (reproducibility property)."""
     a = extract_page_signals("https://example.com/", sample_html)
     b = extract_page_signals("https://example.com/", sample_html)
     assert a.model_dump() == b.model_dump()
@@ -111,7 +111,7 @@ def test_extract_internal_link_targets_resolved_and_classified() -> None:
     html = (
         '<a href="/a">a</a>'
         '<a href="b">b</a>'
-        '<a href="/a">a-dup</a>'  # doublon -> dédupliqué
+        '<a href="/a">a-dup</a>'  # duplicate -> deduplicated
         '<a href="https://other.com/x">ext</a>'
     )
     signals = extract_page_signals("https://example.com/dir/", html)
@@ -199,7 +199,7 @@ def test_extract_aso_absent_by_default(sample_html: str) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# M3.3 — signaux cœur GEO on-page                                             #
+# M3.3 — GEO on-page core signals                                             #
 # --------------------------------------------------------------------------- #
 _GEO_HTML = """<html><head>
 <script type="application/ld+json">
@@ -238,7 +238,7 @@ def test_extract_social_platforms() -> None:
 
 def test_extract_entity_count_heuristic() -> None:
     s = extract_page_signals("https://example.com/", _GEO_HTML)
-    assert s.entity_count >= 5  # heuristique : tokens capitalisés distincts
+    assert s.entity_count >= 5  # heuristic: distinct capitalized tokens
 
 
 def test_extract_main_text_ratio_excludes_boilerplate() -> None:
@@ -251,4 +251,4 @@ def test_extract_main_text_ratio_without_main_landmark() -> None:
     html = "<html><body><nav>Menu Accueil Contact</nav><p>" + ("mot " * 20) + "</p></body></html>"
     s = extract_page_signals("https://example.com/", html)
     assert s.main_text_ratio is not None
-    assert s.main_text_ratio < 1.0  # boilerplate <nav> retiré du contenu
+    assert s.main_text_ratio < 1.0  # <nav> boilerplate removed from the content

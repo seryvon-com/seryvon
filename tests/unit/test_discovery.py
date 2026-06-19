@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests M1 Discovery : normalisation, robots.txt, sitemaps, frontière de crawl."""
+"""M1 Discovery tests: normalization, robots.txt, sitemaps, crawl frontier."""
 
 from __future__ import annotations
 
@@ -142,15 +142,15 @@ def test_parse_rejects_doctype_entities() -> None:
 
 
 def test_parse_mislabeled_gzip_is_invalid() -> None:
-    # content-type prétend gzip mais le corps ne l'est pas : invalide, sans exception.
+    # content-type claims gzip but the body is not: invalid, no exception.
     assert parse_sitemap(b"<urlset></urlset>", content_type="application/gzip").valid is False
 
 
 # --------------------------------------------------------------------------- #
-# discover (orchestration, fetcher injecté)                                   #
+# discover (orchestration, injected fetcher)                                  #
 # --------------------------------------------------------------------------- #
 def make_fetcher(responses: dict[str, tuple[int, bytes, str | None]]) -> ResourceFetcher:
-    """Fetcher en mémoire : URL -> (status, contenu, content-type). Défaut 404."""
+    """In-memory fetcher: URL -> (status, content, content-type). Default 404."""
 
     async def _fetch(url: str) -> FetchedResource:
         status, content, ctype = responses.get(url, (404, b"", None))
@@ -175,7 +175,7 @@ async def test_discover_with_robots_and_sitemap() -> None:
                 _urlset(
                     "https://example.com/",
                     "https://example.com/about",
-                    "https://other.com/external",  # autre hôte -> exclu
+                    "https://other.com/external",  # other host -> excluded
                 ),
                 "application/xml",
             ),
@@ -187,11 +187,11 @@ async def test_discover_with_robots_and_sitemap() -> None:
     assert result.crawl_delay == 1.0
     assert result.sitemap_valid is True
     assert result.home_allowed is True
-    # Le candidat par défaut est dédupliqué avec celui déclaré dans robots.
+    # The default candidate is deduplicated with the one declared in robots.
     assert result.declared_sitemaps == ["https://example.com/sitemap.xml"]
-    # URLs externes exclues ; tri déterministe.
+    # External URLs excluded; deterministic sort.
     assert result.sitemap_urls == ["https://example.com/", "https://example.com/about"]
-    # Frontière : home en tête, pas de doublon, même hôte uniquement.
+    # Frontier: home first, no duplicate, same host only.
     assert result.frontier == ["https://example.com/", "https://example.com/about"]
 
 
@@ -249,7 +249,7 @@ async def test_discover_respects_robots_disallow_in_frontier() -> None:
         ),
     }
     blocked = await discover("https://example.com", user_agent=UA, fetch=make_fetcher(responses))
-    # La page interdite est dans le sitemap mais pas dans la frontière.
+    # The disallowed page is in the sitemap but not in the frontier.
     assert "https://example.com/private/secret" in blocked.sitemap_urls
     assert blocked.frontier == ["https://example.com/", "https://example.com/ok"]
 
@@ -286,7 +286,7 @@ async def test_discover_is_deterministic() -> None:
     first = await discover("https://example.com", user_agent=UA, fetch=make_fetcher(responses))
     second = await discover("https://example.com", user_agent=UA, fetch=make_fetcher(responses))
     assert first.frontier == second.frontier
-    # Tri stable indépendant de l'ordre du sitemap.
+    # Stable sort independent of the sitemap order.
     assert first.frontier == [
         "https://example.com/",
         "https://example.com/a",

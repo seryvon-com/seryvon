@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Fixtures de test partagées."""
+"""Shared test fixtures."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from seryvon.models.signals import PageSignals, SignalBundle
 
 @pytest.fixture(autouse=True)
 def _stub_agentic_probes(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Neutralise les sondes réseau ASO (ai discovery / NLWeb) dans tous les tests."""
+    """Neutralize the ASO network probes (ai discovery / NLWeb) in every test."""
     from seryvon.core import audit as audit_module
 
     async def _no_discovery(origin: str, **kwargs: object) -> dict[str, bool]:
@@ -33,7 +33,7 @@ def _stub_agentic_probes(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def sample_html() -> str:
-    """HTML minimal mais réaliste, avec title optimal et un bloc JSON-LD."""
+    """Minimal but realistic HTML, with an optimal title and a JSON-LD block."""
     return """<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -59,7 +59,7 @@ def sample_html() -> str:
 
 @pytest.fixture
 def bundle_with_title() -> SignalBundle:
-    """Bundle dont la home a un title de longueur optimale."""
+    """Bundle whose home page has an optimal-length title."""
     return SignalBundle(
         domain="example.com",
         pages=[PageSignals(url="https://example.com/", title="Un titre tout à fait correct ici")],
@@ -68,7 +68,7 @@ def bundle_with_title() -> SignalBundle:
 
 @pytest.fixture
 def bundle_no_title() -> SignalBundle:
-    """Bundle dont la home n'a pas de title."""
+    """Bundle whose home page has no title."""
     return SignalBundle(
         domain="example.com",
         pages=[PageSignals(url="https://example.com/", title=None)],

@@ -1,9 +1,9 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests d'intégration du repository (Postgres réel, gated par variable d'env).
+"""Integration tests for the repository (real Postgres, gated by env var).
 
-Skip propre si `SERYVON_TEST_DATABASE_URL` est absent (types PG : pas de SQLite).
+Cleanly skipped if `SERYVON_TEST_DATABASE_URL` is absent (PG types: no SQLite).
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from seryvon.models.report import AsoReadiness, AuditReport, Issue, PillarScore
 
 _TEST_DB = os.environ.get("SERYVON_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
-    not _TEST_DB, reason="SERYVON_TEST_DATABASE_URL non défini (Postgres requis)"
+    not _TEST_DB, reason="SERYVON_TEST_DATABASE_URL not set (Postgres required)"
 )
 
 
@@ -101,7 +101,7 @@ def test_persist_and_load_roundtrip(session: Session) -> None:
     report = _report()
     audit_id = repository.persist_report(report, session)
     session.commit()
-    session.expunge_all()  # force une relecture réelle depuis la base
+    session.expunge_all()  # force a real reload from the database
 
     loaded = repository.load_report(session, audit_id)
     assert loaded is not None

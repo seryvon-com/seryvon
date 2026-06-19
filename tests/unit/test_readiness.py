@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests de l'agrégateur de readiness agentique (none/basic/ready/advanced)."""
+"""Tests for the agentic-readiness aggregator (none/basic/ready/advanced)."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 # Seryvon — Outil d'audit SEO / GEO / GSO / AEO / ASO
 # Copyright (C) 2026 Powehi <contact@powehi.eu> — https://seryvon.com
 # Licensed under the GNU AGPL-3.0-or-later. See <https://www.gnu.org/licenses/>.
-"""Tests des règles ASO statiques (M11) sur leurs paliers."""
+"""Tests for the static ASO rules (M11) across their tiers."""
 
 from __future__ import annotations
 
@@ -124,7 +124,7 @@ def test_agent_access_not_measured_when_unchecked() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# aso.ai_discovery / aso.nlweb (sondes légères)                               #
+# aso.ai_discovery / aso.nlweb (lightweight probes)                           #
 # --------------------------------------------------------------------------- #
 def test_ai_discovery_ratio() -> None:
     two_valid = SignalBundle(
