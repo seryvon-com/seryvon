@@ -20,11 +20,46 @@ slice; the orchestrator determines engine availability from the configured BYOK 
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import httpx
 
 from seryvon.models.llm import LlmResponse
+
+
+async def request_json(
+    url: str,
+    *,
+    headers: dict[str, str],
+    json_body: dict[str, Any],
+    client: httpx.AsyncClient | None,
+    timeout: float,
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """POST `json_body`, raise on HTTP error, return (payload, response headers).
+
+    Shared transport helper for the engine connectors: opens a short-lived client
+    when none is injected, otherwise reuses the caller's (and never closes it).
+    """
+    own_client = client is None
+    if client is None:
+        client = httpx.AsyncClient(timeout=timeout)
+    try:
+        response = await client.post(url, headers=headers, json=json_body)
+        response.raise_for_status()
+        payload: dict[str, Any] = response.json()
+        return payload, dict(response.headers)
+    finally:
+        if own_client:
+            await client.aclose()
+
+
+def rate_limit_snapshot(headers: dict[str, str]) -> dict[str, str]:
+    """Keep the rate-limit / retry-after response headers (for the dispatcher)."""
+    return {
+        key: value
+        for key, value in headers.items()
+        if "ratelimit" in key.lower() or key.lower() == "retry-after"
+    }
 
 
 @runtime_checkable

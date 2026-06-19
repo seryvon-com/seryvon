@@ -29,13 +29,17 @@ from rich.table import Table
 
 from seryvon import __version__
 from seryvon.citation import (
+    AnthropicConnector,
+    GeminiConnector,
+    LlmConnector,
+    OpenAiConnector,
     PerplexityConnector,
     estimate_cost,
     generate_prompt_set,
     run_tracking,
 )
 from seryvon.core.audit import run_audit
-from seryvon.core.config import AuditConfig, get_settings
+from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.db import repository
 from seryvon.db.base import session_scope
@@ -340,16 +344,16 @@ def citations(
 ) -> None:
     """Suivi de citation LLM (M4) : crawle le site, génère le prompt set, mesure la citation.
 
-    `--dry-run` n'envoie aucun appel (prompt set + volume estimé). Sinon une clé
-    `PERPLEXITY_API_KEY` est requise (moteur de référence Perplexity).
+    `--dry-run` n'envoie aucun appel (prompt set + volume + coût estimés). Sinon, au
+    moins une clé BYOK est requise parmi PERPLEXITY/OPENAI/ANTHROPIC/GEMINI_API_KEY.
     """
     audit_config = AuditConfig.from_yaml(config) if config else AuditConfig.default()
     competitor_list = [c.strip() for c in (competitors or "").split(",") if c.strip()]
 
-    if not dry_run and not get_settings().perplexity_api_key:
+    if not dry_run and not _configured_engines(get_settings()):
         console.print(
-            "[yellow]Aucune clé Perplexity (PERPLEXITY_API_KEY). "
-            "Utilisez --dry-run ou configurez la clé.[/yellow]"
+            "[yellow]Aucune clé LLM (PERPLEXITY/OPENAI/ANTHROPIC/GEMINI_API_KEY). "
+            "Utilisez --dry-run ou configurez une clé.[/yellow]"
         )
         raise typer.Exit(code=2)
 
@@ -379,7 +383,33 @@ def citations(
         _print_citations_summary(payload, dry_run=dry_run)
 
 
-_CITATION_ENGINES = ("perplexity",)
+SUPPORTED_ENGINES: tuple[str, ...] = ("perplexity", "openai", "anthropic", "gemini")
+_DEFAULT_DRY_RUN_ENGINE = "perplexity"
+
+
+def _configured_engines(settings: Settings) -> list[str]:
+    """Engines with a configured BYOK key, in canonical order."""
+    keys = {
+        "perplexity": settings.perplexity_api_key,
+        "openai": settings.openai_api_key,
+        "anthropic": settings.anthropic_api_key,
+        "gemini": settings.gemini_api_key,
+    }
+    return [engine for engine in SUPPORTED_ENGINES if keys.get(engine)]
+
+
+def _build_connectors(settings: Settings) -> list[LlmConnector]:
+    """Instantiate a connector for each configured engine (canonical order)."""
+    connectors: list[LlmConnector] = []
+    if settings.perplexity_api_key:
+        connectors.append(PerplexityConnector(settings.perplexity_api_key))
+    if settings.openai_api_key:
+        connectors.append(OpenAiConnector(settings.openai_api_key))
+    if settings.anthropic_api_key:
+        connectors.append(AnthropicConnector(settings.anthropic_api_key))
+    if settings.gemini_api_key:
+        connectors.append(GeminiConnector(settings.gemini_api_key))
+    return connectors
 
 
 async def _run_citations(
@@ -412,9 +442,11 @@ async def _run_citations(
     prompt_set = generate_prompt_set(bundle, target_size=prompt_size, competitors=competitors)
 
     if dry_run:
-        return _dry_run_payload(prompt_set, repetitions)
+        engines = _configured_engines(settings) or [_DEFAULT_DRY_RUN_ENGINE]
+        return _dry_run_payload(prompt_set, repetitions, engines)
 
-    connectors = [PerplexityConnector(settings.perplexity_api_key)]
+    engines = _configured_engines(settings)
+    connectors = _build_connectors(settings)
     async with httpx.AsyncClient(timeout=settings.request_timeout) as client:
         metrics = await run_tracking(
             prompt_set,
@@ -425,22 +457,22 @@ async def _run_citations(
             repetitions=repetitions,
             client=client,
         )
-    return _citation_payload(prompt_set, metrics)
+    return _citation_payload(prompt_set, metrics, engines)
 
 
 def _prompt_rows(prompt_set: PromptSet) -> list[dict[str, str]]:
     return [{"intent": p.intent.value, "text": p.text} for p in prompt_set.prompts]
 
 
-def _dry_run_payload(prompt_set: PromptSet, repetitions: int) -> dict[str, Any]:
-    cost = estimate_cost(_CITATION_ENGINES, len(prompt_set.prompts), repetitions)
+def _dry_run_payload(prompt_set: PromptSet, repetitions: int, engines: list[str]) -> dict[str, Any]:
+    cost = estimate_cost(engines, len(prompt_set.prompts), repetitions)
     return {
         "domain": prompt_set.domain,
         "dry_run": True,
-        "engines": list(_CITATION_ENGINES),
+        "engines": list(engines),
         "repetitions": repetitions,
         "prompt_count": len(prompt_set.prompts),
-        "call_volume": len(prompt_set.prompts) * repetitions * len(_CITATION_ENGINES),
+        "call_volume": len(prompt_set.prompts) * repetitions * len(engines),
         "cost_estimate": cost.model_dump(mode="json"),
         "theme_profile": prompt_set.theme_profile.model_dump(mode="json"),
         "prompts": _prompt_rows(prompt_set),
@@ -448,11 +480,13 @@ def _dry_run_payload(prompt_set: PromptSet, repetitions: int) -> dict[str, Any]:
     }
 
 
-def _citation_payload(prompt_set: PromptSet, metrics: CitationMetrics | None) -> dict[str, Any]:
+def _citation_payload(
+    prompt_set: PromptSet, metrics: CitationMetrics | None, engines: list[str]
+) -> dict[str, Any]:
     return {
         "domain": prompt_set.domain,
         "dry_run": False,
-        "engines": list(_CITATION_ENGINES),
+        "engines": list(engines),
         "prompt_set_version": prompt_set.version,
         "citation_metrics": metrics.model_dump(mode="json") if metrics else None,
         "prompts": _prompt_rows(prompt_set),

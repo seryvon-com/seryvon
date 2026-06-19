@@ -182,6 +182,9 @@ def test_aso_writes_output_file(tmp_path: Path) -> None:
 
 class _NoKeySettings:
     perplexity_api_key = ""
+    openai_api_key = ""
+    anthropic_api_key = ""
+    gemini_api_key = ""
     user_agent = "Seryvon/test"
     request_timeout = 5.0
 
@@ -201,12 +204,15 @@ def test_citations_requires_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli_main, "get_settings", lambda: _NoKeySettings())
     result = runner.invoke(app, ["citations", "https://example.com"])
     assert result.exit_code == 2
-    assert "Perplexity" in result.stdout
+    assert "LLM" in result.stdout
 
 
 def test_citations_real_run_with_fake_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     class _Settings:
         perplexity_api_key = "pk"
+        openai_api_key = ""
+        anthropic_api_key = ""
+        gemini_api_key = ""
         user_agent = "Seryvon/test"
         request_timeout = 5.0
 

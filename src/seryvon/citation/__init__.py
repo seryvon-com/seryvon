@@ -21,13 +21,17 @@ from seryvon.citation.aggregate import (
 )
 from seryvon.citation.connector import LlmConnector
 from seryvon.citation.cost import CostEstimate, estimate_cost
+from seryvon.citation.engines import AnthropicConnector, GeminiConnector, OpenAiConnector
 from seryvon.citation.perplexity import PerplexityConnector
 from seryvon.citation.promptset import extract_theme_profile, generate_prompt_set
 from seryvon.citation.tracking import run_tracking
 
 __all__ = [
+    "AnthropicConnector",
     "CostEstimate",
+    "GeminiConnector",
     "LlmConnector",
+    "OpenAiConnector",
     "PerplexityConnector",
     "aggregate_citations",
     "brand_mentioned",
