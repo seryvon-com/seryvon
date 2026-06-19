@@ -28,7 +28,12 @@ from rich.console import Console
 from rich.table import Table
 
 from seryvon import __version__
-from seryvon.citation import PerplexityConnector, generate_prompt_set, run_tracking
+from seryvon.citation import (
+    PerplexityConnector,
+    estimate_cost,
+    generate_prompt_set,
+    run_tracking,
+)
 from seryvon.core.audit import run_audit
 from seryvon.core.config import AuditConfig, get_settings
 from seryvon.crawler import crawl_site, discover
@@ -428,6 +433,7 @@ def _prompt_rows(prompt_set: PromptSet) -> list[dict[str, str]]:
 
 
 def _dry_run_payload(prompt_set: PromptSet, repetitions: int) -> dict[str, Any]:
+    cost = estimate_cost(_CITATION_ENGINES, len(prompt_set.prompts), repetitions)
     return {
         "domain": prompt_set.domain,
         "dry_run": True,
@@ -435,6 +441,7 @@ def _dry_run_payload(prompt_set: PromptSet, repetitions: int) -> dict[str, Any]:
         "repetitions": repetitions,
         "prompt_count": len(prompt_set.prompts),
         "call_volume": len(prompt_set.prompts) * repetitions * len(_CITATION_ENGINES),
+        "cost_estimate": cost.model_dump(mode="json"),
         "theme_profile": prompt_set.theme_profile.model_dump(mode="json"),
         "prompts": _prompt_rows(prompt_set),
         "tracked_competitors": prompt_set.tracked_competitors,
@@ -461,6 +468,11 @@ def _print_citations_summary(payload: dict[str, Any], *, dry_run: bool) -> None:
             f"{payload['prompt_count']} prompt(s) × {payload['repetitions']} rép. × "
             f"{len(payload['engines'])} moteur(s) = {payload['call_volume']} appel(s) "
             "(dry-run, aucun appel envoyé)."
+        )
+        cost = payload.get("cost_estimate", {})
+        note = " (indicatif)" if cost.get("indicative") else ""
+        console.print(
+            f"Coût estimé{note} : {cost.get('total', 0):.2f} {cost.get('currency', 'USD')}"
         )
         table = Table(title="Prompts générés")
         table.add_column("Intention")

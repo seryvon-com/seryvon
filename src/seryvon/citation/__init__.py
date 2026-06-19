@@ -20,16 +20,19 @@ from seryvon.citation.aggregate import (
     registrable_domain,
 )
 from seryvon.citation.connector import LlmConnector
+from seryvon.citation.cost import CostEstimate, estimate_cost
 from seryvon.citation.perplexity import PerplexityConnector
 from seryvon.citation.promptset import extract_theme_profile, generate_prompt_set
 from seryvon.citation.tracking import run_tracking
 
 __all__ = [
+    "CostEstimate",
     "LlmConnector",
     "PerplexityConnector",
     "aggregate_citations",
     "brand_mentioned",
     "domain_matches",
+    "estimate_cost",
     "extract_theme_profile",
     "generate_prompt_set",
     "registrable_domain",

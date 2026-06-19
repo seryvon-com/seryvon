@@ -193,6 +193,8 @@ def test_citations_dry_run_outputs_volume() -> None:
     assert payload["dry_run"] is True
     assert payload["prompts"], "prompt set should not be empty"
     assert payload["call_volume"] == payload["prompt_count"] * 3 * 1
+    assert payload["cost_estimate"]["indicative"] is True
+    assert payload["cost_estimate"]["total"] >= 0.0
 
 
 def test_citations_requires_key(monkeypatch: pytest.MonkeyPatch) -> None:

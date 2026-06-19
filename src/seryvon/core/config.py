@@ -67,9 +67,12 @@ class Settings(BaseSettings):
     # aso.brand_coherence not_measured.
     wikidata_enabled: bool = True
 
-    # Perplexity LLM citation tracking (BYOK, M4). Key read from PERPLEXITY_API_KEY;
-    # empty => geo.citation_* / aeo.llm_citation stay not_measured.
+    # LLM citation tracking keys (BYOK, M4). Each empty => that engine is skipped;
+    # with no key at all, geo.citation_* / aeo.llm_citation stay not_measured.
     perplexity_api_key: str = Field(default="", validation_alias="PERPLEXITY_API_KEY")
+    openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
+    anthropic_api_key: str = Field(default="", validation_alias="ANTHROPIC_API_KEY")
+    gemini_api_key: str = Field(default="", validation_alias="GEMINI_API_KEY")
 
 
 @lru_cache
