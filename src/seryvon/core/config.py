@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     # aso.brand_coherence not_measured.
     wikidata_enabled: bool = True
 
+    # Perplexity LLM citation tracking (BYOK, M4). Key read from PERPLEXITY_API_KEY;
+    # empty => geo.citation_* / aeo.llm_citation stay not_measured.
+    perplexity_api_key: str = Field(default="", validation_alias="PERPLEXITY_API_KEY")
+
 
 @lru_cache
 def get_settings() -> Settings:

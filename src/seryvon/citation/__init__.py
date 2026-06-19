@@ -8,8 +8,9 @@
 """Module M4 — LLM citation tracking (document 07).
 
 `aggregate`: pure, deterministic core (parsing/normalization + aggregation of
-`LlmResponse` objects into `CitationMetrics`). The network connectors (Perplexity,
-OpenAI…) come in later slices and feed this aggregator.
+`LlmResponse` objects into `CitationMetrics`). `connector`/`perplexity`: network
+connectors (impure, injectable client) that feed the aggregator. OpenAI, Anthropic
+and Gemini connectors come in a later slice.
 """
 
 from seryvon.citation.aggregate import (
@@ -18,8 +19,12 @@ from seryvon.citation.aggregate import (
     domain_matches,
     registrable_domain,
 )
+from seryvon.citation.connector import LlmConnector
+from seryvon.citation.perplexity import PerplexityConnector
 
 __all__ = [
+    "LlmConnector",
+    "PerplexityConnector",
     "aggregate_citations",
     "brand_mentioned",
     "domain_matches",
