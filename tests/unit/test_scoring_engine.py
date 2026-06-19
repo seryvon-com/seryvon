@@ -10,9 +10,28 @@ from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import Status
 from seryvon.models.report import PillarScore
 from seryvon.models.signals import ExternalSignals, PageSignals, SignalBundle, SiteSignals
-from seryvon.scoring.engine import run_criteria, score_global, score_pillar
+from seryvon.scoring.engine import run_criteria, score_coverage, score_global, score_pillar
 
 PILLARS = ("seo", "geo", "gso", "aeo", "aso")
+
+
+def test_coverage_excludes_not_applicable_from_base() -> None:
+    results = [
+        CriterionResult(key="a", pillars=["seo"], score=100.0, status=Status.OK, weight=2.0),
+        CriterionResult(
+            key="b", pillars=["seo"], score=0.0, status=Status.NOT_MEASURED, weight=2.0
+        ),
+        CriterionResult(
+            key="c", pillars=["seo"], score=0.0, status=Status.NOT_APPLICABLE, weight=1.0
+        ),
+    ]
+    ps = score_pillar("seo", results)
+    # eligible = a + b (weight 4); measured = a (weight 2) -> coverage 0.5; c is not counted.
+    assert ps.coverage == 0.5
+    assert ps.measured == 1
+    assert ps.not_applicable == 1
+    assert ps.score == 100.0  # only the measured criterion 'a' contributes
+    assert score_coverage(results) == 0.5
 
 
 def _rich_bundle() -> SignalBundle:

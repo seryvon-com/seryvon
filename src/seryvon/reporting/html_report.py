@@ -37,6 +37,7 @@ _STATUS_CSS: dict[Status, str] = {
     Status.WARNING: "warning",
     Status.CRITICAL: "critical",
     Status.NOT_MEASURED: "nm",
+    Status.NOT_APPLICABLE: "nm",
 }
 
 
@@ -111,6 +112,7 @@ _TEMPLATE = """<!DOCTYPE html>
   </div>
   <p class="meta">
     Seryvon {{ report.tool_version }} · {{ generated }} · schéma v{{ report.schema_version }}
+    · couverture {{ (report.coverage * 100)|round|int }}%
     {%- if report.config_digest %} · config {{ report.config_digest }}{% endif %}
   </p>
 </header>
@@ -119,7 +121,8 @@ _TEMPLATE = """<!DOCTYPE html>
   <div class="pillar {{ p.css }}">
     <div class="pname">{{ p.name }}</div>
     <div class="pscore">{% if p.measured %}{{ "%.1f"|format(p.score) }}{% else %}—{% endif %}</div>
-    <div class="pmeta">{{ p.measured }} mesurés · {{ p.excluded }} exclus</div>
+    <div class="pmeta">{{ p.measured }} mesurés · {{ p.excluded }} exclus ·
+      {{ (p.coverage * 100)|round|int }}% couv.</div>
   </div>
   {% endfor %}
 </section>
@@ -185,6 +188,7 @@ def report_to_html(report: AuditReport) -> str:
             "score": ps.score,
             "measured": ps.measured,
             "excluded": ps.excluded,
+            "coverage": ps.coverage,
             "css": _band(ps.score) if ps.measured else "nm",
         }
         for name, ps in report.pillars.items()

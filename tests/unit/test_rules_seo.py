@@ -292,6 +292,7 @@ def test_hreflang() -> None:
     assert HreflangCriterion().evaluate(_pages(without_default)).score == 70
 
 
-def test_hreflang_not_measured_monolingual() -> None:
+def test_hreflang_not_applicable_monolingual() -> None:
+    # No hreflang declared -> the criterion is irrelevant (monolingual), not unmeasured.
     result = HreflangCriterion().evaluate(_pages(_page(), _page()))
-    assert result.status is Status.NOT_MEASURED
+    assert result.status is Status.NOT_APPLICABLE

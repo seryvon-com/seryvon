@@ -185,10 +185,20 @@ def _print_summary(report) -> None:  # type: ignore[no-untyped-def]
     table.add_column("Score", justify="right")
     table.add_column("Mesurés", justify="right")
     table.add_column("Exclus", justify="right")
+    table.add_column("Couv.", justify="right")
     for pillar, ps in report.pillars.items():
-        table.add_row(pillar.upper(), f"{ps.score:.1f}", str(ps.measured), str(ps.excluded))
+        table.add_row(
+            pillar.upper(),
+            f"{ps.score:.1f}",
+            str(ps.measured),
+            str(ps.excluded),
+            f"{ps.coverage * 100:.0f}%",
+        )
     console.print(table)
-    console.print(f"[bold]Score global :[/bold] {report.score_global:.1f}")
+    console.print(
+        f"[bold]Score global :[/bold] {report.score_global:.1f} "
+        f"· couverture {report.coverage * 100:.0f}%"
+    )
 
 
 @app.command()

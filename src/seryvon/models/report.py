@@ -18,12 +18,14 @@ from seryvon.models.enums import ReadinessLevel, Severity
 
 
 class PillarScore(BaseModel):
-    """Aggregated score of a pillar, with measured/excluded counts (renormalization)."""
+    """Aggregated score of a pillar, with measured/excluded counts + coverage."""
 
     pillar: str
     score: float
     measured: int = 0
     excluded: int = 0
+    not_applicable: int = 0
+    coverage: float = 0.0  # measured / eligible weight (excludes not_applicable)
 
 
 class Issue(BaseModel):
@@ -62,6 +64,7 @@ class AuditReport(BaseModel):
     finished_at: datetime | None = None
 
     score_global: float = 0.0
+    coverage: float = 0.0  # global measured / eligible weight over distinct criteria
     pillars: dict[str, PillarScore] = Field(default_factory=dict)
 
     criteria: list[CriterionResult] = Field(default_factory=list)

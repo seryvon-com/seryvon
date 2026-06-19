@@ -26,10 +26,11 @@ def _cell(value: object) -> str:
 
 
 def _pillar_table(report: AuditReport) -> list[str]:
-    rows = ["| Pilier | Score | Mesurés | Exclus |", "|---|---:|---:|---:|"]
+    rows = ["| Pilier | Score | Mesurés | Exclus | Couverture |", "|---|---:|---:|---:|---:|"]
     for name, ps in report.pillars.items():
         score = f"{ps.score:.1f}" if ps.measured else "—"
-        rows.append(f"| {name.upper()} | {score} | {ps.measured} | {ps.excluded} |")
+        cov = f"{ps.coverage * 100:.0f}%"
+        rows.append(f"| {name.upper()} | {score} | {ps.measured} | {ps.excluded} | {cov} |")
     return rows
 
 
@@ -102,7 +103,8 @@ def report_to_markdown(report: AuditReport) -> str:
     lines = [
         f"# Audit Seryvon — {report.domain}",
         "",
-        f"**Score global : {report.score_global:.1f}/100**  ",
+        f"**Score global : {report.score_global:.1f}/100** "
+        f"· couverture {report.coverage * 100:.0f}%  ",
         f"Seryvon {report.tool_version} · {generated} · schéma v{report.schema_version}",
         "",
         "## Scores par pilier",

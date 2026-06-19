@@ -591,7 +591,7 @@ class HreflangCriterion(Criterion):
     ) -> CriterionResult:
         with_hreflang = [p for p in signals.pages if p.hreflang]
         if not with_hreflang:
-            return CriterionResult.not_measured(
+            return CriterionResult.not_applicable(
                 self.key,
                 self.pillars,
                 self.weight,

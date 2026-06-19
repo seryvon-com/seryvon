@@ -18,7 +18,10 @@ class Status(StrEnum):
     OK = "ok"  # score >= 80
     WARNING = "warning"  # 50 <= score < 80
     CRITICAL = "critical"  # score < 50
-    NOT_MEASURED = "not_measured"  # data unavailable -> excluded from the computation
+    NOT_MEASURED = (
+        "not_measured"  # data unavailable -> excluded, but still eligible (lowers coverage)
+    )
+    NOT_APPLICABLE = "not_applicable"  # criterion irrelevant here -> excluded AND not eligible
 
 
 class Severity(StrEnum):

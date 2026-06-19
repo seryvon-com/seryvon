@@ -46,15 +46,44 @@ def run_criteria(signals: SignalBundle, config: AuditConfig) -> list[CriterionRe
     return results
 
 
+def _coverage(measured: list[CriterionResult], applicable: list[CriterionResult]) -> float:
+    """Weight-based coverage: measured weight / applicable (eligible) weight."""
+    eligible_weight = sum(r.weight for r in applicable)
+    if eligible_weight <= 0:
+        return 0.0
+    return round(sum(r.weight for r in measured) / eligible_weight, 4)
+
+
+def score_coverage(results: list[CriterionResult]) -> float:
+    """Global coverage over the distinct criteria (excludes `not_applicable` from the base)."""
+    applicable = [r for r in results if r.status is not Status.NOT_APPLICABLE]
+    measured = [r for r in applicable if r.status is not Status.NOT_MEASURED]
+    return _coverage(measured, applicable)
+
+
 def score_pillar(pillar: str, results: list[CriterionResult]) -> PillarScore:
-    """Aggregate a pillar's criteria, excluding `not_measured`, and renormalize."""
+    """Aggregate a pillar's criteria, excluding `not_measured`/`not_applicable`, and renormalize.
+
+    `coverage` is the measured/eligible weight ratio, where eligible excludes
+    `not_applicable` (the criterion does not count against coverage when irrelevant).
+    """
     relevant = [r for r in results if pillar in r.pillars]
-    measured = [r for r in relevant if r.status is not Status.NOT_MEASURED]
+    applicable = [r for r in relevant if r.status is not Status.NOT_APPLICABLE]
+    measured = [r for r in applicable if r.status is not Status.NOT_MEASURED]
     excluded = len(relevant) - len(measured)
+    not_applicable = len(relevant) - len(applicable)
+    coverage = _coverage(measured, applicable)
 
     total_weight = sum(r.weight for r in measured)
     if total_weight <= 0:
-        return PillarScore(pillar=pillar, score=0.0, measured=0, excluded=excluded)
+        return PillarScore(
+            pillar=pillar,
+            score=0.0,
+            measured=0,
+            excluded=excluded,
+            not_applicable=not_applicable,
+            coverage=coverage,
+        )
 
     weighted = sum(r.score * r.weight for r in measured)
     return PillarScore(
@@ -62,6 +91,8 @@ def score_pillar(pillar: str, results: list[CriterionResult]) -> PillarScore:
         score=round(weighted / total_weight, 2),
         measured=len(measured),
         excluded=excluded,
+        not_applicable=not_applicable,
+        coverage=coverage,
     )
 
 

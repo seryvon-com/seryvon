@@ -43,6 +43,7 @@ from seryvon.scoring import (
     build_issues,
     compute_aso_readiness,
     run_criteria,
+    score_coverage,
     score_global,
     score_pillar,
 )
@@ -178,6 +179,7 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         started_at=started,
         finished_at=datetime.now(UTC),
         score_global=overall,
+        coverage=score_coverage(results),
         pillars=pillar_scores,
         criteria=results,
         issues=build_issues(results),

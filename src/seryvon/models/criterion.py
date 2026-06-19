@@ -65,6 +65,29 @@ class CriterionResult(BaseModel):
             weight=weight,
         )
 
+    @classmethod
+    def not_applicable(
+        cls,
+        key: str,
+        pillars: list[str],
+        weight: float,
+        reason: str,
+    ) -> CriterionResult:
+        """Build a `not_applicable` result (excluded AND removed from the coverage base).
+
+        Use when the criterion is irrelevant in this context (e.g. a monolingual
+        site for hreflang), as opposed to `not_measured` (data simply unavailable).
+        """
+        return cls(
+            key=key,
+            pillars=pillars,
+            raw_value=None,
+            score=0.0,
+            status=Status.NOT_APPLICABLE,
+            explanation=reason,
+            weight=weight,
+        )
+
 
 class Criterion(ABC):
     """Scoring-criterion interface. Subclass + `@register` to activate it."""
