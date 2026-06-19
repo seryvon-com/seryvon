@@ -22,6 +22,7 @@ from seryvon.citation.aggregate import (
 from seryvon.citation.connector import LlmConnector
 from seryvon.citation.perplexity import PerplexityConnector
 from seryvon.citation.promptset import extract_theme_profile, generate_prompt_set
+from seryvon.citation.tracking import run_tracking
 
 __all__ = [
     "LlmConnector",
@@ -32,4 +33,5 @@ __all__ = [
     "extract_theme_profile",
     "generate_prompt_set",
     "registrable_domain",
+    "run_tracking",
 ]

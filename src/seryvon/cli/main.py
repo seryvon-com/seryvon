@@ -22,17 +22,22 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any
 
+import httpx
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from seryvon import __version__
+from seryvon.citation import PerplexityConnector, generate_prompt_set, run_tracking
 from seryvon.core.audit import run_audit
-from seryvon.core.config import AuditConfig
+from seryvon.core.config import AuditConfig, get_settings
+from seryvon.crawler import crawl_site, discover
 from seryvon.db import repository
 from seryvon.db.base import session_scope
 from seryvon.models.enums import Status
+from seryvon.models.prompts import PromptSet
 from seryvon.models.report import AuditReport
+from seryvon.models.signals import CitationMetrics, SignalBundle
 from seryvon.reporting import report_to_html, report_to_json, report_to_markdown
 
 
@@ -290,6 +295,200 @@ def _print_aso_summary(report: AuditReport) -> None:
     console.print(
         f"[bold]Score ASO :[/bold] {aso.score:.1f} ({aso.measured} mesurés, {aso.excluded} exclus)"
     )
+
+
+@app.command()
+def citations(
+    url: Annotated[str, typer.Argument(help="URL à auditer (citation LLM, module M4).")],
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Fichier de sortie JSON (sinon affichage console)."),
+    ] = None,
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", help="Fichier YAML de configuration."),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run", help="Génère le prompt set et estime le volume, sans rien envoyer."
+        ),
+    ] = False,
+    repetitions: Annotated[
+        int,
+        typer.Option("--repetitions", "-k", help="Répétitions par (prompt, moteur)."),
+    ] = 5,
+    prompts: Annotated[
+        int,
+        typer.Option("--prompts", help="Taille cible du jeu de prompts."),
+    ] = 15,
+    competitors: Annotated[
+        str | None,
+        typer.Option(
+            "--competitors", help="Concurrents à suivre (domaines séparés par des virgules)."
+        ),
+    ] = None,
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="N'émet que le JSON (pas de récapitulatif)."),
+    ] = False,
+) -> None:
+    """Suivi de citation LLM (M4) : crawle le site, génère le prompt set, mesure la citation.
+
+    `--dry-run` n'envoie aucun appel (prompt set + volume estimé). Sinon une clé
+    `PERPLEXITY_API_KEY` est requise (moteur de référence Perplexity).
+    """
+    audit_config = AuditConfig.from_yaml(config) if config else AuditConfig.default()
+    competitor_list = [c.strip() for c in (competitors or "").split(",") if c.strip()]
+
+    if not dry_run and not get_settings().perplexity_api_key:
+        console.print(
+            "[yellow]Aucune clé Perplexity (PERPLEXITY_API_KEY). "
+            "Utilisez --dry-run ou configurez la clé.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    try:
+        payload = asyncio.run(
+            _run_citations(
+                url,
+                audit_config,
+                repetitions=repetitions,
+                prompt_size=prompts,
+                competitors=competitor_list,
+                dry_run=dry_run,
+            )
+        )
+    except Exception as exc:
+        console.print(f"[red]Échec du suivi de citation :[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    if output is not None:
+        output.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        if not quiet:
+            console.print(f"[green]Rapport citation écrit :[/green] {output}")
+    elif quiet:
+        typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+
+    if not quiet:
+        _print_citations_summary(payload, dry_run=dry_run)
+
+
+_CITATION_ENGINES = ("perplexity",)
+
+
+async def _run_citations(
+    url: str,
+    config: AuditConfig,
+    *,
+    repetitions: int,
+    prompt_size: int,
+    competitors: list[str],
+    dry_run: bool,
+) -> dict[str, Any]:
+    """Crawl the site, build the prompt set, and (unless dry-run) run the tracking."""
+    settings = get_settings()
+    user_agent = config.crawl.user_agent or settings.user_agent
+    discovery = await discover(
+        url,
+        user_agent=user_agent,
+        timeout=settings.request_timeout,
+        respect_robots=config.crawl.respect_robots,
+    )
+    pages = await crawl_site(
+        discovery,
+        user_agent=user_agent,
+        max_pages=config.crawl.max_pages,
+        max_depth=config.crawl.max_depth,
+        respect_robots=config.crawl.respect_robots,
+        timeout=settings.request_timeout,
+    )
+    bundle = SignalBundle(domain=discovery.domain, pages=pages)
+    prompt_set = generate_prompt_set(bundle, target_size=prompt_size, competitors=competitors)
+
+    if dry_run:
+        return _dry_run_payload(prompt_set, repetitions)
+
+    connectors = [PerplexityConnector(settings.perplexity_api_key)]
+    async with httpx.AsyncClient(timeout=settings.request_timeout) as client:
+        metrics = await run_tracking(
+            prompt_set,
+            connectors,
+            target_domain=bundle.domain,
+            brand=prompt_set.theme_profile.brand,
+            competitors=competitors,
+            repetitions=repetitions,
+            client=client,
+        )
+    return _citation_payload(prompt_set, metrics)
+
+
+def _prompt_rows(prompt_set: PromptSet) -> list[dict[str, str]]:
+    return [{"intent": p.intent.value, "text": p.text} for p in prompt_set.prompts]
+
+
+def _dry_run_payload(prompt_set: PromptSet, repetitions: int) -> dict[str, Any]:
+    return {
+        "domain": prompt_set.domain,
+        "dry_run": True,
+        "engines": list(_CITATION_ENGINES),
+        "repetitions": repetitions,
+        "prompt_count": len(prompt_set.prompts),
+        "call_volume": len(prompt_set.prompts) * repetitions * len(_CITATION_ENGINES),
+        "theme_profile": prompt_set.theme_profile.model_dump(mode="json"),
+        "prompts": _prompt_rows(prompt_set),
+        "tracked_competitors": prompt_set.tracked_competitors,
+    }
+
+
+def _citation_payload(prompt_set: PromptSet, metrics: CitationMetrics | None) -> dict[str, Any]:
+    return {
+        "domain": prompt_set.domain,
+        "dry_run": False,
+        "engines": list(_CITATION_ENGINES),
+        "prompt_set_version": prompt_set.version,
+        "citation_metrics": metrics.model_dump(mode="json") if metrics else None,
+        "prompts": _prompt_rows(prompt_set),
+        "tracked_competitors": prompt_set.tracked_competitors,
+    }
+
+
+def _print_citations_summary(payload: dict[str, Any], *, dry_run: bool) -> None:
+    """Print the prompt set/volume (dry-run) or the aggregated citation metrics."""
+    if dry_run:
+        console.print(
+            f"[bold]Prompt set — {payload['domain']}[/bold] : "
+            f"{payload['prompt_count']} prompt(s) × {payload['repetitions']} rép. × "
+            f"{len(payload['engines'])} moteur(s) = {payload['call_volume']} appel(s) "
+            "(dry-run, aucun appel envoyé)."
+        )
+        table = Table(title="Prompts générés")
+        table.add_column("Intention")
+        table.add_column("Prompt")
+        for row in payload["prompts"]:
+            table.add_row(row["intent"], row["text"])
+        console.print(table)
+        return
+
+    metrics = payload.get("citation_metrics")
+    if not metrics:
+        console.print("[yellow]Aucune réponse exploitable : citation non mesurée.[/yellow]")
+        return
+    console.print(f"[bold]Citation LLM — {payload['domain']}[/bold]")
+    console.print(
+        f"Citation : {metrics['citation_rate'] * 100:.1f}% · "
+        f"Mention : {metrics['mention_rate'] * 100:.1f}% · "
+        f"Confiance : {metrics['citation_confidence'] * 100:.1f}%"
+    )
+    table = Table(title="Par moteur")
+    table.add_column("Moteur")
+    table.add_column("Citation", justify="right")
+    table.add_column("Mention", justify="right")
+    for engine, per in metrics.get("per_engine", {}).items():
+        table.add_row(
+            engine, f"{per['citation_rate'] * 100:.0f}%", f"{per['mention_rate'] * 100:.0f}%"
+        )
+    console.print(table)
 
 
 @app.command()

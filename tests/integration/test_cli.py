@@ -22,6 +22,7 @@ from seryvon.crawler import extract_page_signals
 from seryvon.crawler.discovery import DiscoveryResult, RobotsTxt
 from seryvon.db import repository
 from seryvon.db.repository import AuditSummary
+from seryvon.models.llm import LlmCitation, LlmResponse
 from seryvon.models.signals import PageSignals
 
 runner = CliRunner()
@@ -54,6 +55,9 @@ def _patch_crawl(monkeypatch: pytest.MonkeyPatch, sample_html: str) -> None:
 
     monkeypatch.setattr(audit_module, "discover", fake_discover)
     monkeypatch.setattr(audit_module, "crawl_site", fake_crawl)
+    # The `citations` command uses discover/crawl_site bound in the CLI module.
+    monkeypatch.setattr(cli_main, "discover", fake_discover, raising=False)
+    monkeypatch.setattr(cli_main, "crawl_site", fake_crawl, raising=False)
 
 
 def test_version() -> None:
@@ -174,3 +178,59 @@ def test_aso_writes_output_file(tmp_path: Path) -> None:
     assert result.exit_code == 0
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["aso"]["pillar"] == "aso"
+
+
+class _NoKeySettings:
+    perplexity_api_key = ""
+    user_agent = "Seryvon/test"
+    request_timeout = 5.0
+
+
+def test_citations_dry_run_outputs_volume() -> None:
+    result = runner.invoke(app, ["citations", "https://example.com", "--dry-run", "-q", "-k", "3"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["dry_run"] is True
+    assert payload["prompts"], "prompt set should not be empty"
+    assert payload["call_volume"] == payload["prompt_count"] * 3 * 1
+
+
+def test_citations_requires_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_main, "get_settings", lambda: _NoKeySettings())
+    result = runner.invoke(app, ["citations", "https://example.com"])
+    assert result.exit_code == 2
+    assert "Perplexity" in result.stdout
+
+
+def test_citations_real_run_with_fake_connector(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Settings:
+        perplexity_api_key = "pk"
+        user_agent = "Seryvon/test"
+        request_timeout = 5.0
+
+    class _FakeConnector:
+        provider = "perplexity"
+
+        def __init__(self, *args: object, **kwargs: object) -> None: ...
+
+        async def query(
+            self, prompt: str, *, prompt_id: str = "", repetition: int = 1, **kwargs: object
+        ) -> LlmResponse:
+            return LlmResponse(
+                engine="perplexity",
+                model="sonar",
+                prompt_id=prompt_id,
+                repetition=repetition,
+                response_text="cité",
+                citations=[LlmCitation(url="https://example.com/", position=1)],
+                web_search_enabled=True,
+            )
+
+    monkeypatch.setattr(cli_main, "get_settings", lambda: _Settings())
+    monkeypatch.setattr(cli_main, "PerplexityConnector", _FakeConnector)
+    result = runner.invoke(app, ["citations", "https://example.com", "-q", "-k", "2"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["dry_run"] is False
+    assert payload["citation_metrics"] is not None
+    assert payload["citation_metrics"]["citation_rate"] == 1.0
