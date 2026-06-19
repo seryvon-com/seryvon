@@ -21,6 +21,7 @@ from seryvon.citation.aggregate import (
 )
 from seryvon.citation.connector import LlmConnector
 from seryvon.citation.perplexity import PerplexityConnector
+from seryvon.citation.promptset import extract_theme_profile, generate_prompt_set
 
 __all__ = [
     "LlmConnector",
@@ -28,5 +29,7 @@ __all__ = [
     "aggregate_citations",
     "brand_mentioned",
     "domain_matches",
+    "extract_theme_profile",
+    "generate_prompt_set",
     "registrable_domain",
 ]
