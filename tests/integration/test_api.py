@@ -105,3 +105,27 @@ def test_get_unknown_returns_404(db_client: TestClient) -> None:
 def test_create_audit_rejects_bad_url(db_client: TestClient) -> None:
     resp = db_client.post("/audits", json={"url": "not-a-url"})
     assert resp.status_code == 422
+
+
+def test_compare_two_scorecards_exact(db_client: TestClient) -> None:
+    """Two identical-profile audits compare as exact (M6)."""
+    a = db_client.post("/audits", json={"url": "https://example.com"})
+    b = db_client.post("/audits", json={"url": "https://example.com"})
+    left = a.headers["location"].rsplit("/", 1)[-1]
+    right = b.headers["location"].rsplit("/", 1)[-1]
+    resp = db_client.post(
+        "/scorecards/compare",
+        json={"left_run_id": left, "right_run_id": right, "mode": "strict"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["comparability"] == "exact"
+    assert body["global_delta"] == 0.0  # deterministic: same site, zero variance
+
+
+def test_compare_unknown_run_returns_404(db_client: TestClient) -> None:
+    resp = db_client.post(
+        "/scorecards/compare",
+        json={"left_run_id": str(uuid.uuid4()), "right_run_id": str(uuid.uuid4())},
+    )
+    assert resp.status_code == 404
