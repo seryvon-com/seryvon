@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from seryvon.core.config import DEFAULT_PILLAR_WEIGHTS, AuditConfig
 from seryvon.models.criterion import RULES, CriterionResult
-from seryvon.models.enums import Status
+from seryvon.models.enums import CoverageLabel, Status
 from seryvon.models.report import PillarScore
 from seryvon.models.signals import SignalBundle
 
@@ -45,6 +45,17 @@ def run_criteria(signals: SignalBundle, config: AuditConfig) -> list[CriterionRe
             result.weight = float(override["weight"])
         results.append(result)
     return results
+
+
+def coverage_label(coverage: float) -> CoverageLabel:
+    """Map a coverage ratio to its display tier (SIC doc 04 §4)."""
+    if coverage >= 0.90:
+        return CoverageLabel.COMPLETE
+    if coverage >= 0.70:
+        return CoverageLabel.SUBSTANTIAL
+    if coverage >= 0.40:
+        return CoverageLabel.PARTIAL
+    return CoverageLabel.INSUFFICIENT
 
 
 def _coverage(measured: list[CriterionResult], applicable: list[CriterionResult]) -> float:
@@ -84,6 +95,7 @@ def score_pillar(pillar: str, results: list[CriterionResult]) -> PillarScore:
             excluded=excluded,
             not_applicable=not_applicable,
             coverage=coverage,
+            coverage_label=coverage_label(coverage),
         )
 
     weighted = sum(r.score * r.weight for r in measured)
@@ -94,6 +106,7 @@ def score_pillar(pillar: str, results: list[CriterionResult]) -> PillarScore:
         excluded=excluded,
         not_applicable=not_applicable,
         coverage=coverage,
+        coverage_label=coverage_label(coverage),
     )
 
 

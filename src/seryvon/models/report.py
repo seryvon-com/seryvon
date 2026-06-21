@@ -10,11 +10,31 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from seryvon.models.criterion import CriterionResult
-from seryvon.models.enums import ReadinessLevel, Severity
+from seryvon.models.enums import CoverageLabel, ReadinessLevel, Severity
+
+
+class MeasurementProfile(BaseModel):
+    """Canonical profile of a measurement run, hashed for comparability (SIC doc 04 §6).
+
+    Two audit results are comparable only if their profile digests match (exact
+    comparability) or if a versioned compatibility rule explicitly allows the
+    difference. The digest is SHA-256 of the canonical JSON of all fields except
+    `digest` itself.
+    """
+
+    seryvon_version: str
+    signal_schema_version: int
+    rule_catalog_digest: str  # SHA-256[:16] of sorted registered criterion keys
+    pillar_weights: dict[str, float]
+    thresholds: dict[str, dict[str, Any]]
+    criteria_overrides: dict[str, dict[str, Any]]
+    active_connectors: list[str]  # connectors that produced data (not not_measured)
+    digest: str  # SHA-256[:16] of canonical JSON of all other fields
 
 
 class PillarScore(BaseModel):
@@ -26,6 +46,7 @@ class PillarScore(BaseModel):
     excluded: int = 0
     not_applicable: int = 0
     coverage: float = 0.0  # measured / eligible weight (excludes not_applicable)
+    coverage_label: CoverageLabel = CoverageLabel.INSUFFICIENT
 
 
 class Issue(BaseModel):
@@ -73,3 +94,4 @@ class AuditReport(BaseModel):
     aso_readiness: AsoReadiness | None = None
 
     config_digest: str | None = None
+    measurement_profile: MeasurementProfile | None = None

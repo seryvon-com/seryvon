@@ -31,7 +31,7 @@ from seryvon.connectors import (
 from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.crawler.discovery import AGENT_BOTS, blocked_agent_bots
-from seryvon.models.report import AuditReport
+from seryvon.models.report import AuditReport, MeasurementProfile
 from seryvon.models.signals import (
     SIGNAL_SCHEMA_VERSION,
     ExternalSignals,
@@ -53,6 +53,36 @@ def _config_digest(config: AuditConfig) -> str:
     """Stable fingerprint of the config (reproducibility — document 05, §8)."""
     payload = json.dumps(config.model_dump(), sort_keys=True).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()[:16]
+
+
+def _rule_catalog_digest() -> str:
+    """Fingerprint of the registered rule set (key + class name for each rule)."""
+    from seryvon.models.criterion import RULES
+
+    catalog = sorted(f"{k}:{type(v).__name__}" for k, v in RULES.items())
+    payload = json.dumps(catalog).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()[:16]
+
+
+def _build_measurement_profile(
+    config: AuditConfig,
+    active_connectors: list[str],
+) -> MeasurementProfile:
+    """Build and hash the canonical measurement profile (SIC doc 04 §6)."""
+    from seryvon import __version__
+    from seryvon.models.signals import SIGNAL_SCHEMA_VERSION
+
+    fields: dict[str, object] = {
+        "seryvon_version": __version__,
+        "signal_schema_version": SIGNAL_SCHEMA_VERSION,
+        "rule_catalog_digest": _rule_catalog_digest(),
+        "pillar_weights": config.pillar_weights,
+        "thresholds": config.thresholds,
+        "criteria_overrides": config.criteria_overrides,
+        "active_connectors": sorted(active_connectors),
+    }
+    digest = hashlib.sha256(json.dumps(fields, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+    return MeasurementProfile(**fields, digest=digest)
 
 
 async def _collect_external(
@@ -143,15 +173,26 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         respect_robots=config.crawl.respect_robots,
         timeout=settings.request_timeout,
     )
+    active_connectors: list[str] = ["crawler"]
     external = await _collect_external(discovery.domain, pages, settings)
+    if external.core_web_vitals is not None or external.lighthouse_performance is not None:
+        active_connectors.append("pagespeed")
+    if external.open_page_rank is not None:
+        active_connectors.append("openpagerank")
     # Agentic discovery probes (free, keyless) — ASO pillar.
     external.ai_discovery_endpoints = await probe_ai_discovery(
         discovery.origin, timeout=settings.request_timeout
     )
+    if external.ai_discovery_endpoints:
+        active_connectors.append("ai_discovery")
     external.nlweb_status = await probe_nlweb(discovery.origin, timeout=settings.request_timeout)
+    if external.nlweb_status:
+        active_connectors.append("nlweb")
     external.kg_presence, external.brand_coherence = await _collect_brand(
         pages[0] if pages else None, settings
     )
+    if external.kg_presence is not None:
+        active_connectors.append("wikidata")
     bundle = SignalBundle(
         domain=discovery.domain,
         signal_schema_version=SIGNAL_SCHEMA_VERSION,
@@ -172,6 +213,8 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
     pillar_scores = {p: score_pillar(p, results) for p in PILLARS}
     overall = score_global(pillar_scores, config)
 
+    config_digest = _config_digest(config)
+    measurement_profile = _build_measurement_profile(config, active_connectors)
     return AuditReport(
         domain=bundle.domain,
         tool_version=__version__,
@@ -184,5 +227,6 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         criteria=results,
         issues=build_issues(results),
         aso_readiness=compute_aso_readiness(bundle),
-        config_digest=_config_digest(config),
+        config_digest=config_digest,
+        measurement_profile=measurement_profile,
     )
