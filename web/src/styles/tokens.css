@@ -1,0 +1,74 @@
+/* Seryvon — design tokens. AGPL-3.0-or-later.
+   Sober base palette to be re-skinned on the Claude Design mockup. */
+
+:root {
+  /* Neutrals */
+  --c-bg: #0f1115;
+  --c-surface: #171a21;
+  --c-surface-2: #1f232c;
+  --c-border: #2a2f3a;
+  --c-text: #e6e9ef;
+  --c-text-muted: #9aa3b2;
+  --c-text-faint: #6b7280;
+
+  /* Brand */
+  --c-accent: #4f8cff;
+  --c-accent-soft: rgba(79, 140, 255, 0.14);
+
+  /* Status (criterion / pillar health) */
+  --c-ok: #34d399;
+  --c-warning: #fbbf24;
+  --c-critical: #f87171;
+  --c-muted: #6b7280;
+
+  /* Pillar accents (ASO = the differentiator, distinct violet) */
+  --c-pillar-seo: #4f8cff;
+  --c-pillar-geo: #22d3ee;
+  --c-pillar-gso: #34d399;
+  --c-pillar-aeo: #fbbf24;
+  --c-pillar-aso: #a78bfa;
+
+  /* Typography */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+
+  /* Radii + spacing */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--c-accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
