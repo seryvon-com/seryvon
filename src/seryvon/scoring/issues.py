@@ -11,9 +11,10 @@ Turns the `warning`/`critical` `CriterionResult` objects into prioritized
 `Issue` objects: `priority = (impact × severity) / effort`, bucketed into P1–P4.
 Pure and deterministic (stable sort by descending priority then key).
 
-Severity: warning=1, critical=2. Impact: weight × number of pillars, normalized
-to 1–3. Effort: a table per fix type (§8), default 2. `not_measured` and `ok`
-criteria do not generate an issue.
+Severity: warning=1, critical=2. Impact: derived from the criterion weight (1–3);
+the number of pillars touched is informational only, not a multiplier (review §13).
+Effort: a table per fix type (§8), default 2. `not_measured`, `not_applicable`,
+`ok` and `experimental` criteria do not generate an issue.
 """
 
 from __future__ import annotations
@@ -159,11 +160,14 @@ _SEVERITY_VALUE = {Status.WARNING: 1, Status.CRITICAL: 2}
 
 
 def _impact(result: CriterionResult) -> int:
-    """Impact 1–3 = weight × number of affected pillars, normalized."""
-    raw = result.weight * len(result.pillars)
-    if raw < 1.5:
+    """Impact 1–3 derived from the criterion weight alone.
+
+    The number of pillars touched is no longer a multiplier (review §13): a shared
+    signal must not become a priority just because it is tagged in several pillars.
+    """
+    if result.weight < 1.0:
         return 1
-    if raw < 3.0:
+    if result.weight < 1.8:
         return 2
     return 3
 
@@ -192,6 +196,9 @@ def build_issues(results: list[CriterionResult]) -> list[Issue]:
     for result in results:
         if result.status not in (Status.WARNING, Status.CRITICAL):
             continue
+        # Experimental signals are advisory: never flag their absence as an issue (review §9).
+        if result.evidence_tier == "experimental":
+            continue
         impact = _impact(result)
         effort = _EFFORT.get(result.key, _DEFAULT_EFFORT)
         priority = round(impact * _SEVERITY_VALUE[result.status] / effort, 2)
@@ -207,6 +214,7 @@ def build_issues(results: list[CriterionResult]) -> list[Issue]:
                     result.key, f"Corriger le critère {result.key}."
                 ),
                 affected_pages=_affected_pages(result),
+                affected_pillars=len(result.pillars),
             )
         )
     issues.sort(key=lambda i: (-i.priority_score, i.criterion_key))

@@ -45,6 +45,9 @@ class CriterionResult(BaseModel):
     explanation: str = ""
     evidence: dict[str, Any] = Field(default_factory=dict)
     weight: float = 1.0
+    # Evidence maturity of the criterion (document 04 §8.2): "standard" (established
+    # heuristic/normative) or "experimental" (agentic signal, validity not yet proven).
+    evidence_tier: str = "standard"
 
     @classmethod
     def not_measured(
@@ -95,6 +98,8 @@ class Criterion(ABC):
     key: ClassVar[str]
     pillars: ClassVar[list[str]]
     weight: ClassVar[float] = 1.0
+    #: Evidence maturity; "experimental" criteria are kept out of the action plan.
+    evidence_tier: ClassVar[str] = "standard"
 
     @abstractmethod
     def evaluate(

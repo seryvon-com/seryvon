@@ -39,6 +39,7 @@ def run_criteria(signals: SignalBundle, config: AuditConfig) -> list[CriterionRe
         criterion = RULES[key]
         result = criterion.evaluate(signals, config.thresholds)
         result.score = _clamp(result.score)
+        result.evidence_tier = criterion.evidence_tier
         override = config.criteria_overrides.get(key, {})
         if "weight" in override:
             result.weight = float(override["weight"])
