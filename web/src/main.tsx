@@ -11,10 +11,13 @@ import { ReportPage } from "./pages/ReportPage";
 import "./styles/tokens.css";
 import "./styles/app.css";
 
-const router = createBrowserRouter([
-  { path: "/", element: <HomePage /> },
-  { path: "/audits/:auditId", element: <ReportPage /> },
-]);
+const router = createBrowserRouter(
+  [
+    { path: "/", element: <HomePage /> },
+    { path: "/audits/:auditId", element: <ReportPage /> },
+  ],
+  { future: { v7_relativeSplatPath: true } },
+);
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("#root introuvable");

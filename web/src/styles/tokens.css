@@ -1,48 +1,67 @@
-/* Seryvon — design tokens. AGPL-3.0-or-later.
-   Sober base palette to be re-skinned on the Claude Design mockup. */
+/* Seryvon — design tokens, PRISM identity (Claude Design mockup). AGPL-3.0-or-later.
+   Fonts are loaded via <link> in index.html (preconnect) rather than @import. */
 
 :root {
-  /* Neutrals */
-  --c-bg: #0f1115;
-  --c-surface: #171a21;
-  --c-surface-2: #1f232c;
-  --c-border: #2a2f3a;
-  --c-text: #e6e9ef;
-  --c-text-muted: #9aa3b2;
-  --c-text-faint: #6b7280;
+  /* Surfaces */
+  --c-bg: #0e1016;
+  --c-sidebar: #0b0d12;
+  --c-surface: #13161d;
+  --c-surface-2: #161a23;
+  --c-surface-3: #0f1218;
+  --c-surface-grad: linear-gradient(160deg, #161a23, #11141b);
+  --c-control: #14171f;
 
-  /* Brand */
-  --c-accent: #4f8cff;
-  --c-accent-soft: rgba(79, 140, 255, 0.14);
+  /* Borders */
+  --c-border: #1c212c;
+  --c-border-card: #232936;
+  --c-border-control: #272c38;
+  --c-border-row: #1a1f29;
+  --c-border-hover: #3a4150;
 
-  /* Status (criterion / pillar health) */
-  --c-ok: #34d399;
-  --c-warning: #fbbf24;
-  --c-critical: #f87171;
-  --c-muted: #6b7280;
+  /* Text */
+  --c-text: #eef1f6;
+  --c-text-muted: #a3acbd;
+  --c-text-soft: #8b94a6;
+  --c-text-faint: #6b7384;
+  --c-text-faint-2: #5b6273;
+  --c-text-label: #4d5566;
 
-  /* Pillar accents (ASO = the differentiator, distinct violet) */
-  --c-pillar-seo: #4f8cff;
-  --c-pillar-geo: #22d3ee;
-  --c-pillar-gso: #34d399;
-  --c-pillar-aeo: #fbbf24;
-  --c-pillar-aso: #a78bfa;
+  /* Brand accent */
+  --accent: #6c8fff;
+  --c-accent: #6c8fff;
+  --c-accent-shadow: rgba(108, 143, 255, 0.28);
+
+  /* Status */
+  --c-ok: #44d07b;
+  --c-warning: #f6b24b;
+  --c-critical: #ff6b6b;
+  --c-muted: #6b7384;
+
+  /* Prism — pillar accents (ASO = the differentiator, pink) */
+  --c-pillar-seo: #5b8cff;
+  --c-pillar-geo: #a77bff;
+  --c-pillar-gso: #3fd6a8;
+  --c-pillar-aeo: #f6b24b;
+  --c-pillar-aso: #ef72b0;
 
   /* Typography */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  /* Radii + spacing */
+  /* Radii */
   --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 16px;
+  --r-md: 9px;
+  --r-lg: 14px;
+  --r-xl: 16px;
+
+  /* Spacing */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
-  --sp-5: 24px;
-  --sp-6: 32px;
-  --sp-7: 48px;
+  --sp-5: 22px;
+  --sp-6: 30px;
 }
 
 * {
@@ -53,22 +72,43 @@ html,
 body,
 #root {
   margin: 0;
-  min-height: 100%;
+  padding: 0;
+  height: 100%;
 }
 
 body {
   background: var(--c-bg);
   color: var(--c-text);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
 a {
-  color: var(--c-accent);
+  color: var(--accent);
   text-decoration: none;
 }
 a:hover {
-  text-decoration: underline;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-border-control);
+  border-radius: 6px;
+  border: 2px solid var(--c-bg);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* The prism mark: conic gradient across the five pillar hues. */
+.prism-mark {
+  display: inline-block;
+  border-radius: 3px;
+  background: conic-gradient(from 210deg, #5b8cff, #a77bff, #3fd6a8, #f6b24b, #ef72b0);
 }

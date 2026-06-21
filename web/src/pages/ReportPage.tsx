@@ -1,12 +1,13 @@
-// Seryvon — report page: load a persisted audit by id. AGPL-3.0-or-later.
+// Seryvon — report page: load a persisted audit by id (PRISM). AGPL-3.0-or-later.
 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
+import { AppShell } from "../components/AppShell";
 import { ReportView } from "../components/ReportView";
-import { TopBar } from "../components/TopBar";
 import type { AuditReport } from "../api/types";
+import { formatDate } from "../lib/format";
 
 export function ReportPage() {
   const { auditId } = useParams<{ auditId: string }>();
@@ -20,26 +21,32 @@ export function ReportPage() {
     setError(null);
     api
       .getAudit(auditId)
-      .then((r) => active && setReport(r))
-      .catch((err) =>
-        active &&
-        setError(
-          err instanceof ApiError
-            ? `Rapport introuvable (${err.status})`
-            : "Échec du chargement — le backend est-il démarré ?",
-        ),
-      );
+      .then((r) => {
+        if (active) setReport(r);
+      })
+      .catch((err) => {
+        if (active)
+          setError(
+            err instanceof ApiError
+              ? `Rapport introuvable (${err.status})`
+              : "Échec du chargement — le backend est-il démarré ?",
+          );
+      });
     return () => {
       active = false;
     };
   }, [auditId]);
 
   return (
-    <div className="app">
-      <TopBar />
+    <AppShell
+      title="Vue d'ensemble"
+      subtitle="Scorecard déterministe sur les cinq piliers"
+      domain={report?.domain}
+      lastAudit={report ? formatDate(report.started_at) : undefined}
+    >
       {error && <div className="notice error">{error}</div>}
       {!error && !report && <div className="notice">Chargement du rapport…</div>}
       {report && <ReportView report={report} />}
-    </div>
+    </AppShell>
   );
 }
