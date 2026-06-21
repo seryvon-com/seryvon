@@ -32,20 +32,28 @@ Criteria that cannot be measured (e.g. a missing API key) are marked
 
 ## Project status
 
-🚧 **Active development.** The deterministic scoring engine covers all five
-pillars, backed by a multi-page async crawler, on-page signal extraction,
-JSON/HTML/Markdown reporting and optional PostgreSQL persistence. LLM citation
-tracking (GEO/AEO, bring-your-own-key) is in progress.
+🚧 **Active development — Phase 4 (open core Observe + Diagnose layer).**
 
-Current deliverables:
+What is already delivered:
+
+| Phase | What |
+|-------|------|
+| 0–1 | Async crawler, robots/sitemaps, full SEO scorecard (26 criteria), PageSpeed Insights + OpenPageRank connectors |
+| 2 | GSO, AEO, ASO (static) scorecards; on-page GEO signals; Wikidata; prioritized action plan |
+| 3 | LLM citation tracking M4 (Perplexity, OpenAI, Anthropic, Gemini) — bring-your-own-key; cost estimator |
+| 4 C-P1 | Measurement profile hash + coverage labels (SIC doc 04 §4+6) |
+
+Next: MinIO artifact storage (C-P2), scorecard comparison M6 (C-P3).
 
 ```bash
 seryvon run https://example.com      # full audit -> JSON/HTML/Markdown report
 seryvon aso https://example.com      # ASO pillar only (agentic readiness)
+seryvon citations https://example.com --dry-run   # LLM citation tracking (BYOK)
 seryvon history example.com          # history of persisted audits
 ```
 
-The full roadmap lives in the design documentation.
+The full design documentation lives in [`docs/sic/`](docs/sic/) (Search Intelligence
+Core — the internal name for Seryvon's measurement kernel).
 
 ---
 
@@ -88,9 +96,19 @@ The scoring engine is kept under thorough automated test coverage.
 
 A **Python 3.12+** core (async httpx crawl, deterministic scoring, FastAPI API,
 Typer CLI) plus a **TypeScript/React** dashboard (later phases), backed by
-**PostgreSQL** + **Redis**, fully containerized. Scoring follows a "rule
-registry" pattern: each criterion is a self-registering rule, so new ones can be
-added without reworking the engine.
+**PostgreSQL** + **Redis** (+ MinIO for raw artifacts, upcoming), fully
+containerized. Scoring follows a "rule registry" pattern: each criterion is a
+self-registering rule, so new ones can be added without reworking the engine.
+
+The internal design follows the **Search Intelligence Core** (SIC) model:
+
+```
+OBSERVE → DIAGNOSE → ACT → PROVE
+```
+
+`Observe` and `Diagnose` are open core. `Act` (Content Action Studio) and
+`Prove` (experimentation) are part of the proprietary SaaS offering.
+Design specifications: [`docs/sic/`](docs/sic/).
 
 ---
 
