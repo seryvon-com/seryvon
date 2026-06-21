@@ -16,7 +16,8 @@ interface Props {
 }
 
 export function ScoreGauge({ score, size = 120, color, prism, numSize, unit }: Props) {
-  const gradId = useId();
+  // useId() embeds colons (":r0:"); strip them so url(#id) resolves in SVG.
+  const gradId = `g${useId().replace(/:/g, "")}`;
   const vb = 200;
   const stroke = 15;
   const r = 84;
