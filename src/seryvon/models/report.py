@@ -39,6 +39,7 @@ class Issue(BaseModel):
     priority_bucket: str  # P1 / P2 / P3 / P4
     recommendation: str = ""
     affected_pages: list[str] = Field(default_factory=list)
+    affected_pillars: int = 0  # informational only (not a priority multiplier, review §13)
 
 
 class AsoReadiness(BaseModel):

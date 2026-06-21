@@ -52,6 +52,7 @@ class AsoMcpReadinessCriterion(Criterion):
     key = "aso.mcp_readiness"
     pillars: ClassVar[list[str]] = ["aso"]
     weight = 1.8
+    evidence_tier: ClassVar[str] = "experimental"
 
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
@@ -90,6 +91,7 @@ class AsoPotentialActionsCriterion(Criterion):
     key = "aso.potential_actions"
     pillars: ClassVar[list[str]] = ["aso"]
     weight = 1.6
+    evidence_tier: ClassVar[str] = "experimental"
 
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
@@ -127,6 +129,7 @@ class AsoActionSchemaCriterion(Criterion):
     key = "aso.action_schema"
     pillars: ClassVar[list[str]] = ["aso", "gso"]
     weight = 1.5
+    evidence_tier: ClassVar[str] = "experimental"
 
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
@@ -187,6 +190,7 @@ class AsoOpenApiCriterion(Criterion):
     key = "aso.openapi"
     pillars: ClassVar[list[str]] = ["aso"]
     weight = 0.8
+    evidence_tier: ClassVar[str] = "experimental"
 
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
@@ -217,6 +221,7 @@ class AsoAiDiscoveryCriterion(Criterion):
     key = "aso.ai_discovery"
     pillars: ClassVar[list[str]] = ["aso"]
     weight = 1.4
+    evidence_tier: ClassVar[str] = "experimental"
 
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
@@ -248,6 +253,7 @@ class AsoNlwebCriterion(Criterion):
     key = "aso.nlweb"
     pillars: ClassVar[list[str]] = ["aso"]
     weight = 1.0
+    evidence_tier: ClassVar[str] = "experimental"
 
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None

@@ -19,6 +19,7 @@ def _result(
     weight: float = 1.0,
     pillars: list[str] | None = None,
     evidence: dict[str, Any] | None = None,
+    evidence_tier: str = "standard",
 ) -> CriterionResult:
     return CriterionResult(
         key=key,
@@ -27,6 +28,7 @@ def _result(
         status=status,
         weight=weight,
         evidence=evidence or {},
+        evidence_tier=evidence_tier,
     )
 
 
@@ -51,12 +53,27 @@ def test_priority_formula_and_bucket() -> None:
     assert issue.priority_bucket == "P1"
 
 
-def test_multipillar_impact_is_higher() -> None:
-    # struct.schema warning : poids 1.5 × 4 piliers = 6 -> impact 3.
-    issue = build_issues(
+def test_impact_ignores_pillar_count() -> None:
+    # Multi-pillar no longer inflates impact (review §13): weight alone drives it.
+    multi = build_issues(
         [_result("struct.schema", Status.WARNING, weight=1.5, pillars=["seo", "gso", "aeo", "aso"])]
     )[0]
-    assert issue.impact == 3
+    single = build_issues([_result("struct.schema", Status.WARNING, weight=1.5, pillars=["seo"])])[
+        0
+    ]
+    assert multi.impact == single.impact == 2  # weight 1.5 -> band 2, regardless of pillar count
+    assert multi.affected_pillars == 4  # exposed as information only
+    assert single.affected_pillars == 1
+
+
+def test_experimental_criteria_are_excluded_from_plan() -> None:
+    # Absence of an experimental agentic endpoint must not be flagged (review §9).
+    results = [
+        _result("aso.mcp_readiness", Status.CRITICAL, weight=1.8, evidence_tier="experimental"),
+        _result("meta.title", Status.CRITICAL, weight=1.5),
+    ]
+    issues = build_issues(results)
+    assert [i.criterion_key for i in issues] == ["meta.title"]
 
 
 def test_issues_sorted_by_priority_desc() -> None:
