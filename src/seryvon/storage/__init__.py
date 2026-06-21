@@ -8,6 +8,7 @@
 """Object storage for raw collection artifacts (Observe layer, SIC C-P2)."""
 
 from seryvon.storage.base import ArtifactNotFound, ArtifactStore
+from seryvon.storage.factory import make_artifact_store
 from seryvon.storage.keys import build_object_key, sha256_hex
 from seryvon.storage.memory import InMemoryArtifactStore
 from seryvon.storage.s3 import S3ArtifactStore
@@ -18,5 +19,6 @@ __all__ = [
     "InMemoryArtifactStore",
     "S3ArtifactStore",
     "build_object_key",
+    "make_artifact_store",
     "sha256_hex",
 ]

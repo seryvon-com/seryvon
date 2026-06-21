@@ -49,17 +49,21 @@ class S3ArtifactStore(ArtifactStore):
         client: Any | None = None,
     ) -> None:
         super().__init__(bucket)
-        if client is not None:
-            self._client = client
-        else:
+        self._config = {
+            "endpoint_url": endpoint_url,
+            "region_name": region_name,
+            "aws_access_key_id": access_key,
+            "aws_secret_access_key": secret_key,
+        }
+        self.__client: Any | None = client
+
+    @property
+    def _client(self) -> Any:
+        """Lazily built boto3 client — config alone never requires boto3."""
+        if self.__client is None:
             boto3 = _require_boto3()
-            self._client = boto3.client(
-                "s3",
-                endpoint_url=endpoint_url,
-                region_name=region_name,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key,
-            )
+            self.__client = boto3.client("s3", **self._config)
+        return self.__client
 
     def presigned_url(self, ref: ArtifactRef, expires: timedelta) -> str:
         if not self._exists(ref.object_key):

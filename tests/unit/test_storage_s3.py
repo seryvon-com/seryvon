@@ -105,5 +105,7 @@ def test_missing_boto3_raises_clear_error(monkeypatch: pytest.MonkeyPatch) -> No
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", _no_boto3)
+    store = S3ArtifactStore("seryvon", endpoint_url="http://localhost:9000")
+    # Config alone is fine (lazy); the error surfaces on first I/O.
     with pytest.raises(RuntimeError, match="seryvon\\[storage\\]"):
-        S3ArtifactStore("seryvon", endpoint_url="http://localhost:9000")
+        store.put(b"d", project_id="p", run_id="r", artifact_type=ArtifactType.HTML)
