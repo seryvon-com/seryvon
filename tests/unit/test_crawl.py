@@ -64,6 +64,21 @@ async def _crawl(pages: dict[str, str], **kwargs: object) -> list[str]:
     return [p.url for p in result]
 
 
+async def test_html_sink_receives_raw_html() -> None:
+    """The optional sink is invoked with (final_url, raw html) per page (C-P2)."""
+    captured: list[tuple[str, str]] = []
+    pages = {HOME: page(body="Contenu serveur visible.")}
+    discovery = discovery_for([HOME])
+    await crawl_site(
+        discovery,
+        user_agent=UA,
+        fetch=make_fetcher(pages),
+        sleep=_no_sleep,
+        html_sink=lambda url, html: captured.append((url, html)),
+    )
+    assert captured == [(HOME, pages[HOME])]
+
+
 # --------------------------------------------------------------------------- #
 # extract_links                                                               #
 # --------------------------------------------------------------------------- #

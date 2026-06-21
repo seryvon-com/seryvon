@@ -21,6 +21,7 @@ from typing import Any
 
 from sqlalchemy import (
     ARRAY,
+    BigInteger,
     Boolean,
     DateTime,
     Float,
@@ -29,6 +30,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -86,6 +88,9 @@ class Audit(Base):
     )
     aso_readiness: Mapped[AsoReadinessRow | None] = relationship(
         back_populates="audit", cascade="all, delete-orphan", uselist=False
+    )
+    artifacts: Mapped[list[ArtifactRow]] = relationship(
+        back_populates="audit", cascade="all, delete-orphan"
     )
 
 
@@ -206,3 +211,34 @@ class AsoReadinessRow(Base):
     )
 
     audit: Mapped[Audit] = relationship(back_populates="aso_readiness")
+
+
+class ArtifactRow(Base):
+    """Object-store metadata for a raw collection artifact (document 05, §4).
+
+    The bytes live in MinIO/S3 under `object_key`; this row is the queryable
+    PostgreSQL handle. `audit_id` is the open-core run reference. Content is
+    addressed by SHA-256, so `(bucket, object_key)` is unique (dedup).
+    """
+
+    __tablename__ = "artifact"
+    __table_args__ = (UniqueConstraint("bucket", "object_key", name="uq_artifact_object"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    audit_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("audit.id", ondelete="CASCADE"), index=True
+    )
+    project_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    run_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    type: Mapped[str] = mapped_column(String(32), nullable=False)
+    bucket: Mapped[str] = mapped_column(String(255), nullable=False)
+    object_key: Mapped[str] = mapped_column(Text, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    compression: Mapped[str] = mapped_column(String(8), default="none")
+    encryption: Mapped[bool] = mapped_column(Boolean, default=False)
+    retention_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    audit: Mapped[Audit | None] = relationship(back_populates="artifacts")

@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from seryvon.db import models as m
+from seryvon.models.artifact import ArtifactRef, ArtifactType, Compression
 from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import ReadinessLevel, Severity, Status
 from seryvon.models.report import AsoReadiness, AuditReport, Issue, PillarScore
@@ -92,6 +93,22 @@ def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
             affected_pages=list(i.affected_pages),
         )
         for i in report.issues
+    ]
+    audit.artifacts = [
+        m.ArtifactRow(
+            project_id=a.project_id,
+            run_id=a.run_id,
+            type=a.type.value,
+            bucket=a.bucket,
+            object_key=a.object_key,
+            sha256=a.sha256,
+            mime_type=a.mime_type,
+            size_bytes=a.size_bytes,
+            compression=a.compression.value,
+            encryption=a.encryption,
+            retention_until=a.retention_until,
+        )
+        for a in report.artifacts
     ]
     if report.aso_readiness is not None:
         r = report.aso_readiness
@@ -164,6 +181,24 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
             blocked_agent_bots=list(ar.blocked_agent_bots),
         )
 
+    artifacts = [
+        ArtifactRef(
+            project_id=row.project_id,
+            run_id=row.run_id,
+            type=ArtifactType(row.type),
+            bucket=row.bucket,
+            object_key=row.object_key,
+            sha256=row.sha256,
+            mime_type=row.mime_type,
+            size_bytes=row.size_bytes,
+            compression=Compression(row.compression),
+            encryption=row.encryption,
+            retention_until=row.retention_until,
+            created_at=row.created_at,
+        )
+        for row in sorted(audit.artifacts, key=lambda r: r.object_key)
+    ]
+
     return AuditReport(
         domain=audit.domain.host,
         tool_version=audit.tool_version,
@@ -176,6 +211,7 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
         issues=issues,
         aso_readiness=readiness,
         config_digest=audit.config_digest,
+        artifacts=artifacts,
     )
 
 

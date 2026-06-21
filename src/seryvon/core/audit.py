@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import uuid
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
@@ -31,6 +32,7 @@ from seryvon.connectors import (
 from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.crawler.discovery import AGENT_BOTS, blocked_agent_bots
+from seryvon.models.artifact import ArtifactRef, ArtifactType
 from seryvon.models.report import AuditReport, MeasurementProfile
 from seryvon.models.signals import (
     SIGNAL_SCHEMA_VERSION,
@@ -47,6 +49,7 @@ from seryvon.scoring import (
     score_global,
     score_pillar,
 )
+from seryvon.storage import ArtifactStore
 
 
 def _config_digest(config: AuditConfig) -> str:
@@ -146,13 +149,22 @@ async def _collect_brand(
     return True, brand_coherence(name, description, result)
 
 
-async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
+async def run_audit(
+    url: str,
+    config: AuditConfig | None = None,
+    *,
+    artifact_store: ArtifactStore | None = None,
+) -> AuditReport:
     """Run an audit on the given URL and return the report.
 
     Steps: discovery (robots/sitemaps/frontier) -> multi-page crawl -> signal
     extraction -> rule execution -> per-pillar aggregation -> global score ->
     report assembly. An unreachable site produces a report (empty pages), never an
     exception (ENF-03).
+
+    When `artifact_store` is provided (opt-in, Observe layer C-P2), the raw HTML
+    of each crawled page is stored and referenced in `report.artifacts`. This is a
+    collection-side side effect: it never feeds scoring (determinism preserved).
     """
     settings = get_settings()
     config = config or AuditConfig.default()
@@ -165,6 +177,23 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         timeout=settings.request_timeout,
         respect_robots=config.crawl.respect_robots,
     )
+
+    artifacts: list[ArtifactRef] = []
+    html_sink = None
+    if artifact_store is not None:
+        run_id = uuid.uuid4().hex
+        project_id = discovery.domain
+
+        def html_sink(final_url: str, html: str) -> None:
+            ref = artifact_store.put(
+                html.encode("utf-8"),
+                project_id=project_id,
+                run_id=run_id,
+                artifact_type=ArtifactType.HTML,
+                compress=True,
+            )
+            artifacts.append(ref)
+
     pages = await crawl_site(
         discovery,
         user_agent=user_agent,
@@ -172,6 +201,7 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         max_depth=config.crawl.max_depth,
         respect_robots=config.crawl.respect_robots,
         timeout=settings.request_timeout,
+        html_sink=html_sink,
     )
     active_connectors: list[str] = ["crawler"]
     external = await _collect_external(discovery.domain, pages, settings)
@@ -229,4 +259,5 @@ async def run_audit(url: str, config: AuditConfig | None = None) -> AuditReport:
         aso_readiness=compute_aso_readiness(bundle),
         config_digest=config_digest,
         measurement_profile=measurement_profile,
+        artifacts=artifacts,
     )
