@@ -3,37 +3,33 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-interface NavItem {
-  label: string;
-  active?: boolean;
-  soon?: boolean;
-}
-
-const NAV_MAIN: NavItem[] = [
-  { label: "Vue d'ensemble", active: true },
-  { label: "Rapport d'audit", soon: true },
-  { label: "Plan d'action", soon: true },
-  { label: "Citation Tracking", soon: true },
-  { label: "Readiness ASO", soon: true },
-  { label: "Historique", soon: true },
-];
-
-const NAV_CONFIG: NavItem[] = [
-  { label: "Prompt Set", soon: true },
-  { label: "Concurrents", soon: true },
-  { label: "Clés & BYOK", soon: true },
-];
+import { useI18n } from "../i18n";
+import { LanguageSelector } from "./LanguageSelector";
 
 interface Props {
-  title: string;
-  subtitle?: string;
   domain?: string;
   lastAudit?: string;
   children: ReactNode;
 }
 
-export function AppShell({ title, subtitle, domain, lastAudit, children }: Props) {
+export function AppShell({ domain, lastAudit, children }: Props) {
   const navigate = useNavigate();
+  const { t } = useI18n();
+
+  const navMain = [
+    { label: t.nav.overview, active: true },
+    { label: t.nav.report, soon: true },
+    { label: t.nav.plan, soon: true },
+    { label: t.nav.citation, soon: true },
+    { label: t.nav.asoReadiness, soon: true },
+    { label: t.nav.history, soon: true },
+  ];
+  const navConfig = [
+    { label: t.nav.promptSet, soon: true },
+    { label: t.nav.competitors, soon: true },
+    { label: t.nav.keys, soon: true },
+  ];
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -45,36 +41,37 @@ export function AppShell({ title, subtitle, domain, lastAudit, children }: Props
           </div>
         </Link>
 
-        <div className="group-label">ANALYSE</div>
+        <div className="group-label">{t.nav.analyse}</div>
         <nav>
-          {NAV_MAIN.map((it) => (
-            <NavButton key={it.label} item={it} />
+          {navMain.map((it) => (
+            <NavButton key={it.label} label={it.label} active={it.active} soon={it.soon} />
           ))}
         </nav>
 
-        <div className="group-label">CONFIGURATION</div>
+        <div className="group-label">{t.nav.configuration}</div>
         <nav>
-          {NAV_CONFIG.map((it) => (
-            <NavButton key={it.label} item={it} />
+          {navConfig.map((it) => (
+            <NavButton key={it.label} label={it.label} soon={it.soon} />
           ))}
         </nav>
 
         <div className="status-card">
           <div className="row">
             <span className="dot" />
-            <span className="label">Mode 100 % gratuit + BYOK</span>
+            <span className="label">{t.status.mode}</span>
           </div>
-          <div className="sub">Scoring déterministe · traçable</div>
+          <div className="sub">{t.status.sub}</div>
         </div>
       </aside>
 
       <div className="main">
         <header className="topbar">
           <div style={{ minWidth: 0 }}>
-            <h1>{title}</h1>
-            {subtitle && <div className="subtitle">{subtitle}</div>}
+            <h1>{t.topbar.overviewTitle}</h1>
+            <div className="subtitle">{t.topbar.overviewSubtitle}</div>
           </div>
           <div className="actions">
+            <LanguageSelector />
             {domain && (
               <span className="domain-chip">
                 <span className="prism-mark mark" />
@@ -84,11 +81,11 @@ export function AppShell({ title, subtitle, domain, lastAudit, children }: Props
             {lastAudit && (
               <span className="audit-pill">
                 <span className="dot" />
-                <span>Dernier audit · {lastAudit}</span>
+                <span>{t.topbar.lastAudit(lastAudit)}</span>
               </span>
             )}
             <button className="btn" onClick={() => navigate("/")}>
-              Lancer un audit
+              {t.topbar.runAudit}
             </button>
           </div>
         </header>
@@ -100,14 +97,15 @@ export function AppShell({ title, subtitle, domain, lastAudit, children }: Props
   );
 }
 
-function NavButton({ item }: { item: NavItem }) {
-  const cls = ["nav-item", item.active ? "active" : "", item.soon ? "disabled" : ""]
+function NavButton({ label, active, soon }: { label: string; active?: boolean; soon?: boolean }) {
+  const { t } = useI18n();
+  const cls = ["nav-item", active ? "active" : "", soon ? "disabled" : ""]
     .filter(Boolean)
     .join(" ");
   return (
-    <button className={cls} disabled={item.soon} type="button">
-      <span style={{ flex: 1 }}>{item.label}</span>
-      {item.soon && <span className="badge-soon">bientôt</span>}
+    <button className={cls} disabled={soon} type="button">
+      <span style={{ flex: 1 }}>{label}</span>
+      {soon && <span className="badge-soon">{t.nav.soon}</span>}
     </button>
   );
 }

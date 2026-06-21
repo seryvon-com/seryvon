@@ -2,13 +2,15 @@
 
 import type { PillarScore } from "../api/types";
 import { PILLAR_LABELS } from "../api/types";
-import { COVERAGE_LABELS, PILLAR_FULL, isPillar, pillarColor } from "../lib/format";
+import { useI18n } from "../i18n";
+import { isPillar, pillarColor } from "../lib/format";
 
 export function PillarCard({ pillar }: { pillar: PillarScore }) {
+  const { t } = useI18n();
   const key = pillar.pillar;
   const isP = isPillar(key);
   const label = isP ? PILLAR_LABELS[key] : key.toUpperCase();
-  const full = isP ? PILLAR_FULL[key] : "";
+  const full = isP ? t.pillarFull[key] : "";
   const color = pillarColor(key);
 
   return (
@@ -22,14 +24,18 @@ export function PillarCard({ pillar }: { pillar: PillarScore }) {
           </div>
           <div className="full">{full}</div>
           <div style={{ fontSize: 11, color: "var(--c-text-faint)", marginTop: 8 }}>
-            {COVERAGE_LABELS[pillar.coverage_label]}
+            {t.coverage[pillar.coverage_label]}
           </div>
         </div>
       </div>
       <div className="meta">
-        <span>{pillar.measured} mesurés</span>
+        <span>
+          {pillar.measured} {t.pillar.measured}
+        </span>
         <span className="sep">·</span>
-        <span style={{ color: "var(--c-text-faint-2)" }}>{pillar.excluded} exclus</span>
+        <span style={{ color: "var(--c-text-faint-2)" }}>
+          {pillar.excluded} {t.pillar.excluded}
+        </span>
       </div>
     </div>
   );

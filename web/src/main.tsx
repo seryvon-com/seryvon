@@ -6,6 +6,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
+import { I18nProvider } from "./i18n";
 import { HomePage } from "./pages/HomePage";
 import { ReportPage } from "./pages/ReportPage";
 import "./styles/tokens.css";
@@ -24,6 +25,8 @@ if (!rootEl) throw new Error("#root introuvable");
 
 createRoot(rootEl).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <I18nProvider>
+      <RouterProvider router={router} />
+    </I18nProvider>
   </StrictMode>,
 );

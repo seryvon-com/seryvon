@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
+import { useI18n } from "../i18n";
 
 export function HomePage() {
+  const { t } = useI18n();
   const [url, setUrl] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,9 +27,7 @@ export function HomePage() {
       if (latest) navigate(`/audits/${latest.audit_id}`);
     } catch (err) {
       setError(
-        err instanceof ApiError
-          ? `Échec de l'audit (${err.status}) : ${err.message}`
-          : "Échec de l'audit — le backend FastAPI est-il démarré ?",
+        err instanceof ApiError ? t.home.errorStatus(err.status, err.message) : t.home.errorBackend,
       );
     } finally {
       setRunning(false);
@@ -39,20 +39,17 @@ export function HomePage() {
       <div className="landing">
         <span className="prism-mark mark" />
         <h2>seryvon</h2>
-        <p>
-          Audit web déterministe sur cinq piliers — <b>SEO · GEO · GSO · AEO · ASO</b>. Chaque score
-          est traçable jusqu'à sa donnée source et reproductible (variance &lt; 2 %).
-        </p>
+        <p>{t.home.tagline("SEO · GEO · GSO · AEO · ASO")}</p>
         <form className="audit-form" onSubmit={onSubmit}>
           <input
             type="text"
-            placeholder="https://exemple.com"
+            placeholder={t.home.placeholder}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            aria-label="URL à auditer"
+            aria-label="URL"
           />
           <button className="btn" type="submit" disabled={running}>
-            {running ? "Audit en cours…" : "Auditer"}
+            {running ? t.home.auditing : t.home.audit}
           </button>
         </form>
         {error && (

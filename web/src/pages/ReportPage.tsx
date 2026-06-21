@@ -7,10 +7,11 @@ import { api, ApiError } from "../api/client";
 import { AppShell } from "../components/AppShell";
 import { ReportView } from "../components/ReportView";
 import type { AuditReport } from "../api/types";
-import { formatDate } from "../lib/format";
+import { useI18n } from "../i18n";
 
 export function ReportPage() {
   const { auditId } = useParams<{ auditId: string }>();
+  const { t, formatDate } = useI18n();
   const [report, setReport] = useState<AuditReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,27 +26,17 @@ export function ReportPage() {
         if (active) setReport(r);
       })
       .catch((err) => {
-        if (active)
-          setError(
-            err instanceof ApiError
-              ? `Rapport introuvable (${err.status})`
-              : "Échec du chargement — le backend est-il démarré ?",
-          );
+        if (active) setError(err instanceof ApiError ? t.report.notFound(err.status) : t.report.loadError);
       });
     return () => {
       active = false;
     };
-  }, [auditId]);
+  }, [auditId, t]);
 
   return (
-    <AppShell
-      title="Vue d'ensemble"
-      subtitle="Scorecard déterministe sur les cinq piliers"
-      domain={report?.domain}
-      lastAudit={report ? formatDate(report.started_at) : undefined}
-    >
+    <AppShell domain={report?.domain} lastAudit={report ? formatDate(report.started_at) : undefined}>
       {error && <div className="notice error">{error}</div>}
-      {!error && !report && <div className="notice">Chargement du rapport…</div>}
+      {!error && !report && <div className="notice">{t.report.loading}</div>}
       {report && <ReportView report={report} />}
     </AppShell>
   );

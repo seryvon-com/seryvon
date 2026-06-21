@@ -2,12 +2,14 @@
 
 import type { AuditReport } from "../api/types";
 import { PILLARS, PILLAR_LABELS } from "../api/types";
+import { useI18n } from "../i18n";
 import { pillarColor } from "../lib/format";
 
 export function Spectrum({ report }: { report: AuditReport }) {
+  const { t } = useI18n();
   return (
     <div className="card spectrum">
-      <h3 style={{ marginBottom: 14 }}>Spectre de visibilité</h3>
+      <h3 style={{ marginBottom: 14 }}>{t.report.spectrum}</h3>
       {PILLARS.map((p) => {
         const ps = report.pillars[p];
         if (!ps) return null;

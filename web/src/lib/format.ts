@@ -1,6 +1,7 @@
-// Seryvon — display helpers. AGPL-3.0-or-later.
+// Seryvon — non-text display helpers (colors, buckets). AGPL-3.0-or-later.
+// All human-readable strings live in src/i18n.
 
-import type { CoverageLabel, Pillar, ReadinessLevel, Status } from "../api/types";
+import type { Pillar, ReadinessLevel, Status } from "../api/types";
 
 const PILLAR_COLORS: Record<string, string> = {
   seo: "var(--c-pillar-seo)",
@@ -8,15 +9,6 @@ const PILLAR_COLORS: Record<string, string> = {
   gso: "var(--c-pillar-gso)",
   aeo: "var(--c-pillar-aeo)",
   aso: "var(--c-pillar-aso)",
-};
-
-/** Full pillar name shown under the acronym (PRISM mockup). */
-export const PILLAR_FULL: Record<Pillar, string> = {
-  seo: "Search Engine Optimization",
-  geo: "Generative Engine Optimization",
-  gso: "Generative Search Optimization",
-  aeo: "Answer Engine Optimization",
-  aso: "Agentic Search Optimization",
 };
 
 export function pillarColor(pillar: string): string {
@@ -38,19 +30,9 @@ export function statusSeverity(status: Status): "critical" | "warning" {
   return status === "critical" ? "critical" : "warning";
 }
 
-export const COVERAGE_LABELS: Record<CoverageLabel, string> = {
-  complete: "couverture complète",
-  substantial: "couverture substantielle",
-  partial: "couverture partielle",
-  insufficient: "couverture insuffisante",
-};
-
-/** Ordered ASO readiness ladder (PRISM band). */
-export const READINESS_LADDER: ReadinessLevel[] = ["none", "basic", "ready", "advanced"];
-
+/** ASO readiness band: how many of the 4 segments to light for a level. */
+const READINESS_LADDER: ReadinessLevel[] = ["none", "basic", "ready", "advanced"];
 export function readinessReached(level: ReadinessLevel): number {
-  // none = 0 steps lit, basic = 1, ready = 2, advanced = 3 (band shows 4 segments;
-  // "none" lights none, each tier above lights one more up to all four).
   const idx = READINESS_LADDER.indexOf(level);
   return idx <= 0 ? (level === "none" ? 0 : 1) : idx + 1;
 }
@@ -59,16 +41,15 @@ export function isPillar(key: string): key is Pillar {
   return ["seo", "geo", "gso", "aeo", "aso"].includes(key);
 }
 
-export function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
-}
-
-export function formatDuration(startIso: string, endIso: string | null): string {
-  if (!endIso) return "—";
+/** Split a duration into (seconds<60) or (minutes, remainder) for locale formatting. */
+export function durationParts(
+  startIso: string,
+  endIso: string | null,
+): { kind: "none" } | { kind: "s"; s: number } | { kind: "m"; m: number; s: number } {
+  if (!endIso) return { kind: "none" };
   const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
-  if (!Number.isFinite(ms) || ms < 0) return "—";
+  if (!Number.isFinite(ms) || ms < 0) return { kind: "none" };
   const s = Math.round(ms / 1000);
-  if (s < 60) return `${s} s`;
-  return `${Math.floor(s / 60)} m ${String(s % 60).padStart(2, "0")} s`;
+  if (s < 60) return { kind: "s", s };
+  return { kind: "m", m: Math.floor(s / 60), s: s % 60 };
 }
