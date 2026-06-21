@@ -72,6 +72,8 @@ class Audit(Base):
     pillars_requested: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
 
     score_global: Mapped[float | None] = mapped_column(Float)
+    coverage: Mapped[float] = mapped_column(Float, default=0.0)
+    measurement_profile: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -164,6 +166,9 @@ class PillarScoreRow(Base):
     score: Mapped[float] = mapped_column(Float, nullable=False)
     measured: Mapped[int] = mapped_column(Integer, default=0)
     excluded: Mapped[int] = mapped_column(Integer, default=0)
+    not_applicable: Mapped[int] = mapped_column(Integer, default=0)
+    coverage: Mapped[float] = mapped_column(Float, default=0.0)
+    coverage_label: Mapped[str] = mapped_column(String(16), default="insufficient")
 
     audit: Mapped[Audit] = relationship(back_populates="pillar_scores")
 

@@ -25,8 +25,14 @@ from sqlalchemy.orm import Session
 from seryvon.db import models as m
 from seryvon.models.artifact import ArtifactRef, ArtifactType, Compression
 from seryvon.models.criterion import CriterionResult
-from seryvon.models.enums import ReadinessLevel, Severity, Status
-from seryvon.models.report import AsoReadiness, AuditReport, Issue, PillarScore
+from seryvon.models.enums import CoverageLabel, ReadinessLevel, Severity, Status
+from seryvon.models.report import (
+    AsoReadiness,
+    AuditReport,
+    Issue,
+    MeasurementProfile,
+    PillarScore,
+)
 
 
 @dataclass(slots=True)
@@ -58,6 +64,12 @@ def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
         config_digest=report.config_digest,
         pillars_requested=list(report.pillars),
         score_global=report.score_global,
+        coverage=report.coverage,
+        measurement_profile=(
+            report.measurement_profile.model_dump()
+            if report.measurement_profile is not None
+            else None
+        ),
         started_at=report.started_at,
         finished_at=report.finished_at,
     )
@@ -77,7 +89,13 @@ def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
     ]
     audit.pillar_scores = [
         m.PillarScoreRow(
-            pillar=ps.pillar, score=ps.score, measured=ps.measured, excluded=ps.excluded
+            pillar=ps.pillar,
+            score=ps.score,
+            measured=ps.measured,
+            excluded=ps.excluded,
+            not_applicable=ps.not_applicable,
+            coverage=ps.coverage,
+            coverage_label=ps.coverage_label.value,
         )
         for ps in report.pillars.values()
     ]
@@ -162,7 +180,13 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
     ]
     pillars = {
         ps.pillar: PillarScore(
-            pillar=ps.pillar, score=ps.score, measured=ps.measured, excluded=ps.excluded
+            pillar=ps.pillar,
+            score=ps.score,
+            measured=ps.measured,
+            excluded=ps.excluded,
+            not_applicable=ps.not_applicable,
+            coverage=ps.coverage,
+            coverage_label=CoverageLabel(ps.coverage_label),
         )
         for ps in audit.pillar_scores
     }
@@ -206,6 +230,12 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
         started_at=audit.started_at,
         finished_at=audit.finished_at,
         score_global=audit.score_global or 0.0,
+        coverage=audit.coverage,
+        measurement_profile=(
+            MeasurementProfile(**audit.measurement_profile)
+            if audit.measurement_profile is not None
+            else None
+        ),
         pillars=pillars,
         criteria=criteria,
         issues=issues,

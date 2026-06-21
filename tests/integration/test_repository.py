@@ -20,8 +20,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from seryvon.db import repository
 from seryvon.db.base import Base
 from seryvon.models.criterion import CriterionResult
-from seryvon.models.enums import ReadinessLevel, Severity, Status
-from seryvon.models.report import AsoReadiness, AuditReport, Issue, PillarScore
+from seryvon.models.enums import CoverageLabel, ReadinessLevel, Severity, Status
+from seryvon.models.report import (
+    AsoReadiness,
+    AuditReport,
+    Issue,
+    MeasurementProfile,
+    PillarScore,
+)
 
 _TEST_DB = os.environ.get("SERYVON_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -49,8 +55,17 @@ def _report(domain: str = "example.com", score: float = 64.8) -> AuditReport:
         started_at=datetime(2026, 6, 18, 9, 0, tzinfo=UTC),
         finished_at=datetime(2026, 6, 18, 9, 1, tzinfo=UTC),
         score_global=score,
+        coverage=0.6992,
         pillars={
-            "seo": PillarScore(pillar="seo", score=72.1, measured=20, excluded=6),
+            "seo": PillarScore(
+                pillar="seo",
+                score=72.1,
+                measured=20,
+                excluded=6,
+                not_applicable=2,
+                coverage=0.77,
+                coverage_label=CoverageLabel.SUBSTANTIAL,
+            ),
             "geo": PillarScore(pillar="geo", score=0.0, measured=0, excluded=0),
         },
         criteria=[
@@ -94,6 +109,16 @@ def _report(domain: str = "example.com", score: float = 64.8) -> AuditReport:
             blocked_agent_bots=["GPTBot"],
         ),
         config_digest="abc123",
+        measurement_profile=MeasurementProfile(
+            seryvon_version="0.1.0.dev0",
+            signal_schema_version=7,
+            rule_catalog_digest="rc123",
+            pillar_weights={"seo": 0.3, "geo": 0.22},
+            thresholds={},
+            criteria_overrides={},
+            active_connectors=["crawler"],
+            digest="prof123",
+        ),
     )
 
 
