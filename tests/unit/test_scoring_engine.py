@@ -5,12 +5,13 @@
 
 from __future__ import annotations
 
+from seryvon.core.audit import _build_measurement_profile, _rule_catalog_digest
 from seryvon.core.config import DEFAULT_PILLAR_WEIGHTS, AuditConfig
 from seryvon.models.criterion import CriterionResult
-from seryvon.models.enums import Status
+from seryvon.models.enums import CoverageLabel, Status
 from seryvon.models.report import PillarScore
 from seryvon.models.signals import ExternalSignals, PageSignals, SignalBundle, SiteSignals
-from seryvon.scoring.engine import run_criteria, score_coverage, score_global, score_pillar
+from seryvon.scoring.engine import coverage_label, run_criteria, score_coverage, score_global, score_pillar
 
 PILLARS = ("seo", "geo", "gso", "aeo", "aso")
 
@@ -173,6 +174,66 @@ def test_scoring_is_deterministic_on_rich_bundle() -> None:
     pillars_b = {p: score_pillar(p, second) for p in PILLARS}
     assert {p: s.score for p, s in pillars_a.items()} == {p: s.score for p, s in pillars_b.items()}
     assert score_global(pillars_a, cfg) == score_global(pillars_b, cfg)
+
+
+def test_coverage_label_thresholds() -> None:
+    """SIC doc 04 §4 boundaries."""
+    assert coverage_label(1.00) == CoverageLabel.COMPLETE
+    assert coverage_label(0.90) == CoverageLabel.COMPLETE
+    assert coverage_label(0.89) == CoverageLabel.SUBSTANTIAL
+    assert coverage_label(0.70) == CoverageLabel.SUBSTANTIAL
+    assert coverage_label(0.69) == CoverageLabel.PARTIAL
+    assert coverage_label(0.40) == CoverageLabel.PARTIAL
+    assert coverage_label(0.39) == CoverageLabel.INSUFFICIENT
+    assert coverage_label(0.00) == CoverageLabel.INSUFFICIENT
+
+
+def test_pillar_score_carries_coverage_label() -> None:
+    results = [
+        CriterionResult(key="a", pillars=["seo"], score=100.0, status=Status.OK, weight=1.0),
+    ]
+    ps = score_pillar("seo", results)
+    assert ps.coverage == 1.0
+    assert ps.coverage_label == CoverageLabel.COMPLETE
+
+
+def test_pillar_score_insufficient_when_all_not_measured() -> None:
+    results = [
+        CriterionResult(key="a", pillars=["geo"], score=0.0, status=Status.NOT_MEASURED, weight=1.0)
+    ]
+    ps = score_pillar("geo", results)
+    assert ps.coverage == 0.0
+    assert ps.coverage_label == CoverageLabel.INSUFFICIENT
+
+
+def test_measurement_profile_digest_is_deterministic() -> None:
+    config = AuditConfig.default()
+    p1 = _build_measurement_profile(config, ["crawler"])
+    p2 = _build_measurement_profile(config, ["crawler"])
+    assert p1.digest == p2.digest
+
+
+def test_measurement_profile_digest_changes_with_connectors() -> None:
+    config = AuditConfig.default()
+    p1 = _build_measurement_profile(config, ["crawler"])
+    p2 = _build_measurement_profile(config, ["crawler", "pagespeed"])
+    assert p1.digest != p2.digest
+
+
+def test_measurement_profile_digest_changes_with_config() -> None:
+    config_a = AuditConfig.default()
+    config_b = AuditConfig.default()
+    config_b.pillar_weights["seo"] = 0.99
+    p1 = _build_measurement_profile(config_a, ["crawler"])
+    p2 = _build_measurement_profile(config_b, ["crawler"])
+    assert p1.digest != p2.digest
+
+
+def test_rule_catalog_digest_is_stable() -> None:
+    d1 = _rule_catalog_digest()
+    d2 = _rule_catalog_digest()
+    assert d1 == d2
+    assert len(d1) == 16
 
 
 def test_run_criteria_applies_threshold_override() -> None:

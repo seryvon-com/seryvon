@@ -40,6 +40,20 @@ class ReadinessLevel(StrEnum):
     ADVANCED = "advanced"
 
 
+class CoverageLabel(StrEnum):
+    """Human-readable coverage tier (SIC doc 04 §4).
+
+    Thresholds: complete >= 0.90, substantial 0.70-0.89, partial 0.40-0.69,
+    insufficient < 0.40. A score labelled `insufficient` must not trigger
+    automatic ranking.
+    """
+
+    COMPLETE = "complete"
+    SUBSTANTIAL = "substantial"
+    PARTIAL = "partial"
+    INSUFFICIENT = "insufficient"
+
+
 # Score -> status switch thresholds. Centralized for determinism.
 STATUS_OK_THRESHOLD = 80.0
 STATUS_WARNING_THRESHOLD = 50.0
