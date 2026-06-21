@@ -11,9 +11,10 @@ Turns the `warning`/`critical` `CriterionResult` objects into prioritized
 `Issue` objects: `priority = (impact × severity) / effort`, bucketed into P1–P4.
 Pure and deterministic (stable sort by descending priority then key).
 
-Severity: warning=1, critical=2. Impact: weight × number of pillars, normalized
-to 1–3. Effort: a table per fix type (§8), default 2. `not_measured` and `ok`
-criteria do not generate an issue.
+Severity: warning=1, critical=2. Impact: derived from the criterion weight (1–3);
+the number of pillars touched is informational only, not a multiplier (review §13).
+Effort: a table per fix type (§8), default 2. `not_measured`, `not_applicable`,
+`ok` and `experimental` criteria do not generate an issue.
 """
 
 from __future__ import annotations
