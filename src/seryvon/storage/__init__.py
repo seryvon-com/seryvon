@@ -10,11 +10,13 @@
 from seryvon.storage.base import ArtifactNotFound, ArtifactStore
 from seryvon.storage.keys import build_object_key, sha256_hex
 from seryvon.storage.memory import InMemoryArtifactStore
+from seryvon.storage.s3 import S3ArtifactStore
 
 __all__ = [
     "ArtifactNotFound",
     "ArtifactStore",
     "InMemoryArtifactStore",
+    "S3ArtifactStore",
     "build_object_key",
     "sha256_hex",
 ]
