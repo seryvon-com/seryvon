@@ -8,6 +8,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { I18nProvider } from "./i18n";
 import { AsoPage } from "./pages/AsoPage";
+import { CitationPage } from "./pages/CitationPage";
 import { ComparePage } from "./pages/ComparePage";
 import { CriteriaPage } from "./pages/CriteriaPage";
 import { HistoryPage } from "./pages/HistoryPage";
@@ -24,6 +25,7 @@ const router = createBrowserRouter(
     { path: "/audits/:auditId", element: <ReportPage /> },
     { path: "/audits/:auditId/report", element: <CriteriaPage /> },
     { path: "/audits/:auditId/plan", element: <PlanPage /> },
+    { path: "/audits/:auditId/citations", element: <CitationPage /> },
     { path: "/audits/:auditId/aso", element: <AsoPage /> },
     { path: "/audits/:auditId/history", element: <HistoryPage /> },
     { path: "/audits/:auditId/compare", element: <ComparePage /> },
