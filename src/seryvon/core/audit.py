@@ -155,6 +155,7 @@ async def run_audit(
     config: AuditConfig | None = None,
     *,
     artifact_store: ArtifactStore | None = None,
+    settings: Settings | None = None,
 ) -> AuditReport:
     """Run an audit on the given URL and return the report.
 
@@ -167,7 +168,7 @@ async def run_audit(
     of each crawled page is stored and referenced in `report.artifacts`. This is a
     collection-side side effect: it never feeds scoring (determinism preserved).
     """
-    settings = get_settings()
+    settings = settings or get_settings()
     config = config or AuditConfig.default()
     # Locale for produced text (recommendations, explanations…); presentation only.
     set_locale(config.locale)

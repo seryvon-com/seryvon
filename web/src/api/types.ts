@@ -129,6 +129,16 @@ export interface AuditSummary {
   started_at: string;
 }
 
+export type KeySource = "db" | "env" | "none";
+
+export interface KeyEntry {
+  connector: string;
+  masked_value: string | null;
+  source: KeySource;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export type Comparability = "exact" | "compatible" | "intersection" | "incompatible";
 export type ComparisonMode = "strict" | "intersection" | "descriptive";
 
