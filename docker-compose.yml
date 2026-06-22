@@ -1,6 +1,5 @@
-# Seryvon — orchestration locale du cœur (document 03, §8).
-# Exécutable entièrement hors cloud. Les services `beat` et `frontend` arrivent
-# en phases ultérieures (audits planifiés, dashboard React).
+# Seryvon — orchestration complète (Phase 6) : postgres, redis, migrate (one-shot),
+# api, workers CPU/IO, frontend React (nginx).
 
 services:
   postgres:
@@ -29,6 +28,17 @@ services:
       timeout: 3s
       retries: 5
 
+  migrate:
+    build: .
+    command: alembic upgrade head
+    env_file: .env
+    environment:
+      SERYVON_DATABASE_URL: postgresql+psycopg://seryvon:seryvon@postgres:5432/seryvon
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build: .
     env_file: .env
@@ -40,10 +50,21 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
 
   # File CPU-bound : crawl, rendu, scoring, ASO statique.
   worker-cpu:
@@ -55,6 +76,8 @@ services:
       SERYVON_CELERY_BROKER_URL: redis://redis:6379/1
       SERYVON_CELERY_RESULT_BACKEND: redis://redis:6379/2
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       postgres:
@@ -70,6 +93,8 @@ services:
       SERYVON_CELERY_BROKER_URL: redis://redis:6379/1
       SERYVON_CELERY_RESULT_BACKEND: redis://redis:6379/2
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       postgres:

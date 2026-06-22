@@ -7,22 +7,62 @@
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
 """Audit tasks (CPU-bound queue).
 
-Wraps the synchronous `run_audit` orchestrator for execution via Celery.
-Persisting the results to the database is wired in Phase 1.
+Wraps `run_audit` for Celery execution with full settings resolution (BYOK
+keys from DB), persistence, locale, and a hard timeout.
+
+Return value on SUCCESS: ``{"audit_id": "<uuid>"}`` — the API polls this to
+redirect the frontend to ``/audits/{audit_id}``.
 """
 
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 from seryvon.core.audit import run_audit
 from seryvon.core.config import AuditConfig
+from seryvon.core.settings_resolver import resolve_settings
+from seryvon.db import repository
+from seryvon.db.base import session_scope
 from seryvon.tasks.app import celery_app
 
+log = logging.getLogger(__name__)
 
-@celery_app.task(name="seryvon.tasks.audit.run_audit_task")  # type: ignore[untyped-decorator]
-def run_audit_task(url: str) -> dict[str, Any]:
-    """Run an audit and return the serialized report (dict)."""
-    report = asyncio.run(run_audit(url, AuditConfig.default()))
-    return report.model_dump(mode="json")
+_AUDIT_TIMEOUT_SECONDS = 300
+
+
+@celery_app.task(  # type: ignore[untyped-decorator]
+    name="seryvon.tasks.audit.run_audit_task",
+    bind=True,
+    track_started=True,
+    queue="cpu",
+)
+def run_audit_task(self: Any, url: str, locale: str = "en") -> dict[str, Any]:
+    """Run an audit end-to-end and persist the result.
+
+    Celery state transitions: PENDING → STARTED → SUCCESS | FAILURE.
+    On SUCCESS the result dict contains ``audit_id`` (str UUID).
+    On FAILURE the exception message is the error.
+    """
+    log.info("audit_task start url=%s locale=%s task_id=%s", url, locale, self.request.id)
+
+    with session_scope() as session:
+        settings = resolve_settings(session)
+
+    config = AuditConfig.default()
+    config.locale = locale
+
+    async def _run() -> Any:
+        return await asyncio.wait_for(
+            run_audit(url, config, settings=settings),
+            timeout=float(_AUDIT_TIMEOUT_SECONDS),
+        )
+
+    report = asyncio.run(_run())
+
+    with session_scope() as session:
+        audit_id = repository.persist_report(report, session)
+
+    log.info("audit_task done url=%s audit_id=%s", url, audit_id)
+    return {"audit_id": str(audit_id)}
