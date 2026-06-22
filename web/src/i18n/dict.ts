@@ -11,6 +11,7 @@ export interface Dict {
   localeName: string; // shown in the language selector
 
   nav: {
+    tagline: string;
     analyse: string;
     configuration: string;
     overview: string;

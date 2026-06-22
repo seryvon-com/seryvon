@@ -6,6 +6,7 @@ export const en: Dict = {
   localeName: "English",
 
   nav: {
+    tagline: "5-pillar visibility audit, from SEO to agentic search.",
     analyse: "ANALYSIS",
     configuration: "CONFIGURATION",
     overview: "Overview",

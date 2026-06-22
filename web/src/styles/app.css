@@ -21,28 +21,23 @@
 }
 .sidebar .brand {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px 22px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 4px 20px;
 }
-.sidebar .brand .mark {
-  width: 26px;
-  height: 26px;
+.sidebar .brand-logo {
+  width: 136px;
+  mix-blend-mode: screen;
+  display: block;
 }
-.sidebar .brand .name {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: -0.01em;
-  line-height: 1;
-  color: #fff;
-}
-.sidebar .brand .pillars-line {
-  font-size: 9px;
+.sidebar .brand-tagline {
+  font-size: 10px;
   color: var(--c-text-faint-2);
-  letter-spacing: 0.12em;
-  margin-top: 4px;
-  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  font-family: var(--font-sans);
+  padding: 0 2px;
 }
 .sidebar .group-label {
   font-size: 10px;

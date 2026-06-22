@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import logoSeryvon from "../assets/logoseryvon.png";
+
 import { useI18n } from "../i18n";
 import { LanguageSelector } from "./LanguageSelector";
 
@@ -107,11 +109,8 @@ export function AppShell({
     <div className="shell">
       <aside className="sidebar">
         <Link to="/" className="brand">
-          <span className="prism-mark mark" />
-          <div>
-            <div className="name">seryvon</div>
-            <div className="pillars-line">SEO · GEO · GSO · AEO · ASO</div>
-          </div>
+          <img src={logoSeryvon} alt="Seryvon" className="brand-logo" />
+          <div className="brand-tagline">{t.nav.tagline}</div>
         </Link>
 
         <div className="group-label">{t.nav.analyse}</div>
