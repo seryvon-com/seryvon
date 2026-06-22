@@ -1,4 +1,4 @@
-// Seryvon — audit history page: all audits for a domain. AGPL-3.0-or-later.
+// Seryvon — audit history page for a domain (PRISM). AGPL-3.0-or-later.
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -22,22 +22,18 @@ export function HistoryPage() {
     setReport(null);
     setHistory(null);
     setError(null);
-
     api
       .getAudit(auditId)
       .then((r) => {
         if (!active) return;
         setReport(r);
-        return api.listAudits(r.domain);
-      })
-      .then((list) => {
-        if (active && list) setHistory(list);
+        return api.listAudits(r.domain).then((h) => {
+          if (active) setHistory(h);
+        });
       })
       .catch((err) => {
         if (active)
-          setError(
-            err instanceof ApiError ? t.report.notFound(err.status) : t.report.loadError,
-          );
+          setError(err instanceof ApiError ? t.report.notFound(err.status) : t.report.loadError);
       });
     return () => {
       active = false;
@@ -51,45 +47,50 @@ export function HistoryPage() {
       auditId={auditId}
       active="history"
       title={t.history.title}
-      subtitle={report ? t.history.subtitle(report.domain) : ""}
+      subtitle={t.history.subtitle}
     >
       {error && <div className="notice error">{error}</div>}
       {!error && !history && <div className="notice">{t.report.loading}</div>}
-      {history && history.length === 0 && (
-        <div className="notice">{t.history.noHistory}</div>
-      )}
+      {history && history.length === 0 && <div className="notice">{t.history.empty}</div>}
       {history && history.length > 0 && (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t.history.colDate}</th>
-              <th>{t.history.colScore}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {history.map((entry) => (
-              <tr key={entry.audit_id}>
-                <td>{formatDate(entry.started_at)}</td>
-                <td>
-                  {entry.score_global != null ? (
-                    <span className="score-pill">{Math.round(entry.score_global)}</span>
-                  ) : (
-                    <span style={{ color: "var(--c-text-faint)" }}>—</span>
-                  )}
-                </td>
-                <td>
-                  <button
-                    className="btn-small"
-                    onClick={() => navigate(`/audits/${entry.audit_id}`)}
-                  >
-                    {t.history.view}
-                  </button>
-                </td>
+        <div className="card">
+          <div className="section-head">
+            <h3>{t.history.title}</h3>
+            <span className="section-sub">{t.history.count(history.length)}</span>
+          </div>
+          <table className="criteria-table">
+            <thead>
+              <tr>
+                <th>{t.history.colDate}</th>
+                <th style={{ textAlign: "right" }}>{t.history.colScore}</th>
+                <th>{t.history.colId}</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {history.map((h) => (
+                <tr key={h.audit_id}>
+                  <td>{formatDate(h.started_at)}</td>
+                  <td style={{ textAlign: "right", fontFamily: "var(--font-mono)" }}>
+                    {h.score_global == null ? "—" : Math.round(h.score_global)}
+                  </td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--c-text-faint)" }}>
+                    {h.audit_id}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => navigate(`/audits/${h.audit_id}`)}
+                    >
+                      {t.history.view}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </AppShell>
   );

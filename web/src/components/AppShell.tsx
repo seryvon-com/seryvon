@@ -1,6 +1,7 @@
 // Seryvon — app shell: PRISM sidebar + topbar. AGPL-3.0-or-later.
 
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useI18n } from "../i18n";
@@ -12,7 +13,7 @@ interface Props {
   /** Persisted audit id, enabling the Overview / Audit report nav links. */
   auditId?: string;
   /** Which primary nav entry is the current screen. */
-  active?: "overview" | "report" | "plan" | "asoReadiness" | "history" | "rankTracking";
+  active?: "overview" | "report" | "plan" | "citation" | "aso" | "history" | "compare" | "rankTracking" | "keys";
   /** Topbar heading; defaults to the Overview labels. */
   title?: string;
   subtitle?: string;
@@ -31,49 +32,70 @@ export function AppShell({
   const navigate = useNavigate();
   const { t } = useI18n();
 
+  // Persist the last known auditId so config pages (e.g. /keys) can still link back.
+  useEffect(() => {
+    if (auditId) localStorage.setItem("lastAuditId", auditId);
+  }, [auditId]);
+  const effectiveAuditId = auditId ?? localStorage.getItem("lastAuditId") ?? undefined;
+
   const navMain = [
     {
       label: t.nav.overview,
       active: active === "overview",
-      to: auditId ? `/audits/${auditId}` : undefined,
-      soon: !auditId,
+      to: effectiveAuditId ? `/audits/${effectiveAuditId}` : undefined,
+      soon: !effectiveAuditId,
     },
     {
       label: t.nav.report,
       active: active === "report",
-      to: auditId ? `/audits/${auditId}/report` : undefined,
-      soon: !auditId,
+      to: effectiveAuditId ? `/audits/${effectiveAuditId}/report` : undefined,
+      soon: !effectiveAuditId,
     },
     {
       label: t.nav.plan,
       active: active === "plan",
-      to: auditId ? `/audits/${auditId}/plan` : undefined,
-      soon: !auditId,
+      to: effectiveAuditId ? `/audits/${effectiveAuditId}/plan` : undefined,
+      soon: !effectiveAuditId,
     },
-    { label: t.nav.citation, soon: true },
+    {
+      label: t.nav.citation,
+      active: active === "citation",
+      to: effectiveAuditId ? `/audits/${effectiveAuditId}/citations` : undefined,
+      soon: !effectiveAuditId,
+    },
     {
       label: t.nav.asoReadiness,
-      active: active === "asoReadiness",
-      to: auditId ? `/audits/${auditId}/aso` : undefined,
-      soon: !auditId,
+      active: active === "aso",
+      to: effectiveAuditId ? `/audits/${effectiveAuditId}/aso` : undefined,
+      soon: !effectiveAuditId,
     },
     {
       label: t.nav.history,
       active: active === "history",
-      to: auditId ? `/audits/${auditId}/history` : undefined,
-      soon: !auditId,
+      to: effectiveAuditId ? `/audits/${effectiveAuditId}/history` : undefined,
+      soon: !effectiveAuditId,
+    },
+    {
+      label: t.nav.competitors,
+      active: active === "compare",
+      to: effectiveAuditId ? `/audits/${effectiveAuditId}/compare` : undefined,
+      soon: !effectiveAuditId,
     },
     {
       label: t.nav.rankTracking,
       active: active === "rankTracking",
-      to: auditId ? `/audits/${auditId}/rank-tracking` : undefined,
-      soon: !auditId,
+      to: effectiveAuditId ? `/audits/${effectiveAuditId}/rank-tracking` : undefined,
+      soon: !effectiveAuditId,
     },
   ];
   const navConfig = [
     { label: t.nav.promptSet, soon: true },
-    { label: t.nav.competitors, soon: true },
-    { label: t.nav.keys, soon: true },
+    {
+      label: t.nav.keys,
+      active: active === "keys",
+      to: "/keys",
+      soon: false,
+    },
   ];
 
   return (
@@ -103,7 +125,13 @@ export function AppShell({
         <div className="group-label">{t.nav.configuration}</div>
         <nav>
           {navConfig.map((it) => (
-            <NavButton key={it.label} label={it.label} soon={it.soon} />
+            <NavButton
+              key={it.label}
+              label={it.label}
+              active={it.active}
+              soon={it.soon}
+              onClick={it.to && !it.soon ? () => navigate(it.to as string) : undefined}
+            />
           ))}
         </nav>
 

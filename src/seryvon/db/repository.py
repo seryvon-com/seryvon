@@ -5,7 +5,7 @@
 # it under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
-"""Repository layer: persisting and reloading audit reports (M8).
+"""Repository layer: persisting/reloading audit reports (M8) + BYOK key CRUD.
 
 Maps the `AuditReport` (Pydantic, source of truth) to/from the ORM rows
 (document 05). Outside the pure `run_audit` pipeline (decision DB3): persistence
@@ -243,6 +243,58 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
         config_digest=audit.config_digest,
         artifacts=artifacts,
     )
+
+
+# ---------------------------------------------------------------------------
+# BYOK key CRUD
+# ---------------------------------------------------------------------------
+
+#: Connectors that support BYOK keys (maps connector name → Settings field).
+CONNECTOR_FIELD: dict[str, str] = {
+    "psi": "psi_api_key",
+    "opr": "opr_api_key",
+    "perplexity": "perplexity_api_key",
+    "openai": "openai_api_key",
+    "anthropic": "anthropic_api_key",
+    "gemini": "gemini_api_key",
+}
+
+
+def upsert_key(session: Session, connector: str, encrypted_value: bytes) -> m.ApiKeyRow:
+    """Create or update an encrypted API key for a connector."""
+    from datetime import UTC
+
+    row = session.scalar(select(m.ApiKeyRow).where(m.ApiKeyRow.connector == connector))
+    if row is None:
+        row = m.ApiKeyRow(connector=connector, encrypted_value=encrypted_value)
+        session.add(row)
+    else:
+        row.encrypted_value = encrypted_value
+        from datetime import datetime
+
+        row.updated_at = datetime.now(UTC)
+    session.flush()
+    return row
+
+
+def get_key_encrypted(session: Session, connector: str) -> bytes | None:
+    """Return the raw Fernet token for a connector, or None if not stored."""
+    row = session.scalar(select(m.ApiKeyRow).where(m.ApiKeyRow.connector == connector))
+    return row.encrypted_value if row is not None else None
+
+
+def list_keys(session: Session) -> list[m.ApiKeyRow]:
+    """Return all stored API key rows, sorted by connector name."""
+    return list(session.scalars(select(m.ApiKeyRow).order_by(m.ApiKeyRow.connector)))
+
+
+def delete_key(session: Session, connector: str) -> bool:
+    """Delete a stored API key. Returns True if a row was deleted."""
+    row = session.scalar(select(m.ApiKeyRow).where(m.ApiKeyRow.connector == connector))
+    if row is None:
+        return False
+    session.delete(row)
+    return True
 
 
 def list_audits(session: Session, host: str) -> list[AuditSummary]:

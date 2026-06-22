@@ -1,4 +1,4 @@
-// Seryvon — action plan page: prioritized P1–P4 issues. AGPL-3.0-or-later.
+// Seryvon — action plan page: full prioritized issue list (PRISM). AGPL-3.0-or-later.
 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -27,9 +27,7 @@ export function PlanPage() {
       })
       .catch((err) => {
         if (active)
-          setError(
-            err instanceof ApiError ? t.report.notFound(err.status) : t.report.loadError,
-          );
+          setError(err instanceof ApiError ? t.report.notFound(err.status) : t.report.loadError);
       });
     return () => {
       active = false;
@@ -47,7 +45,15 @@ export function PlanPage() {
     >
       {error && <div className="notice error">{error}</div>}
       {!error && !report && <div className="notice">{t.report.loading}</div>}
-      {report && <IssueList issues={report.issues} />}
+      {report && (
+        <div className="card">
+          <div className="section-head">
+            <h3>{t.plan.title}</h3>
+            <span className="section-sub">{t.plan.total(report.issues.length)}</span>
+          </div>
+          <IssueList issues={report.issues} />
+        </div>
+      )}
     </AppShell>
   );
 }
