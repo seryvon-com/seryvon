@@ -32,6 +32,7 @@ from seryvon.connectors import (
 from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.crawler.discovery import AGENT_BOTS, blocked_agent_bots
+from seryvon.i18n import set_locale
 from seryvon.models.artifact import ArtifactRef, ArtifactType
 from seryvon.models.report import AuditReport, MeasurementProfile
 from seryvon.models.signals import (
@@ -168,6 +169,8 @@ async def run_audit(
     """
     settings = get_settings()
     config = config or AuditConfig.default()
+    # Locale for produced text (recommendations, explanations…); presentation only.
+    set_locale(config.locale)
     started = datetime.now(UTC)
     user_agent = config.crawl.user_agent or settings.user_agent
 

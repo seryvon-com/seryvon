@@ -19,6 +19,7 @@ Effort: a table per fix type (§8), default 2. `not_measured`, `not_applicable`,
 
 from __future__ import annotations
 
+from seryvon.i18n import has_message, t
 from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import Severity, Status
 from seryvon.models.report import Issue
@@ -92,69 +93,6 @@ _EFFORT: dict[str, int] = {
     "aso.nlweb": 3,
 }
 
-# Concise recommendation per criterion (product text, kept in French); generic fallback otherwise.
-_RECOMMENDATIONS: dict[str, str] = {
-    "meta.title": "Ajouter un <title> unique de 30–60 caractères sur chaque page.",
-    "meta.description": "Rédiger une meta description de 120–158 caractères.",
-    "meta.canonical": "Déclarer une URL canonique absolue.",
-    "meta.robots": "Retirer les directives noindex des pages à indexer.",
-    "meta.title_unique": "Dédupliquer les balises title identiques.",
-    "og.complete": "Compléter les balises Open Graph (title, description, image, url, type).",
-    "twitter.cards": "Ajouter les Twitter Cards (card, title, description, image).",
-    "struct.h1": "N'utiliser qu'un seul H1 par page.",
-    "struct.hierarchy": "Corriger la hiérarchie Hn (un H1, aucun niveau sauté).",
-    "struct.schema": "Ajouter des données structurées JSON-LD pertinentes.",
-    "content.depth": "Enrichir le contenu (viser ≥ 800 mots utiles).",
-    "content.text_ratio": "Augmenter le ratio texte/code (alléger le markup).",
-    "links.internal": "Ajouter 3 à 100 liens internes pertinents par page.",
-    "links.orphans": "Relier les pages orphelines depuis la navigation.",
-    "img.alt": "Renseigner l'attribut alt de toutes les images.",
-    "crawl.indexable": "Corriger les pages non indexables (statut HTTP, noindex).",
-    "crawl.sitemap": "Publier un sitemap.xml valide.",
-    "crawl.https": "Servir toutes les pages en HTTPS.",
-    "crawl.redirects": "Réduire les chaînes de redirection à un saut maximum.",
-    "i18n.hreflang": "Déclarer des hreflang cohérents avec x-default.",
-    "perf.lcp": "Optimiser le LCP (≤ 2500 ms).",
-    "perf.cls": "Réduire le CLS (≤ 0.1).",
-    "perf.inp": "Améliorer l'INP (≤ 200 ms).",
-    "perf.lighthouse": "Optimiser la performance (score Lighthouse).",
-    "authority.opr": "Acquérir des backlinks et mentions de qualité.",
-    "authority.backlinks": "Développer un profil de domaines référents.",
-    "gso.faqpage": "Ajouter un schema FAQPage sur les pages de questions.",
-    "gso.howto": "Ajouter un schema HowTo sur les tutoriels.",
-    "gso.breadcrumb": "Ajouter un BreadcrumbList sur le template.",
-    "gso.itemlist": "Structurer les listes via ItemList ou des tableaux.",
-    "gso.qa_format": "Formuler des sections question-réponse extractibles.",
-    "gso.cwv_eligible": "Faire passer les 3 Core Web Vitals dans les seuils.",
-    "aeo.author_credentials": "Déclarer des auteurs avec credentials (Person).",
-    "aeo.about_page": "Publier une page À propos détaillée.",
-    "aeo.defined_terms": "Ajouter des définitions (DefinedTerm ou glossaire).",
-    "aeo.dates_structured": "Exposer datePublished/dateModified en JSON-LD.",
-    "aeo.comparison_tables": "Ajouter des tableaux comparatifs.",
-    "aeo.answer_directness": "Placer une réponse directe en tête de page.",
-    "aeo.kg_presence": "Créer/renforcer l'entité dans Wikidata/Wikipedia.",
-    "geo.ssr": "Servir le contenu en rendu serveur (SSR).",
-    "geo.noise_ratio": "Augmenter la part de contenu utile vs nav/boilerplate.",
-    "geo.entity_density": "Densifier le contenu en entités nommées pertinentes.",
-    "geo.primary_sources": "Citer des sources externes primaires (liens sortants).",
-    "geo.authors": "Déclarer un auteur structuré (author/Person en JSON-LD).",
-    "geo.cross_platform": "Référencer la marque sur ≥4 plateformes (sameAs).",
-    "geo.freshness": "Mettre à jour le contenu et exposer dateModified.",
-    "geo.citation_rate": "Gagner des citations génératives (contenu de référence citable).",
-    "geo.mention_rate": "Renforcer la notoriété de marque (mentions, présence éditoriale).",
-    "geo.citation_confidence": "Stabiliser la citation (contenu canonique constant, autorité).",
-    "aeo.llm_citation": "Optimiser pour les answer engines (réponses directes, sources fiables).",
-    "aso.mcp_readiness": "Exposer un serveur WebMCP (registerTool / toolname).",
-    "aso.potential_actions": "Ajouter des potentialAction exécutables (Buy/Order…).",
-    "aso.action_schema": "Enrichir les schemas d'action (Product/Offer, Service, Event).",
-    "aso.ai_discovery": "Publier /.well-known/ai.txt et /ai/*.json.",
-    "aso.nlweb": "Exposer un endpoint NLWeb conforme.",
-    "aso.accessible_forms": "Labelliser les formulaires (label/for, aria-label).",
-    "aso.openapi": "Exposer une API documentée (OpenAPI/Swagger).",
-    "aso.brand_coherence": "Aligner nom et description entre site et Wikidata.",
-    "aso.agent_access": "Autoriser les bots d'agents dans robots.txt.",
-}
-
 _SEVERITY = {Status.WARNING: Severity.WARNING, Status.CRITICAL: Severity.CRITICAL}
 _SEVERITY_VALUE = {Status.WARNING: 1, Status.CRITICAL: 2}
 
@@ -190,8 +128,18 @@ def _affected_pages(result: CriterionResult) -> list[str]:
     return []
 
 
+def _recommendation(key: str) -> str:
+    """Localized recommendation for a criterion, with a generic fallback."""
+    message_key = f"rec.{key}"
+    return t(message_key) if has_message(message_key) else t("rec.generic", key=key)
+
+
 def build_issues(results: list[CriterionResult]) -> list[Issue]:
-    """Build the prioritized action plan from the criterion results."""
+    """Build the prioritized action plan from the criterion results.
+
+    Recommendation text is localized via the active locale (set from the audit
+    config); see `seryvon.i18n`.
+    """
     issues: list[Issue] = []
     for result in results:
         if result.status not in (Status.WARNING, Status.CRITICAL):
@@ -210,9 +158,7 @@ def build_issues(results: list[CriterionResult]) -> list[Issue]:
                 effort=effort,
                 priority_score=priority,
                 priority_bucket=_bucket(priority),
-                recommendation=_RECOMMENDATIONS.get(
-                    result.key, f"Corriger le critère {result.key}."
-                ),
+                recommendation=_recommendation(result.key),
                 affected_pages=_affected_pages(result),
                 affected_pillars=len(result.pillars),
             )

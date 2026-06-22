@@ -53,6 +53,7 @@ class AuditRequest(BaseModel):
     """Request body to launch an audit."""
 
     url: HttpUrl
+    locale: str = "en"  # produced-text locale (en base, fr second); presentation only
 
 
 class AuditSummaryOut(BaseModel):
@@ -85,7 +86,9 @@ async def create_audit(
     request: AuditRequest, response: Response, session: Session = Depends(get_session)
 ) -> AuditReport:
     """Run an audit (synchronous), persist it and return the full report."""
-    report = await run_audit(str(request.url), AuditConfig.default())
+    config = AuditConfig.default()
+    config.locale = request.locale
+    report = await run_audit(str(request.url), config)
     audit_id = repository.persist_report(report, session)
     response.headers["Location"] = f"/audits/{audit_id}"
     return report

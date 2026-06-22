@@ -120,6 +120,9 @@ class AuditConfig(BaseModel):
     criteria_overrides: dict[str, dict[str, Any]] = Field(default_factory=dict)
     thresholds: dict[str, dict[str, Any]] = Field(default_factory=dict)
     crawl: CrawlConfig = Field(default_factory=CrawlConfig)
+    # Locale for produced text (recommendations, explanations…). English base, FR
+    # second locale. Presentation only — never affects scores (see seryvon.i18n).
+    locale: str = "en"
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> AuditConfig:

@@ -96,4 +96,22 @@ def test_recommendation_and_affected_pages() -> None:
 
 def test_unknown_key_uses_fallback_recommendation() -> None:
     issue = build_issues([_result("custom.key", Status.WARNING)])[0]
-    assert issue.recommendation == "Corriger le critère custom.key."
+    assert issue.recommendation == "Fix the custom.key criterion."
+
+
+def test_recommendations_are_english_by_default() -> None:
+    issue = build_issues([_result("meta.title", Status.CRITICAL, weight=1.5)])[0]
+    assert issue.recommendation.startswith("Add a unique")
+
+
+def test_recommendations_localize_to_french() -> None:
+    from seryvon.i18n import set_locale
+
+    set_locale("fr")
+    try:
+        issue = build_issues([_result("meta.title", Status.CRITICAL, weight=1.5)])[0]
+        assert issue.recommendation.startswith("Ajouter un <title>")
+        fallback = build_issues([_result("custom.key", Status.WARNING)])[0]
+        assert fallback.recommendation == "Corriger le critère custom.key."
+    finally:
+        set_locale("en")
