@@ -1,15 +1,15 @@
-// Seryvon — report page: load a persisted audit by id (PRISM). AGPL-3.0-or-later.
+// Seryvon — audit report page: detailed criteria table (PRISM). AGPL-3.0-or-later.
 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
 import { AppShell } from "../components/AppShell";
-import { ReportView } from "../components/ReportView";
+import { CriteriaTable } from "../components/CriteriaTable";
 import type { AuditReport } from "../api/types";
 import { useI18n } from "../i18n";
 
-export function ReportPage() {
+export function CriteriaPage() {
   const { auditId } = useParams<{ auditId: string }>();
   const { t, formatDate } = useI18n();
   const [report, setReport] = useState<AuditReport | null>(null);
@@ -26,7 +26,8 @@ export function ReportPage() {
         if (active) setReport(r);
       })
       .catch((err) => {
-        if (active) setError(err instanceof ApiError ? t.report.notFound(err.status) : t.report.loadError);
+        if (active)
+          setError(err instanceof ApiError ? t.report.notFound(err.status) : t.report.loadError);
       });
     return () => {
       active = false;
@@ -38,11 +39,13 @@ export function ReportPage() {
       domain={report?.domain}
       lastAudit={report ? formatDate(report.started_at) : undefined}
       auditId={auditId}
-      active="overview"
+      active="report"
+      title={t.criteria.title}
+      subtitle={t.criteria.subtitle}
     >
       {error && <div className="notice error">{error}</div>}
       {!error && !report && <div className="notice">{t.report.loading}</div>}
-      {report && <ReportView report={report} />}
+      {report && <CriteriaTable report={report} />}
     </AppShell>
   );
 }

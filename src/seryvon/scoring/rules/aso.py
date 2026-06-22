@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
@@ -59,7 +60,7 @@ class AsoMcpReadinessCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         imperative = any(p.aso.webmcp.has_register_tool for p in signals.pages)
         declarative = any(p.aso.webmcp.has_tool_attributes for p in signals.pages)
@@ -73,11 +74,11 @@ class AsoMcpReadinessCriterion(Criterion):
             status=status_from_score(score),
             threshold={"ready": "registerTool() OU toolname"},
             explanation=(
-                "WebMCP détecté (agents peuvent appeler des outils)."
+                t("expl.webmcp_full")
                 if score == 100
-                else "Signaux WebMCP partiels."
+                else t("expl.webmcp_partial")
                 if score == 50
-                else "Aucun signal WebMCP."
+                else t("expl.webmcp_none")
             ),
             evidence=_HTML_SOURCE,
             weight=self.weight,
@@ -98,7 +99,7 @@ class AsoPotentialActionsCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         actions = _union(signals.pages, "potential_actions")
         executable = any(action in _EXECUTABLE_ACTIONS for action in actions)
@@ -111,11 +112,11 @@ class AsoPotentialActionsCriterion(Criterion):
             status=status_from_score(score),
             threshold={"executable": "BuyAction/OrderAction/ReserveAction…"},
             explanation=(
-                f"Action exécutable présente : {actions}."
+                t("expl.actions_executable", actions=actions)
                 if executable
-                else f"SearchAction/action non transactionnelle : {actions}."
+                else t("expl.actions_nontransactional", actions=actions)
                 if actions
-                else "Aucun potentialAction."
+                else t("expl.actions_none")
             ),
             evidence={"source": "JSON-LD"},
             weight=self.weight,
@@ -136,7 +137,7 @@ class AsoActionSchemaCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         types = _union(signals.pages, "action_schema_types")
         score = 100.0 if len(types) >= 2 else 50.0 if len(types) == 1 else 0.0
@@ -147,7 +148,7 @@ class AsoActionSchemaCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"rich": "≥2 types d'action"},
-            explanation=f"Types d'action riches détectés : {types or 'aucun'}.",
+            explanation=t("expl.action_schema", types=types if types else t("word.none")),
             evidence={"source": "JSON-LD"},
             weight=self.weight,
         )
@@ -166,7 +167,7 @@ class AsoAccessibleFormsCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         total = sum(p.aso.agent_usable_forms for p in signals.pages)
         score = 100.0 if total >= 1 else 0.0
@@ -177,7 +178,7 @@ class AsoAccessibleFormsCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"min": 1},
-            explanation=f"{total} formulaire(s) exploitable(s) par un agent.",
+            explanation=t("expl.accessible_forms", total=total),
             evidence=_HTML_SOURCE,
             weight=self.weight,
         )
@@ -197,7 +198,7 @@ class AsoOpenApiCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         links = _union(signals.pages, "openapi_links")
         score = 100.0 if links else 0.0
@@ -208,7 +209,9 @@ class AsoOpenApiCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"present": "lien openapi/swagger/api-docs"},
-            explanation=f"API documentée exposée : {links}." if links else "Aucune API documentée.",
+            explanation=t("expl.openapi_present", links=links)
+            if links
+            else t("expl.openapi_absent"),
             evidence=_HTML_SOURCE,
             weight=self.weight,
         )
@@ -229,7 +232,7 @@ class AsoAiDiscoveryCriterion(Criterion):
         endpoints = signals.external.ai_discovery_endpoints
         if endpoints is None:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Endpoints de découverte IA non sondés."
+                self.key, self.pillars, self.weight, t("reason.ai_discovery_not_probed")
             )
         valid = sum(1 for ok in endpoints.values() if ok)
         score = round(valid / _AI_DISCOVERY_ENDPOINTS * 100, 2)
@@ -240,7 +243,7 @@ class AsoAiDiscoveryCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"endpoints": _AI_DISCOVERY_ENDPOINTS},
-            explanation=f"{valid}/{_AI_DISCOVERY_ENDPOINTS} endpoint(s) de découverte IA valides.",
+            explanation=t("expl.ai_discovery", valid=valid, total=_AI_DISCOVERY_ENDPOINTS),
             evidence={"source": "ai.txt + /ai/*.json"},
             weight=self.weight,
         )
@@ -261,7 +264,7 @@ class AsoNlwebCriterion(Criterion):
         status = signals.external.nlweb_status
         if status is None:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Endpoint NLWeb non sondé."
+                self.key, self.pillars, self.weight, t("reason.nlweb_not_probed")
             )
         score = {"conformant": 100.0, "present": 50.0, "absent": 0.0}.get(status, 0.0)
         return CriterionResult(
@@ -271,7 +274,7 @@ class AsoNlwebCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"levels": "conformant/present/absent"},
-            explanation=f"Endpoint NLWeb : {status}.",
+            explanation=t("expl.nlweb", status=status),
             evidence={"source": "sonde /ask"},
             weight=self.weight,
         )
@@ -294,7 +297,7 @@ class AsoBrandCoherenceCriterion(Criterion):
                 self.key,
                 self.pillars,
                 self.weight,
-                "Cohérence de marque non mesurée (entité Wikidata absente ou désactivée).",
+                t("reason.brand_not_measured"),
             )
         score = round(sum(brand.values()) / len(brand) * 100, 2)
         return CriterionResult(
@@ -304,7 +307,7 @@ class AsoBrandCoherenceCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "nom + description cohérents (site/Wikidata)"},
-            explanation=f"Cohérence de marque : {score}% (site vs Wikidata).",
+            explanation=t("expl.brand_coherence", score=score),
             evidence={"source": "Wikidata"},
             weight=self.weight,
         )
@@ -324,7 +327,7 @@ class AsoAgentAccessCriterion(Criterion):
         checked = signals.site.agent_bots_checked
         if checked == 0:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Accès des bots d'agents non évalué."
+                self.key, self.pillars, self.weight, t("reason.agent_access_not_evaluated")
             )
         blocked = signals.site.blocked_agent_bots
         score = round((checked - len(blocked)) / checked * 100, 2)
@@ -336,9 +339,9 @@ class AsoAgentAccessCriterion(Criterion):
             status=status_from_score(score),
             threshold={"target": "tous les bots d'agents autorisés"},
             explanation=(
-                f"{len(blocked)} bot(s) d'agent bloqué(s) : {blocked}."
+                t("expl.agent_blocked", count=len(blocked), bots=blocked)
                 if blocked
-                else "Tous les bots d'agents connus sont autorisés."
+                else t("expl.agent_all_allowed")
             ),
             evidence={"source": "robots.txt (M1)"},
             weight=self.weight,

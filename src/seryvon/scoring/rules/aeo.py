@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
@@ -35,9 +36,7 @@ _ABOUT_HINTS = (
 _LEAD_MIN_WORDS = 20  # "direct answer" lead paragraph
 
 
-def _flag(
-    *, key: str, pillars: list[str], weight: float, present: bool, label: str
-) -> CriterionResult:
+def _flag(*, key: str, pillars: list[str], weight: float, present: bool) -> CriterionResult:
     """Traceable binary-presence result (100/0)."""
     score = 100.0 if present else 0.0
     return CriterionResult(
@@ -46,7 +45,7 @@ def _flag(
         raw_value={"present": present},
         score=score,
         status=status_from_score(score),
-        explanation=f"{label} : {'présent' if present else 'absent'}.",
+        explanation=t("expl.flag_present") if present else t("expl.flag_absent"),
         evidence={"source": "HTML/JSON-LD"},
         weight=weight,
     )
@@ -70,17 +69,17 @@ class AeoAuthorCredentialsCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         has_credentials = any(p.author_has_credentials for p in signals.pages)
         has_author = any(p.has_author for p in signals.pages)
         score = 100.0 if has_credentials else 50.0 if has_author else 0.0
         explanation = (
-            "Auteur identifiable avec credentials."
+            t("expl.author_full")
             if has_credentials
-            else "Auteur identifiable sans credentials structurés."
+            else t("expl.author_partial")
             if has_author
-            else "Aucun auteur identifiable."
+            else t("expl.author_none")
         )
         return CriterionResult(
             key=self.key,
@@ -108,7 +107,7 @@ class AeoAboutPageCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         about = next((p.url for p in signals.pages if _is_about_page(p)), None)
         score = 100.0 if about else 0.0
@@ -119,7 +118,7 @@ class AeoAboutPageCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"hint": "URL/titre About / À propos / mentions"},
-            explanation=f"Page About : {about}" if about else "Aucune page About détectée.",
+            explanation=t("expl.about_present", url=about) if about else t("expl.about_absent"),
             evidence={"source": "URL + titre"},
             weight=self.weight,
         )
@@ -138,7 +137,7 @@ class AeoDefinedTermsCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         present = any(
             "DefinedTerm" in p.structured_data_types or p.definition_lists_count > 0
@@ -149,7 +148,6 @@ class AeoDefinedTermsCriterion(Criterion):
             pillars=self.pillars,
             weight=self.weight,
             present=present,
-            label="Définitions (DefinedTerm / <dl>)",
         )
 
 
@@ -166,7 +164,7 @@ class AeoDatesStructuredCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         present = any(p.has_structured_dates for p in signals.pages)
         return _flag(
@@ -174,7 +172,6 @@ class AeoDatesStructuredCriterion(Criterion):
             pillars=self.pillars,
             weight=self.weight,
             present=present,
-            label="Dates structurées",
         )
 
 
@@ -191,7 +188,7 @@ class AeoComparisonTablesCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         present = any(p.tables_count > 0 for p in signals.pages)
         return _flag(
@@ -199,7 +196,6 @@ class AeoComparisonTablesCriterion(Criterion):
             pillars=self.pillars,
             weight=self.weight,
             present=present,
-            label="Tableau comparatif",
         )
 
 
@@ -217,7 +213,7 @@ class AeoAnswerDirectnessCriterion(Criterion):
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         direct = sum(1 for p in pages if p.lead_paragraph_words >= _LEAD_MIN_WORDS)
         score = round(direct / len(pages) * 100, 2)
@@ -228,7 +224,7 @@ class AeoAnswerDirectnessCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"min_lead_words": _LEAD_MIN_WORDS},
-            explanation=f"{direct}/{len(pages)} page(s) avec paragraphe-réponse en tête.",
+            explanation=t("expl.answer_directness", direct=direct, total=len(pages)),
             evidence={"source": "HTML parsing"},
             weight=self.weight,
         )
@@ -252,14 +248,13 @@ class AeoKgPresenceCriterion(Criterion):
         kg = signals.external.kg_presence
         if kg is None:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Wikidata non configuré (slice ultérieure)."
+                self.key, self.pillars, self.weight, t("reason.wikidata_not_configured")
             )
         return _flag(
             key=self.key,
             pillars=self.pillars,
             weight=self.weight,
             present=kg,
-            label="Entité Wikidata/Wikipedia",
         )
 
 
@@ -284,7 +279,7 @@ class AeoLlmCitationCriterion(Criterion):
                 self.key,
                 self.pillars,
                 self.weight,
-                "Citation tracking LLM non disponible (clé API BYOK requise).",
+                t("reason.citation_unavailable"),
             )
         score = round(cm.citation_rate * 100, 2)
         raw: dict[str, Any] = {"citation_rate": cm.citation_rate, "engines": cm.engines}
@@ -295,7 +290,7 @@ class AeoLlmCitationCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"formula": "% réponses retrieval citant le domaine"},
-            explanation=f"Taux de citation answer engines : {score}%.",
+            explanation=t("expl.aeo_llm_citation", score=score),
             evidence={
                 "source": "M4 citation tracking",
                 "per_engine": {k: v.model_dump() for k, v in cm.per_engine.items()},

@@ -3,7 +3,7 @@
 // English is the base locale; French is kept as a ready second locale. Dynamic
 // strings are functions so each locale controls its own interpolation/plurals.
 
-import type { CoverageLabel, Pillar, ReadinessLevel } from "../api/types";
+import type { CoverageLabel, Pillar, ReadinessLevel, Status } from "../api/types";
 
 export type Locale = "en" | "fr";
 
@@ -59,9 +59,31 @@ export interface Dict {
     loadError: string;
   };
 
+  criteria: {
+    title: string;
+    subtitle: string;
+    filterAll: string;
+    statusFilter: string;
+    pillarTags: string;
+    colCriterion: string;
+    colScore: string;
+    colWeight: string;
+    tierExperimental: string;
+    rawValue: string;
+    threshold: string;
+    explanation: string;
+    evidence: string;
+    noExplanation: string;
+    none: string;
+    empty: string;
+    count: (n: number) => string;
+  };
+
   pillarFull: Record<Pillar, string>;
   coverage: Record<CoverageLabel, string>;
   readiness: Record<ReadinessLevel, string>;
+  statusLabel: Record<Status, string>;
+  ruleLabel: Record<string, string>;
 
   aso: {
     kicker: string;

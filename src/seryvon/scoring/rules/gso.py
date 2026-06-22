@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import SignalBundle
@@ -54,7 +55,7 @@ class _SchemaPresenceCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         pages_with = [p.url for p in signals.pages if self.schema_type in p.structured_data_types]
         score = 100.0 if pages_with else 0.0
@@ -66,9 +67,9 @@ class _SchemaPresenceCriterion(Criterion):
             raw_value={"present": bool(pages_with), "pages": len(pages_with)},
             threshold={"schema": self.schema_type},
             explanation=(
-                f"{self.label} présent sur {len(pages_with)} page(s)."
+                t("expl.schema_present", pages=len(pages_with))
                 if pages_with
-                else f"{self.label} absent du site."
+                else t("expl.schema_absent")
             ),
         )
 
@@ -119,7 +120,7 @@ class GsoItemListCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         present = any(
             "ItemList" in p.structured_data_types or p.tables_count > 0 for p in signals.pages
@@ -132,9 +133,7 @@ class GsoItemListCriterion(Criterion):
             self.weight,
             raw_value={"present": present},
             threshold={"any": "ItemList ou <table>"},
-            explanation="Liste/tableau structuré présent."
-            if present
-            else "Aucune liste structurée.",
+            explanation=t("expl.itemlist_present") if present else t("expl.itemlist_absent"),
         )
 
 
@@ -151,7 +150,7 @@ class GsoQaFormatCriterion(Criterion):
     ) -> CriterionResult:
         if not signals.pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         present = any(
             "FAQPage" in p.structured_data_types or p.question_headings >= 2 for p in signals.pages
@@ -164,7 +163,7 @@ class GsoQaFormatCriterion(Criterion):
             self.weight,
             raw_value={"present": present},
             threshold={"any": "FAQPage ou ≥2 titres-questions"},
-            explanation="Format Q-R extractible présent." if present else "Aucun format Q-R.",
+            explanation=t("expl.qa_present") if present else t("expl.qa_absent"),
         )
 
 
@@ -182,7 +181,7 @@ class GsoCwvEligibleCriterion(Criterion):
         cwv = signals.external.core_web_vitals
         if not cwv or not all(metric in cwv for metric in _CWV_GOOD):
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Core Web Vitals indisponibles (PSI)."
+                self.key, self.pillars, self.weight, t("reason.cwv_unavailable")
             )
         eligible = all(cwv[metric] <= good for metric, good in _CWV_GOOD.items())
         score = 100.0 if eligible else 0.0
@@ -193,9 +192,7 @@ class GsoCwvEligibleCriterion(Criterion):
             self.weight,
             raw_value={"core_web_vitals": cwv, "eligible": eligible},
             threshold=dict(_CWV_GOOD),
-            explanation="Les 3 Core Web Vitals sont dans les seuils."
-            if eligible
-            else "Au moins un Core Web Vital hors seuil.",
+            explanation=t("expl.cwv_eligible") if eligible else t("expl.cwv_not_eligible"),
         )
 
 
@@ -214,7 +211,7 @@ class GsoLongtailCriterion(Criterion):
             self.key,
             self.pillars,
             self.weight,
-            "Longue traîne non mesurable sans données mots-clés/SERP (Phase 4).",
+            t("reason.longtail"),
         )
 
 
@@ -232,7 +229,7 @@ class GsoAiOverviewCriterion(Criterion):
         presence = signals.external.ai_overview_presence
         if presence is None:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "API SERP non configurée (Phase 4)."
+                self.key, self.pillars, self.weight, t("reason.serp_not_configured")
             )
         score = round(min(100.0, max(0.0, presence * 100)), 2)
         return _present(
@@ -242,5 +239,5 @@ class GsoAiOverviewCriterion(Criterion):
             self.weight,
             raw_value={"ai_overview_presence": presence},
             threshold={"formula": "% prompts avec AI Overview"},
-            explanation=f"Présence AI Overview : {score}%.",
+            explanation=t("expl.ai_overview", score=score),
         )
