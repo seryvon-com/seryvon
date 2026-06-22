@@ -9,16 +9,41 @@ import { LanguageSelector } from "./LanguageSelector";
 interface Props {
   domain?: string;
   lastAudit?: string;
+  /** Persisted audit id, enabling the Overview / Audit report nav links. */
+  auditId?: string;
+  /** Which primary nav entry is the current screen. */
+  active?: "overview" | "report";
+  /** Topbar heading; defaults to the Overview labels. */
+  title?: string;
+  subtitle?: string;
   children: ReactNode;
 }
 
-export function AppShell({ domain, lastAudit, children }: Props) {
+export function AppShell({
+  domain,
+  lastAudit,
+  auditId,
+  active = "overview",
+  title,
+  subtitle,
+  children,
+}: Props) {
   const navigate = useNavigate();
   const { t } = useI18n();
 
   const navMain = [
-    { label: t.nav.overview, active: true },
-    { label: t.nav.report, soon: true },
+    {
+      label: t.nav.overview,
+      active: active === "overview",
+      to: auditId ? `/audits/${auditId}` : undefined,
+      soon: !auditId,
+    },
+    {
+      label: t.nav.report,
+      active: active === "report",
+      to: auditId ? `/audits/${auditId}/report` : undefined,
+      soon: !auditId,
+    },
     { label: t.nav.plan, soon: true },
     { label: t.nav.citation, soon: true },
     { label: t.nav.asoReadiness, soon: true },
@@ -44,7 +69,13 @@ export function AppShell({ domain, lastAudit, children }: Props) {
         <div className="group-label">{t.nav.analyse}</div>
         <nav>
           {navMain.map((it) => (
-            <NavButton key={it.label} label={it.label} active={it.active} soon={it.soon} />
+            <NavButton
+              key={it.label}
+              label={it.label}
+              active={it.active}
+              soon={it.soon}
+              onClick={it.to ? () => navigate(it.to as string) : undefined}
+            />
           ))}
         </nav>
 
@@ -67,8 +98,8 @@ export function AppShell({ domain, lastAudit, children }: Props) {
       <div className="main">
         <header className="topbar">
           <div style={{ minWidth: 0 }}>
-            <h1>{t.topbar.overviewTitle}</h1>
-            <div className="subtitle">{t.topbar.overviewSubtitle}</div>
+            <h1>{title ?? t.topbar.overviewTitle}</h1>
+            <div className="subtitle">{subtitle ?? t.topbar.overviewSubtitle}</div>
           </div>
           <div className="actions">
             <LanguageSelector />
@@ -97,13 +128,23 @@ export function AppShell({ domain, lastAudit, children }: Props) {
   );
 }
 
-function NavButton({ label, active, soon }: { label: string; active?: boolean; soon?: boolean }) {
+function NavButton({
+  label,
+  active,
+  soon,
+  onClick,
+}: {
+  label: string;
+  active?: boolean;
+  soon?: boolean;
+  onClick?: () => void;
+}) {
   const { t } = useI18n();
   const cls = ["nav-item", active ? "active" : "", soon ? "disabled" : ""]
     .filter(Boolean)
     .join(" ");
   return (
-    <button className={cls} disabled={soon} type="button">
+    <button className={cls} disabled={soon} type="button" onClick={onClick}>
       <span style={{ flex: 1 }}>{label}</span>
       {soon && <span className="badge-soon">{t.nav.soon}</span>}
     </button>

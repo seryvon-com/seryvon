@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { I18nProvider } from "./i18n";
+import { CriteriaPage } from "./pages/CriteriaPage";
 import { HomePage } from "./pages/HomePage";
 import { ReportPage } from "./pages/ReportPage";
 import "./styles/tokens.css";
@@ -16,6 +17,7 @@ const router = createBrowserRouter(
   [
     { path: "/", element: <HomePage /> },
     { path: "/audits/:auditId", element: <ReportPage /> },
+    { path: "/audits/:auditId/report", element: <CriteriaPage /> },
   ],
   { future: { v7_relativeSplatPath: true } },
 );
