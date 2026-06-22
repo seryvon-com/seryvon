@@ -32,6 +32,7 @@ from selectolax.parser import HTMLParser
 from seryvon.crawler.discovery import DiscoveryResult, same_host
 from seryvon.crawler.extract import extract_links, extract_page_signals
 from seryvon.crawler.fetch import FetchResult, fetch_page
+from seryvon.crawler.playwright_render import PlaywrightRenderer, classify_render_mode
 from seryvon.models.signals import PageSignals
 
 #: Fetch a page by URL (injectable for tests).
@@ -43,17 +44,18 @@ HtmlSink = Callable[[str, str], None]
 
 DEFAULT_MAX_CONCURRENCY = 5
 
-# SSR/CSR heuristic (D2) — replaced by a Playwright measurement in Phase 2.
+# SSR/CSR heuristic (D2) — fallback when Playwright is unavailable.
 _SSR_MIN_WORDS = 50
 _CSR_MOUNT_SELECTORS = ("#root", "#app", "[data-reactroot]", "[ng-version]")
 
 
 def detect_render_mode(html: str) -> str:
-    """Guess `"ssr"` or `"csr"` without a browser (heuristic, decision D2).
+    """Heuristic fallback for SSR/CSR detection without a browser (decision D2).
 
-    A text-rich body indicates server rendering; a near-empty body with an SPA
-    mount node or many scripts indicates client rendering. The reliable
-    measurement (raw HTML vs rendered DOM) will come with Playwright (Phase 2).
+    Used when Playwright is disabled or unavailable. A text-rich body indicates
+    server rendering; a near-empty body with an SPA mount node or many scripts
+    indicates client rendering. When Playwright is available, `classify_render_mode`
+    is used instead (DOM diff — more reliable).
     """
     tree = HTMLParser(html)
     body = tree.body
@@ -99,6 +101,7 @@ async def _run_crawl(
     max_concurrency: int,
     respect_robots: bool,
     html_sink: HtmlSink | None = None,
+    playwright_renderer: PlaywrightRenderer | None = None,
 ) -> list[PageSignals]:
     """Deterministic BFS crawl loop from a fetcher (real or injected)."""
     robots = discovery.robots
@@ -141,7 +144,30 @@ async def _run_crawl(
                 status_code=result.status_code,
                 redirects=result.redirects,
             )
-            signals.render_mode = detect_render_mode(result.html)
+            # Playwright rendering: home page only (performance trade-off).
+            # Compares raw HTTP HTML with rendered DOM to detect CSR reliably.
+            is_home = result.final_url.rstrip("/") == discovery.home_url.rstrip("/")
+            if playwright_renderer is not None and is_home:
+                rendered = await playwright_renderer(result.final_url)
+                if rendered is not None:
+                    signals.render_mode = classify_render_mode(result.html, rendered.html)
+                    signals.render_source = "playwright"
+                    if signals.render_mode == "csr":
+                        # Re-extract signals from rendered DOM: JS-rendered content
+                        # gives accurate GEO metrics (noise_ratio, entities, etc.).
+                        rendered_signals = extract_page_signals(
+                            result.final_url,
+                            rendered.html,
+                            status_code=result.status_code,
+                            redirects=result.redirects,
+                        )
+                        rendered_signals.render_mode = "csr"
+                        rendered_signals.render_source = "playwright"
+                        signals = rendered_signals
+                else:
+                    signals.render_mode = detect_render_mode(result.html)
+            else:
+                signals.render_mode = detect_render_mode(result.html)
             results[result.final_url] = signals
             if html_sink is not None:
                 html_sink(result.final_url, result.html)
@@ -168,6 +194,7 @@ async def crawl_site(
     fetch: PageFetcher | None = None,
     sleep: Sleeper | None = None,
     html_sink: HtmlSink | None = None,
+    playwright_renderer: PlaywrightRenderer | None = None,
 ) -> list[PageSignals]:
     """Crawl a site from the M1 frontier and return the per-page signals.
 
@@ -192,4 +219,5 @@ async def crawl_site(
         max_concurrency=max_concurrency,
         respect_robots=respect_robots,
         html_sink=html_sink,
+        playwright_renderer=playwright_renderer,
     )

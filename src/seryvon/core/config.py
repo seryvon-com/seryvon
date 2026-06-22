@@ -80,6 +80,11 @@ class Settings(BaseSettings):
     # Empty => seo.avg_position / seo.click_through_rate stay not_measured.
     gsc_service_account: str = Field(default="", validation_alias="GSC_SERVICE_ACCOUNT")
 
+    # Playwright rendering (optional, geo.ssr). Install: `playwright install chromium`.
+    # Disabled by default — opt-in via PLAYWRIGHT_ENABLED=true.
+    playwright_enabled: bool = Field(default=False, validation_alias="PLAYWRIGHT_ENABLED")
+    playwright_timeout: float = Field(default=10.0, validation_alias="PLAYWRIGHT_TIMEOUT")
+
     # LLM citation tracking keys (BYOK, M4). Each empty => that engine is skipped;
     # with no key at all, geo.citation_* / aeo.llm_citation stay not_measured.
     perplexity_api_key: str = Field(default="", validation_alias="PERPLEXITY_API_KEY")

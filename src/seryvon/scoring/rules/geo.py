@@ -62,15 +62,19 @@ class GeoSsrCriterion(Criterion):
             )
         ssr = sum(1 for mode in modes if mode == "ssr")
         score = round(ssr / len(modes) * 100, 2)
+        # Reflect the detection method used for the home page (most informative page).
+        home = signals.home
+        detection = home.render_source if home and home.render_mode else "heuristic"
+        source = "Playwright (DOM diff)" if detection == "playwright" else "heuristic (D2)"
         return CriterionResult(
             key=self.key,
             pillars=self.pillars,
-            raw_value={"pages": len(modes), "ssr": ssr},
+            raw_value={"pages": len(modes), "ssr": ssr, "detection": detection},
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% SSR"},
             explanation=t("expl.ssr", ssr=ssr, total=len(modes)),
-            evidence={"source": "heuristique SSR/CSR (M2)"},
+            evidence={"source": source},
             weight=self.weight,
         )
 

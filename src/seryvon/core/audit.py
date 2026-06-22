@@ -34,6 +34,7 @@ from seryvon.connectors import (
 from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.crawler.discovery import AGENT_BOTS, blocked_agent_bots
+from seryvon.crawler.playwright_render import PlaywrightRenderer, make_renderer
 from seryvon.i18n import set_locale
 from seryvon.models.artifact import ArtifactRef, ArtifactType
 from seryvon.models.report import AuditReport, MeasurementProfile
@@ -204,6 +205,12 @@ async def run_audit(
             )
             artifacts.append(ref)
 
+    playwright_renderer: PlaywrightRenderer | None = None
+    if settings.playwright_enabled:
+        playwright_renderer = make_renderer(
+            user_agent=user_agent, timeout=settings.playwright_timeout
+        )
+
     pages = await crawl_site(
         discovery,
         user_agent=user_agent,
@@ -212,8 +219,11 @@ async def run_audit(
         respect_robots=config.crawl.respect_robots,
         timeout=settings.request_timeout,
         html_sink=html_sink,
+        playwright_renderer=playwright_renderer,
     )
     active_connectors: list[str] = ["crawler"]
+    if pages and pages[0].render_source == "playwright":
+        active_connectors.append("playwright")
     external = await _collect_external(discovery.domain, pages, settings)
     if external.core_web_vitals is not None or external.lighthouse_performance is not None:
         active_connectors.append("pagespeed")
