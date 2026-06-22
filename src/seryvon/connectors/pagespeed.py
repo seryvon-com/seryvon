@@ -20,10 +20,14 @@ home page only, `mobile` strategy by default.
 
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
 import httpx
+
+log = logging.getLogger(__name__)
 
 PSI_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 # CrUX expresses CLS in hundredths (5 => 0.05); we convert back to the standard scale.
@@ -91,13 +95,22 @@ async def fetch_pagespeed(
     if client is None:
         client = httpx.AsyncClient(timeout=timeout)
     payload: dict[str, Any] = {}
+    t0 = time.monotonic()
+    log.info("pagespeed start url=%s strategy=%s", url, strategy)
     try:
         response = await client.get(PSI_ENDPOINT, params=params)
         response.raise_for_status()
         payload = response.json()
-    except (httpx.HTTPError, ValueError):
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning(
+            "pagespeed error url=%s elapsed_ms=%d error=%s",
+            url,
+            int((time.monotonic() - t0) * 1000),
+            exc,
+        )
         return PageSpeedResult()
     finally:
         if own_client:
             await client.aclose()
+    log.info("pagespeed done url=%s elapsed_ms=%d", url, int((time.monotonic() - t0) * 1000))
     return parse_pagespeed(payload)

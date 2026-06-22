@@ -13,9 +13,13 @@ compliance and Playwright rendering arrive in Phase 1 (M1/M2).
 
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass
 
 import httpx
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -56,19 +60,30 @@ async def fetch_page(
     4xx/5xx) is, however, returned as-is so the indexability criteria can score it.
     """
     headers = {"User-Agent": user_agent}
+    t0 = time.monotonic()
+    log.debug("fetch_page start url=%s", url)
     async with httpx.AsyncClient(
         follow_redirects=True,
         timeout=timeout,
         headers=headers,
     ) as client:
         response = await client.get(url)
-        return FetchResult(
-            url=url,
-            final_url=str(response.url),
-            status_code=response.status_code,
-            html=response.text,
-            redirects=len(response.history),
-        )
+    elapsed = int((time.monotonic() - t0) * 1000)
+    log.debug(
+        "fetch_page done url=%s final=%s status=%d redirects=%d elapsed_ms=%d",
+        url,
+        response.url,
+        response.status_code,
+        len(response.history),
+        elapsed,
+    )
+    return FetchResult(
+        url=url,
+        final_url=str(response.url),
+        status_code=response.status_code,
+        html=response.text,
+        redirects=len(response.history),
+    )
 
 
 async def fetch_resource(
@@ -84,16 +99,22 @@ async def fetch_resource(
     by the caller as "everything allowed" (RFC 9309).
     """
     headers = {"User-Agent": user_agent}
+    t0 = time.monotonic()
+    log.debug("fetch_resource start url=%s", url)
     async with httpx.AsyncClient(
         follow_redirects=True,
         timeout=timeout,
         headers=headers,
     ) as client:
         response = await client.get(url)
-        return FetchedResource(
-            url=url,
-            final_url=str(response.url),
-            status_code=response.status_code,
-            content=response.content,
-            content_type=response.headers.get("content-type"),
-        )
+    elapsed = int((time.monotonic() - t0) * 1000)
+    log.debug(
+        "fetch_resource done url=%s status=%d elapsed_ms=%d", url, response.status_code, elapsed
+    )
+    return FetchedResource(
+        url=url,
+        final_url=str(response.url),
+        status_code=response.status_code,
+        content=response.content,
+        content_type=response.headers.get("content-type"),
+    )

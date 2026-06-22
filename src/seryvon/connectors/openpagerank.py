@@ -17,10 +17,14 @@ same pattern as the PageSpeed Insights connector.
 
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass
 from typing import Any
 
 import httpx
+
+log = logging.getLogger(__name__)
 
 OPR_ENDPOINT = "https://openpagerank.com/api/v1.0/getPageRank"
 
@@ -58,13 +62,24 @@ async def fetch_openpagerank(
     if client is None:
         client = httpx.AsyncClient(timeout=timeout)
     payload: dict[str, Any] = {}
+    t0 = time.monotonic()
+    log.info("openpagerank start domain=%s", domain)
     try:
         response = await client.get(OPR_ENDPOINT, params=params, headers=headers)
         response.raise_for_status()
         payload = response.json()
-    except (httpx.HTTPError, ValueError):
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning(
+            "openpagerank error domain=%s elapsed_ms=%d error=%s",
+            domain,
+            int((time.monotonic() - t0) * 1000),
+            exc,
+        )
         return OpenPageRankResult()
     finally:
         if own_client:
             await client.aclose()
+    log.info(
+        "openpagerank done domain=%s elapsed_ms=%d", domain, int((time.monotonic() - t0) * 1000)
+    )
     return parse_openpagerank(payload)

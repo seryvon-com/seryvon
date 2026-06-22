@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+import time
 import uuid
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
@@ -54,6 +56,8 @@ from seryvon.scoring import (
     score_pillar,
 )
 from seryvon.storage import ArtifactStore
+
+log = logging.getLogger(__name__)
 
 
 def _config_digest(config: AuditConfig) -> str:
@@ -182,11 +186,20 @@ async def run_audit(
     started = datetime.now(UTC)
     user_agent = config.crawl.user_agent or settings.user_agent
 
+    log.info("audit start url=%s", url)
+    t_discovery = time.monotonic()
     discovery = await discover(
         url,
         user_agent=user_agent,
         timeout=settings.request_timeout,
         respect_robots=config.crawl.respect_robots,
+    )
+
+    log.info(
+        "audit discovery done domain=%s sitemap_urls=%d elapsed_ms=%d",
+        discovery.domain,
+        len(discovery.sitemap_urls),
+        int((time.monotonic() - t_discovery) * 1000),
     )
 
     artifacts: list[ArtifactRef] = []
@@ -211,6 +224,7 @@ async def run_audit(
             user_agent=user_agent, timeout=settings.playwright_timeout
         )
 
+    t_crawl = time.monotonic()
     pages = await crawl_site(
         discovery,
         user_agent=user_agent,
@@ -221,9 +235,16 @@ async def run_audit(
         html_sink=html_sink,
         playwright_renderer=playwright_renderer,
     )
+    log.info(
+        "audit crawl done pages=%d elapsed_ms=%d",
+        len(pages),
+        int((time.monotonic() - t_crawl) * 1000),
+    )
     active_connectors: list[str] = ["crawler"]
     if pages and pages[0].render_source == "playwright":
         active_connectors.append("playwright")
+    t_ext = time.monotonic()
+    log.info("audit connectors start domain=%s", discovery.domain)
     external = await _collect_external(discovery.domain, pages, settings)
     if external.core_web_vitals is not None or external.lighthouse_performance is not None:
         active_connectors.append("pagespeed")
@@ -245,6 +266,11 @@ async def run_audit(
     )
     if external.kg_presence is not None:
         active_connectors.append("wikidata")
+    log.info(
+        "audit connectors done elapsed_ms=%d active=%s",
+        int((time.monotonic() - t_ext) * 1000),
+        active_connectors,
+    )
     bundle = SignalBundle(
         domain=discovery.domain,
         signal_schema_version=SIGNAL_SCHEMA_VERSION,
@@ -261,15 +287,22 @@ async def run_audit(
         external=external,
     )
 
+    t_scoring = time.monotonic()
     results = run_criteria(bundle, config)
     pillar_scores = {p: score_pillar(p, results) for p in PILLARS}
     overall = score_global(pillar_scores, config)
+    log.info(
+        "audit scoring done score=%.1f elapsed_ms=%d",
+        overall,
+        int((time.monotonic() - t_scoring) * 1000),
+    )
 
     try:
         prompt_set = generate_prompt_set(bundle)
     except Exception:
         prompt_set = None
 
+    log.info("audit done url=%s score=%.1f", url, overall)
     config_digest = _config_digest(config)
     measurement_profile = _build_measurement_profile(config, active_connectors)
     return AuditReport(

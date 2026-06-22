@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 from collections.abc import Awaitable, Callable
 
 import httpx
@@ -34,6 +35,8 @@ from seryvon.crawler.extract import extract_links, extract_page_signals
 from seryvon.crawler.fetch import FetchResult, fetch_page
 from seryvon.crawler.playwright_render import PlaywrightRenderer, classify_render_mode
 from seryvon.models.signals import PageSignals
+
+log = logging.getLogger(__name__)
 
 #: Fetch a page by URL (injectable for tests).
 PageFetcher = Callable[[str], Awaitable[FetchResult]]
@@ -115,6 +118,14 @@ async def _run_crawl(
     current = sorted(set(discovery.frontier))
     depth = 0
 
+    log.info(
+        "crawl start domain=%s frontier=%d max_pages=%d max_depth=%d",
+        host,
+        len(current),
+        max_pages,
+        max_depth,
+    )
+
     while current and len(results) < max_pages and depth <= max_depth:
         wave = [
             url
@@ -127,7 +138,9 @@ async def _run_crawl(
         if not wave:
             break
 
+        log.info("crawl wave depth=%d urls=%d total_done=%d", depth, len(wave), len(results))
         fetched = await _fetch_wave(wave, fetch, semaphore, delay, sleep)
+        log.info("crawl wave done depth=%d fetched=%d", depth, len(fetched))
 
         next_frontier: set[str] = set()
         for url in wave:
@@ -148,8 +161,15 @@ async def _run_crawl(
             # Compares raw HTTP HTML with rendered DOM to detect CSR reliably.
             is_home = result.final_url.rstrip("/") == discovery.home_url.rstrip("/")
             if playwright_renderer is not None and is_home:
+                log.info("playwright render start url=%s", result.final_url)
                 rendered = await playwright_renderer(result.final_url)
                 if rendered is not None:
+                    log.info(
+                        "playwright render done url=%s words=%d render_ms=%d",
+                        result.final_url,
+                        rendered.word_count,
+                        rendered.render_time_ms,
+                    )
                     signals.render_mode = classify_render_mode(result.html, rendered.html)
                     signals.render_source = "playwright"
                     if signals.render_mode == "csr":
@@ -179,6 +199,7 @@ async def _run_crawl(
         current = sorted(next_frontier)
         depth += 1
 
+    log.info("crawl end domain=%s pages=%d", host, len(results))
     return [results[url] for url in sorted(results)]
 
 

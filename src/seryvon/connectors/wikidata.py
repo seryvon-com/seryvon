@@ -18,11 +18,15 @@ Parsing/comparison are pure and deterministic; only `fetch_wikidata` performs I/
 
 from __future__ import annotations
 
+import logging
 import re
+import time
 from dataclasses import dataclass
 from typing import Any
 
 import httpx
+
+log = logging.getLogger(__name__)
 
 WIKIDATA_ENDPOINT = "https://www.wikidata.org/w/api.php"
 _NAME_OVERLAP_MIN = 0.5  # token overlap of the shorter name
@@ -102,13 +106,22 @@ async def fetch_wikidata(
     if client is None:
         client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
     payload: dict[str, Any] = {}
+    t0 = time.monotonic()
+    log.info("wikidata start name=%r", name)
     try:
         response = await client.get(WIKIDATA_ENDPOINT, params=params)
         response.raise_for_status()
         payload = response.json()
-    except (httpx.HTTPError, ValueError):
+    except (httpx.HTTPError, ValueError) as exc:
+        log.warning(
+            "wikidata error name=%r elapsed_ms=%d error=%s",
+            name,
+            int((time.monotonic() - t0) * 1000),
+            exc,
+        )
         return WikidataResult()
     finally:
         if own_client:
             await client.aclose()
+    log.info("wikidata done name=%r elapsed_ms=%d", name, int((time.monotonic() - t0) * 1000))
     return parse_wikidata(payload)

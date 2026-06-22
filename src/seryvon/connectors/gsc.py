@@ -23,12 +23,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
+import time
 from datetime import date, timedelta
 from typing import Any
 
 import httpx
 
 from seryvon.models.signals import GscQuery, GscResult
+
+log = logging.getLogger(__name__)
 
 _GSC_ENDPOINT = (
     "https://searchconsole.googleapis.com/webmasters/v3/sites/{site}/searchAnalytics/query"
@@ -112,10 +116,15 @@ async def fetch_gsc(
         date_range_days=date_range_days,
     )
 
+    t0 = time.monotonic()
+    log.info("gsc start domain=%s", domain)
     token = _access_token
     if token is None:
         token = await asyncio.to_thread(_get_access_token, service_account_json)
     if not token:
+        log.warning(
+            "gsc auth_failed domain=%s elapsed_ms=%d", domain, int((time.monotonic() - t0) * 1000)
+        )
         return empty
 
     end_date = date.today()
@@ -141,12 +150,21 @@ async def fetch_gsc(
             try:
                 resp = await active_client.post(url, json=body, headers=headers)
                 if resp.status_code == 200:
+                    log.info(
+                        "gsc done domain=%s elapsed_ms=%d",
+                        domain,
+                        int((time.monotonic() - t0) * 1000),
+                    )
                     return parse_gsc(resp.json(), date_range_days=date_range_days)
                 if resp.status_code == 403:
-                    # Property not accessible with this service account; try next.
+                    log.debug("gsc 403 site=%s trying_next", site_url)
                     continue
-            except (httpx.HTTPError, ValueError):
+            except (httpx.HTTPError, ValueError) as exc:
+                log.debug("gsc fetch_error site=%s error=%s", site_url, exc)
                 continue
+        log.info(
+            "gsc no_property domain=%s elapsed_ms=%d", domain, int((time.monotonic() - t0) * 1000)
+        )
         return empty
     finally:
         if own_client:

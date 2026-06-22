@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import uuid
 from collections.abc import Iterator
 from datetime import datetime
@@ -68,6 +69,12 @@ _citation_jobs: dict[str, _CitationJob] = {}
 
 # Hard ceiling for a single audit (discovery + crawl + connectors + scoring).
 _AUDIT_TIMEOUT_SECONDS = 300
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 app = FastAPI(
     title="Seryvon API",

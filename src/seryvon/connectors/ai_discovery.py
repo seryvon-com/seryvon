@@ -19,9 +19,13 @@ Pure, deterministic validators; only the `probe_*` functions perform I/O
 
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
 
 import httpx
+
+log = logging.getLogger(__name__)
 
 AI_DISCOVERY_ENDPOINTS = 4  # ai.txt + summary + faq + service
 _NLWEB_PATH = "/ask"
@@ -97,14 +101,23 @@ async def probe_ai_discovery(
     own_client = client is None
     if client is None:
         client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+    t0 = time.monotonic()
+    log.info("ai_discovery start origin=%s", origin)
     try:
         ai_txt = await _get(client, f"{origin}/.well-known/ai.txt")
-        return {
+        result = {
             "ai_txt": bool(ai_txt and ai_txt.status_code == 200 and ai_txt.content.strip()),
             "summary": valid_summary(_json_200(await _get(client, f"{origin}/ai/summary.json"))),
             "faq": valid_faq(_json_200(await _get(client, f"{origin}/ai/faq.json"))),
             "service": valid_service(_json_200(await _get(client, f"{origin}/ai/service.json"))),
         }
+        log.info(
+            "ai_discovery done origin=%s found=%s elapsed_ms=%d",
+            origin,
+            [k for k, v in result.items() if v],
+            int((time.monotonic() - t0) * 1000),
+        )
+        return result
     finally:
         if own_client:
             await client.aclose()
@@ -120,14 +133,27 @@ async def probe_nlweb(
     own_client = client is None
     if client is None:
         client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+    t0 = time.monotonic()
+    log.info("nlweb start origin=%s", origin)
     try:
         response = await _get(client, f"{origin}{_NLWEB_PATH}")
     finally:
         if own_client:
             await client.aclose()
     if response is None or response.status_code != 200:
+        log.info(
+            "nlweb absent origin=%s elapsed_ms=%d", origin, int((time.monotonic() - t0) * 1000)
+        )
         return "absent"
     data = _json_200(response)
     if isinstance(data, dict) and ("@context" in data or "results" in data):
-        return "conformant"
-    return "present"
+        status = "conformant"
+    else:
+        status = "present"
+    log.info(
+        "nlweb done origin=%s status=%s elapsed_ms=%d",
+        origin,
+        status,
+        int((time.monotonic() - t0) * 1000),
+    )
+    return status
