@@ -3,7 +3,7 @@
 // English is the base locale; French is kept as a ready second locale. Dynamic
 // strings are functions so each locale controls its own interpolation/plurals.
 
-import type { CoverageLabel, Pillar, ReadinessLevel, Status } from "../api/types";
+import type { Comparability, CoverageLabel, Pillar, ReadinessLevel, Status } from "../api/types";
 
 export type Locale = "en" | "fr";
 
@@ -41,6 +41,7 @@ export interface Dict {
     auditing: string;
     errorBackend: string;
     errorStatus: (status: number, message: string) => string;
+    progress: string;
   };
 
   report: {
@@ -79,6 +80,41 @@ export interface Dict {
     count: (n: number) => string;
   };
 
+  plan: {
+    title: string;
+    subtitle: string;
+    empty: string;
+    affected: (n: number) => string;
+    total: (n: number) => string;
+  };
+
+  asoDetail: {
+    title: string;
+    subtitle: string;
+    agentReady: string;
+    yes: string;
+    no: string;
+    webmcp: string;
+    actionSchema: string;
+    aiDiscovery: string;
+    nlweb: string;
+    brandCoherence: string;
+    blockedBots: string;
+    none: string;
+    unavailable: string;
+  };
+
+  history: {
+    title: string;
+    subtitle: string;
+    empty: string;
+    colDate: string;
+    colScore: string;
+    colId: string;
+    view: string;
+    count: (n: number) => string;
+  };
+
   pillarFull: Record<Pillar, string>;
   coverage: Record<CoverageLabel, string>;
   readiness: Record<ReadinessLevel, string>;
@@ -92,6 +128,27 @@ export interface Dict {
     blurbStrong: string;
     webmcpPresent: string;
     webmcpAbsent: (endpoints: number) => string;
+  };
+
+  compare: {
+    title: string;
+    subtitle: string;
+    leftAudit: string;
+    rightAudit: string;
+    domainPlaceholder: string;
+    loadHistory: string;
+    loadingHistory: string;
+    compareBtn: string;
+    noHistory: (domain: string) => string;
+    globalDelta: string;
+    recomputed: string;
+    comparability: Record<Comparability, string>;
+    profileDiffs: (n: number) => string;
+    colLeft: string;
+    colRight: string;
+    colDelta: string;
+    onlyChanges: string;
+    errorCompare: string;
   };
 
   pillar: { measured: string; excluded: string };

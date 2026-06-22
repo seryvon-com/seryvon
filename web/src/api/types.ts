@@ -128,3 +128,36 @@ export interface AuditSummary {
   score_global: number | null;
   started_at: string;
 }
+
+export type Comparability = "exact" | "compatible" | "intersection" | "incompatible";
+export type ComparisonMode = "strict" | "intersection" | "descriptive";
+
+export interface PillarDelta {
+  pillar: string;
+  left_score: number | null;
+  right_score: number | null;
+  delta: number | null;
+}
+
+export interface CriterionDelta {
+  key: string;
+  left_score: number | null;
+  right_score: number | null;
+  delta: number | null;
+  left_status: Status | null;
+  right_status: Status | null;
+}
+
+export interface ComparisonResult {
+  comparability: Comparability;
+  requested_mode: ComparisonMode;
+  allowed_modes: ComparisonMode[];
+  profile_differences: string[];
+  recomputed: boolean;
+  common_criteria: string[];
+  global_delta: number | null;
+  left_global: number | null;
+  right_global: number | null;
+  pillars: PillarDelta[];
+  criteria: CriterionDelta[];
+}
