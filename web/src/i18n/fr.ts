@@ -6,7 +6,7 @@ export const fr: Dict = {
   localeName: "Français",
 
   nav: {
-    tagline: "Audit de visibilité 5 piliers, du SEO à l'agentique.",
+    tagline: "Audit 5 piliers, du SEO à l'agentique.",
     analyse: "ANALYSE",
     configuration: "CONFIGURATION",
     overview: "Vue d'ensemble",

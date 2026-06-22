@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import logoSeryvon from "../assets/logoseryvon.png";
+import logoMark from "../assets/logo-mark.png";
+import seryvonText from "../assets/seryvon-text.png";
 
 import { useI18n } from "../i18n";
 import { LanguageSelector } from "./LanguageSelector";
@@ -110,10 +111,8 @@ export function AppShell({
       <aside className="sidebar">
         <Link to="/" className="brand">
           <div className="brand-row">
-            <span className="brand-icon-wrap">
-              <img src={logoSeryvon} alt="" className="brand-icon" />
-            </span>
-            <span className="brand-name">seryvon</span>
+            <img src={logoMark} alt="" className="brand-icon" />
+            <img src={seryvonText} alt="seryvon" className="brand-name-img" />
           </div>
           <div className="brand-tagline">{t.nav.tagline}</div>
         </Link>
