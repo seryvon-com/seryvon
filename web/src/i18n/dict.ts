@@ -26,6 +26,27 @@ export interface Dict {
     soon: string;
   };
 
+  plan: {
+    title: string;
+    subtitle: string;
+    noIssues: string;
+  };
+
+  history: {
+    title: string;
+    subtitle: (domain: string) => string;
+    noHistory: string;
+    colDate: string;
+    colScore: string;
+    view: string;
+  };
+
+  asoPage: {
+    title: string;
+    subtitle: string;
+    criteriaTitle: string;
+  };
+
   rankTracking: {
     title: string;
     subtitle: string;

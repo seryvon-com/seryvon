@@ -886,6 +886,112 @@
   color: var(--c-critical);
 }
 
+/* ===== Data pages (Plan, ASO, History, Rank Tracking) ===== */
+.section-header {
+  margin-bottom: 14px;
+}
+.section-header .kicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--c-text-faint);
+  text-transform: uppercase;
+}
+
+.stat-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-card);
+  border-radius: var(--r-lg);
+  padding: 16px 20px;
+  min-width: 120px;
+  flex: 1;
+}
+.stat-card .stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--c-text);
+  line-height: 1;
+}
+.stat-card .stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--c-text-faint);
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--c-border);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--c-border);
+  color: var(--c-text-soft);
+  vertical-align: middle;
+}
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+.data-table tr:hover td {
+  background: var(--c-surface-hover, rgba(255,255,255,0.02));
+}
+
+.score-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--c-surface);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+}
+.score-pill.ok    { color: var(--c-ok);       border-color: var(--c-ok); }
+.score-pill.warning  { color: var(--c-warning);  border-color: var(--c-warning); }
+.score-pill.critical { color: var(--c-critical); border-color: var(--c-critical); }
+
+.btn-small {
+  background: transparent;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  color: var(--c-text-soft);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-small:hover {
+  border-color: var(--accent);
+  color: var(--c-text);
+}
+
+.rank-tracking {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 /* On narrow widths drop secondary topbar items so the primary actions stay on one line. */
 @media (max-width: 1100px) {
   .topbar .subtitle {

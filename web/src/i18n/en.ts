@@ -166,6 +166,27 @@ export const en: Dict = {
     "seo.click_through_rate": "Organic CTR",
   },
 
+  plan: {
+    title: "Action plan",
+    subtitle: "Prioritized issues — fix the highest impact items first",
+    noIssues: "No priority action — every measured criterion is green.",
+  },
+
+  history: {
+    title: "Audit history",
+    subtitle: (domain) => `All audits for ${domain}`,
+    noHistory: "No audit history found for this domain.",
+    colDate: "Date",
+    colScore: "Score",
+    view: "View",
+  },
+
+  asoPage: {
+    title: "ASO Readiness",
+    subtitle: "Agentic Search Optimization — the pillar no one else audits",
+    criteriaTitle: "ASO criteria",
+  },
+
   rankTracking: {
     title: "Rank Tracking",
     subtitle: "Google Search Console — keyword positions",
