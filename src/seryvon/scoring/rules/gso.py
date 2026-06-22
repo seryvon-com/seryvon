@@ -217,7 +217,7 @@ class GsoLongtailCriterion(Criterion):
 
 @register
 class GsoAiOverviewCriterion(Criterion):
-    """AI Overview presence (`gso.ai_overview_presence`) — SERP API, Phase 4."""
+    """AI Overview presence (`gso.ai_overview_presence`) — SERP API BYOK (M9)."""
 
     key = "gso.ai_overview_presence"
     pillars: ClassVar[list[str]] = ["gso"]
@@ -226,18 +226,24 @@ class GsoAiOverviewCriterion(Criterion):
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
     ) -> CriterionResult:
-        presence = signals.external.ai_overview_presence
-        if presence is None:
+        aio = signals.external.aio_metrics
+        if aio is None:
             return CriterionResult.not_measured(
                 self.key, self.pillars, self.weight, t("reason.serp_not_configured")
             )
-        score = round(min(100.0, max(0.0, presence * 100)), 2)
+        score = round(min(100.0, max(0.0, aio.presence_rate * 100)), 2)
         return _present(
             score,
             self.key,
             self.pillars,
             self.weight,
-            raw_value={"ai_overview_presence": presence},
-            threshold={"formula": "% prompts avec AI Overview"},
+            raw_value={
+                "presence_rate": aio.presence_rate,
+                "trigger_rate": aio.trigger_rate,
+                "avg_position": aio.avg_position,
+                "query_count": aio.query_count,
+                "provider": aio.provider,
+            },
+            threshold={"target": "≥30 % des requêtes citées dans AI Overview"},
             explanation=t("expl.ai_overview", score=score),
         )

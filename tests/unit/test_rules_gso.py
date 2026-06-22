@@ -89,8 +89,10 @@ def test_longtail_and_ai_overview_not_measured() -> None:
 
 
 def test_ai_overview_score_when_present() -> None:
-    # Rule ready for the SERP connector (Phase 4): presence -> %.
-    bundle = SignalBundle(domain="ex.com", external=ExternalSignals(ai_overview_presence=0.6))
+    from seryvon.models.signals import AioMetrics
+
+    aio = AioMetrics(presence_rate=0.6, trigger_rate=1.0, query_count=3)
+    bundle = SignalBundle(domain="ex.com", external=ExternalSignals(aio_metrics=aio))
     assert GsoAiOverviewCriterion().evaluate(bundle).score == 60.0
 
 

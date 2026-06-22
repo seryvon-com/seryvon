@@ -29,6 +29,7 @@ from seryvon.connectors import (
     fetch_gsc,
     fetch_openpagerank,
     fetch_pagespeed,
+    fetch_serp_aio,
     fetch_wikidata,
     probe_ai_discovery,
     probe_nlweb,
@@ -252,6 +253,16 @@ async def run_audit(
         active_connectors.append("openpagerank")
     if external.gsc_data is not None and external.gsc_data.avg_position is not None:
         active_connectors.append("gsc")
+    # SERP / AI Overview (M9, BYOK). gso.ai_overview_presence stays not_measured without key.
+    if settings.serp_api_key and discovery.domain:
+        external.aio_metrics = await fetch_serp_aio(
+            discovery.domain,
+            api_key=settings.serp_api_key,
+            provider=settings.serp_provider,
+            timeout=settings.request_timeout,
+        )
+        if external.aio_metrics is not None:
+            active_connectors.append("serp")
     # Agentic discovery probes (free, keyless) — ASO pillar.
     external.ai_discovery_endpoints = await probe_ai_discovery(
         discovery.origin, timeout=settings.request_timeout

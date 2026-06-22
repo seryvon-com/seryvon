@@ -92,6 +92,11 @@ class Settings(BaseSettings):
     anthropic_api_key: str = Field(default="", validation_alias="ANTHROPIC_API_KEY")
     gemini_api_key: str = Field(default="", validation_alias="GEMINI_API_KEY")
 
+    # SERP / AI Overview connector (BYOK, M9). Empty => gso.ai_overview_presence
+    # stays not_measured. SERP_PROVIDER selects the adapter (default: "serpapi").
+    serp_api_key: str = Field(default="", validation_alias="SERP_API_KEY")
+    serp_provider: str = Field(default="serpapi", validation_alias="SERP_PROVIDER")
+
 
 @lru_cache
 def get_settings() -> Settings:

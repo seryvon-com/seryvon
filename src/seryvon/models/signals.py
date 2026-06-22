@@ -18,7 +18,9 @@ a property covered by an explicit test (document 03, §9).
 5 = agent-bot access in `site`; 6 = NLWeb status in `external`;
 7 = M3.3 GEO on-page core signals + `audited_at`;
 8 = aggregated LLM citation metrics in `external` (M4, Phase 3);
-9 = GSC rank-tracking signals in `external` (M10)).
+9 = GSC rank-tracking signals in `external` (M10);
+10 = Playwright render_source field (Phase 6);
+11 = SERP / AI Overview metrics in `external` (M9)).
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 10
+SIGNAL_SCHEMA_VERSION = 11
 
 
 class WebMcpSignals(BaseModel):
@@ -165,6 +167,40 @@ class GscResult(BaseModel):
     date_range_days: int = 90
 
 
+class AioSource(BaseModel):
+    """A single source cited in a Google AI Overview (M9)."""
+
+    url: str
+    domain: str
+    title: str | None = None
+    position: int  # 1-based rank within the AIO source list
+
+
+class AioResult(BaseModel):
+    """SERP result for a single query: AI Overview presence + citation (M9)."""
+
+    query: str
+    aio_triggered: bool  # AIO was shown in the SERP
+    target_cited: bool   # target domain appears in AIO sources
+    target_position: int | None = None  # rank when cited (1-based)
+    sources: list[AioSource] = Field(default_factory=list)
+
+
+class AioMetrics(BaseModel):
+    """Aggregated SERP / AI Overview metrics across queries (M9).
+
+    Populated by `connectors.serp.fetch_serp_aio`; `None` in `ExternalSignals`
+    when SERP_API_KEY is not configured => `gso.ai_overview_presence` not_measured.
+    """
+
+    presence_rate: float = 0.0   # fraction of queries where target cited in AIO (0–1)
+    trigger_rate: float = 0.0    # fraction of queries where AIO was shown (0–1)
+    avg_position: float | None = None  # average AIO rank when cited
+    results: list[AioResult] = Field(default_factory=list)
+    query_count: int = 0
+    provider: str = "serpapi"
+
+
 class ExternalSignals(BaseModel):
     """Signals from external APIs (PSI, OpenPageRank, LLM, SERP, GSC...).
 
@@ -178,7 +214,7 @@ class ExternalSignals(BaseModel):
     referring_domains: int | None = None
     kg_presence: bool | None = None
     citation_metrics: CitationMetrics | None = None
-    ai_overview_presence: float | None = None
+    aio_metrics: AioMetrics | None = None  # M9 SERP / AI Overview (replaces ai_overview_presence)
     ai_discovery_endpoints: dict[str, bool] | None = None
     nlweb_status: str | None = None  # "conformant" / "present" / "absent"
     blocked_agent_bots: list[str] | None = None

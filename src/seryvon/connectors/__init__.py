@@ -13,27 +13,35 @@ from seryvon.connectors.openpagerank import (
     parse_openpagerank,
 )
 from seryvon.connectors.pagespeed import PageSpeedResult, fetch_pagespeed, parse_pagespeed
+from seryvon.connectors.serp import aggregate_aio, build_queries, fetch_serp_aio, parse_serp_aio
 from seryvon.connectors.wikidata import (
     WikidataResult,
     brand_coherence,
     fetch_wikidata,
     parse_wikidata,
 )
-from seryvon.models.signals import GscResult
+from seryvon.models.signals import AioMetrics, AioResult, AioSource, GscResult
 
 __all__ = [
+    "AioMetrics",
+    "AioResult",
+    "AioSource",
     "GscResult",
     "OpenPageRankResult",
     "PageSpeedResult",
     "WikidataResult",
+    "aggregate_aio",
     "brand_coherence",
+    "build_queries",
     "fetch_gsc",
     "fetch_openpagerank",
     "fetch_pagespeed",
+    "fetch_serp_aio",
     "fetch_wikidata",
     "parse_gsc",
     "parse_openpagerank",
     "parse_pagespeed",
+    "parse_serp_aio",
     "parse_wikidata",
     "probe_ai_discovery",
     "probe_nlweb",

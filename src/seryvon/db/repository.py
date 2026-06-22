@@ -264,6 +264,7 @@ CONNECTOR_FIELD: dict[str, str] = {
     "openai": "openai_api_key",
     "anthropic": "anthropic_api_key",
     "gemini": "gemini_api_key",
+    "serp": "serp_api_key",
 }
 
 
