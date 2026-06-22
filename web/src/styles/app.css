@@ -1019,6 +1019,88 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/* ===== Keys & BYOK page ===== */
+.keys-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+.key-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.key-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.key-connector {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--c-text);
+  margin-bottom: 3px;
+}
+.key-desc {
+  font-size: 12px;
+  color: var(--c-text-3);
+  line-height: 1.45;
+}
+.key-help-link {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  text-decoration: none;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.key-help-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+.key-source-badge {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.key-source-db { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+.key-source-env { background: rgba(108, 143, 255, 0.15); color: var(--accent); }
+.key-source-none { background: rgba(100, 116, 139, 0.15); color: var(--c-text-3); }
+
+.key-masked {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--c-text-2);
+  background: var(--c-surface-3);
+  padding: 7px 12px;
+  border-radius: var(--r-md);
+  letter-spacing: 0.04em;
+}
+.key-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.key-flash {
+  font-size: 12px;
+  color: #34d399;
+  font-family: var(--font-mono);
+}
+.key-flash.error {
+  color: var(--c-critical);
+}
 .compare-badge-exact      { background: rgba(68, 208, 123, 0.14); color: var(--c-ok); }
 .compare-badge-compatible { background: rgba(68, 208, 123, 0.08); color: var(--c-ok); }
 .compare-badge-intersection { background: rgba(246, 178, 75, 0.12); color: var(--c-warning); }

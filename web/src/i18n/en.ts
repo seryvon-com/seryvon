@@ -208,6 +208,34 @@ export const en: Dict = {
     webmcpAbsent: (endpoints) => `WebMCP absent · ${endpoints} AI discovery endpoint(s)`,
   },
 
+  keys: {
+    title: "Keys & BYOK",
+    subtitle: "Bring your own API keys — stored encrypted at rest",
+    noEncryption: "Encryption not configured — set SERYVON_SECRET_KEY to enable key storage.",
+    save: "Save",
+    saving: "Saving…",
+    delete: "Delete",
+    placeholder: "Paste your API key…",
+    source: {
+      db: "Stored",
+      env: "Env var",
+      none: "Not set",
+    },
+    connectorDesc: {
+      psi: "PageSpeed Insights — Core Web Vitals (LCP, CLS, INP) + Lighthouse score",
+      opr: "OpenPageRank — domain authority score",
+      perplexity: "Perplexity AI — LLM citation tracking",
+      openai: "OpenAI — LLM citation tracking (GPT)",
+      anthropic: "Anthropic — LLM citation tracking (Claude)",
+      gemini: "Google Gemini — LLM citation tracking",
+    },
+    getKey: "Get API key →",
+    saved: "Key saved.",
+    deleted: "Key deleted.",
+    errorSave: "Failed to save key.",
+    errorDelete: "Failed to delete key.",
+  },
+
   compare: {
     title: "Competitors",
     subtitle: "Side-by-side comparison of two audit scorecards",

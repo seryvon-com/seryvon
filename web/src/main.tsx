@@ -12,6 +12,7 @@ import { ComparePage } from "./pages/ComparePage";
 import { CriteriaPage } from "./pages/CriteriaPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { HomePage } from "./pages/HomePage";
+import { KeysPage } from "./pages/KeysPage";
 import { PlanPage } from "./pages/PlanPage";
 import { ReportPage } from "./pages/ReportPage";
 import "./styles/tokens.css";
@@ -26,6 +27,7 @@ const router = createBrowserRouter(
     { path: "/audits/:auditId/aso", element: <AsoPage /> },
     { path: "/audits/:auditId/history", element: <HistoryPage /> },
     { path: "/audits/:auditId/compare", element: <ComparePage /> },
+    { path: "/keys", element: <KeysPage /> },
   ],
   { future: { v7_relativeSplatPath: true } },
 );

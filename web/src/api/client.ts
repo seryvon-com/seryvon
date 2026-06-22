@@ -6,7 +6,7 @@
 // (see vite.config.ts) so the same code works in dev and behind a reverse proxy.
 
 import type { Locale } from "../i18n/dict";
-import type { AuditReport, AuditSummary, ComparisonMode, ComparisonResult } from "./types";
+import type { AuditReport, AuditSummary, ComparisonMode, ComparisonResult, KeyEntry } from "./types";
 
 const BASE = "/api";
 
@@ -63,4 +63,18 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ left_run_id: leftRunId, right_run_id: rightRunId, mode }),
     }),
+
+  /** List BYOK key statuses for all connectors (masked values only). */
+  listKeys: () => request<KeyEntry[]>("/keys"),
+
+  /** Store or update a BYOK key for a connector. */
+  upsertKey: (connector: string, value: string) =>
+    request<KeyEntry>(`/keys/${connector}`, {
+      method: "PUT",
+      body: JSON.stringify({ value }),
+    }),
+
+  /** Delete a stored BYOK key for a connector. */
+  deleteKey: (connector: string) =>
+    request<void>(`/keys/${connector}`, { method: "DELETE" }),
 };
