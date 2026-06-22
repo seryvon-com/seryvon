@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
+import { LanguageSelector } from "../components/LanguageSelector";
 import { useI18n } from "../i18n";
 
 export function HomePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [url, setUrl] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +20,11 @@ export function HomePage() {
     setRunning(true);
     setError(null);
     try {
-      const report = await api.createAudit(url.trim());
+      let normalizedUrl = url.trim();
+      if (!normalizedUrl.match(/^https?:\/\//)) {
+        normalizedUrl = `https://${normalizedUrl}`;
+      }
+      const report = await api.createAudit(normalizedUrl, locale);
       // POST persists but does not return the audit id; re-fetch the latest run
       // for the domain to navigate to its report.
       const history = await api.listAudits(report.domain);
@@ -36,6 +41,9 @@ export function HomePage() {
 
   return (
     <div className="content">
+      <div className="landing-lang">
+        <LanguageSelector />
+      </div>
       <div className="landing">
         <span className="prism-mark mark" />
         <h2>seryvon</h2>
@@ -52,6 +60,14 @@ export function HomePage() {
             {running ? t.home.auditing : t.home.audit}
           </button>
         </form>
+        {running && (
+          <div className="audit-progress" role="status" aria-live="polite">
+            <div className="bar">
+              <span className="fill" />
+            </div>
+            <div className="caption">{t.home.progress}</div>
+          </div>
+        )}
         {error && (
           <div className="notice error" style={{ marginTop: 20, textAlign: "left" }}>
             {error}

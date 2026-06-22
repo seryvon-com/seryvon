@@ -7,8 +7,12 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { I18nProvider } from "./i18n";
+import { AsoPage } from "./pages/AsoPage";
+import { ComparePage } from "./pages/ComparePage";
 import { CriteriaPage } from "./pages/CriteriaPage";
+import { HistoryPage } from "./pages/HistoryPage";
 import { HomePage } from "./pages/HomePage";
+import { PlanPage } from "./pages/PlanPage";
 import { ReportPage } from "./pages/ReportPage";
 import "./styles/tokens.css";
 import "./styles/app.css";
@@ -18,6 +22,10 @@ const router = createBrowserRouter(
     { path: "/", element: <HomePage /> },
     { path: "/audits/:auditId", element: <ReportPage /> },
     { path: "/audits/:auditId/report", element: <CriteriaPage /> },
+    { path: "/audits/:auditId/plan", element: <PlanPage /> },
+    { path: "/audits/:auditId/aso", element: <AsoPage /> },
+    { path: "/audits/:auditId/history", element: <HistoryPage /> },
+    { path: "/audits/:auditId/compare", element: <ComparePage /> },
   ],
   { future: { v7_relativeSplatPath: true } },
 );

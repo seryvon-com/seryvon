@@ -37,6 +37,7 @@ export const en: Dict = {
     auditing: "Auditing…",
     errorBackend: "Audit failed — is the FastAPI backend running?",
     errorStatus: (status, message) => `Audit failed (${status}): ${message}`,
+    progress: "Crawling, scoring and assembling the report…",
   },
 
   report: {
@@ -74,6 +75,41 @@ export const en: Dict = {
     none: "—",
     empty: "No criterion matches the current filters.",
     count: (n) => `${n} criteria`,
+  },
+
+  plan: {
+    title: "Action plan",
+    subtitle: "Prioritized issues — priority = (impact × severity) / effort",
+    empty: "No priority action — every measured criterion is green.",
+    affected: (n) => `${n} affected page(s)`,
+    total: (n) => `${n} issue(s)`,
+  },
+
+  asoDetail: {
+    title: "ASO Readiness",
+    subtitle: "Agentic Search Optimization — the pillar no one else audits",
+    agentReady: "Agent-ready",
+    yes: "Yes",
+    no: "No",
+    webmcp: "WebMCP",
+    actionSchema: "Action schema",
+    aiDiscovery: "AI discovery endpoints",
+    nlweb: "NLWeb endpoint",
+    brandCoherence: "Brand coherence",
+    blockedBots: "Blocked agent bots",
+    none: "None",
+    unavailable: "ASO readiness was not computed for this audit.",
+  },
+
+  history: {
+    title: "History",
+    subtitle: "Past audits for this domain, most recent first",
+    empty: "No prior audit for this domain.",
+    colDate: "Date",
+    colScore: "Global score",
+    colId: "Audit id",
+    view: "View",
+    count: (n) => `${n} audit(s)`,
   },
 
   pillarFull: {
@@ -170,6 +206,32 @@ export const en: Dict = {
     blurbStrong: "no one else audits",
     webmcpPresent: "WebMCP present",
     webmcpAbsent: (endpoints) => `WebMCP absent · ${endpoints} AI discovery endpoint(s)`,
+  },
+
+  compare: {
+    title: "Competitors",
+    subtitle: "Side-by-side comparison of two audit scorecards",
+    leftAudit: "REFERENCE",
+    rightAudit: "COMPARE WITH",
+    domainPlaceholder: "domain.com",
+    loadHistory: "Load",
+    loadingHistory: "Loading…",
+    compareBtn: "Compare →",
+    noHistory: (d) => `No audit found for ${d}`,
+    globalDelta: "GLOBAL DELTA",
+    recomputed: "Scores recomputed on common criteria only (intersection mode)",
+    comparability: {
+      exact: "Exact",
+      compatible: "Compatible",
+      intersection: "Intersection",
+      incompatible: "Incompatible",
+    },
+    profileDiffs: (n) => `${n} profile difference(s)`,
+    colLeft: "Left",
+    colRight: "Right",
+    colDelta: "Criteria delta",
+    onlyChanges: "Changed only",
+    errorCompare: "Compare failed — profiles may be incompatible",
   },
 
   pillar: { measured: "measured", excluded: "excluded" },

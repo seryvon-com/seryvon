@@ -12,7 +12,7 @@ interface Props {
   /** Persisted audit id, enabling the Overview / Audit report nav links. */
   auditId?: string;
   /** Which primary nav entry is the current screen. */
-  active?: "overview" | "report";
+  active?: "overview" | "report" | "plan" | "aso" | "history" | "compare";
   /** Topbar heading; defaults to the Overview labels. */
   title?: string;
   subtitle?: string;
@@ -44,14 +44,34 @@ export function AppShell({
       to: auditId ? `/audits/${auditId}/report` : undefined,
       soon: !auditId,
     },
-    { label: t.nav.plan, soon: true },
+    {
+      label: t.nav.plan,
+      active: active === "plan",
+      to: auditId ? `/audits/${auditId}/plan` : undefined,
+      soon: !auditId,
+    },
     { label: t.nav.citation, soon: true },
-    { label: t.nav.asoReadiness, soon: true },
-    { label: t.nav.history, soon: true },
+    {
+      label: t.nav.asoReadiness,
+      active: active === "aso",
+      to: auditId ? `/audits/${auditId}/aso` : undefined,
+      soon: !auditId,
+    },
+    {
+      label: t.nav.history,
+      active: active === "history",
+      to: auditId ? `/audits/${auditId}/history` : undefined,
+      soon: !auditId,
+    },
+    {
+      label: t.nav.competitors,
+      active: active === "compare",
+      to: auditId ? `/audits/${auditId}/compare` : undefined,
+      soon: !auditId,
+    },
   ];
   const navConfig = [
     { label: t.nav.promptSet, soon: true },
-    { label: t.nav.competitors, soon: true },
     { label: t.nav.keys, soon: true },
   ];
 

@@ -37,6 +37,7 @@ export const fr: Dict = {
     auditing: "Audit en cours…",
     errorBackend: "Échec de l'audit — le backend FastAPI est-il démarré ?",
     errorStatus: (status, message) => `Échec de l'audit (${status}) : ${message}`,
+    progress: "Crawl, scoring et assemblage du rapport en cours…",
   },
 
   report: {
@@ -74,6 +75,41 @@ export const fr: Dict = {
     none: "—",
     empty: "Aucun critère ne correspond aux filtres actifs.",
     count: (n) => `${n} critères`,
+  },
+
+  plan: {
+    title: "Plan d'action",
+    subtitle: "Problèmes priorisés — priorité = (impact × sévérité) / effort",
+    empty: "Aucune action prioritaire — tous les critères mesurés sont au vert.",
+    affected: (n) => `${n} page(s) concernée(s)`,
+    total: (n) => `${n} problème(s)`,
+  },
+
+  asoDetail: {
+    title: "Readiness ASO",
+    subtitle: "Agentic Search Optimization — le pilier que personne d'autre n'audite",
+    agentReady: "Prêt pour les agents",
+    yes: "Oui",
+    no: "Non",
+    webmcp: "WebMCP",
+    actionSchema: "Schéma d'action",
+    aiDiscovery: "Endpoints AI discovery",
+    nlweb: "Endpoint NLWeb",
+    brandCoherence: "Cohérence de marque",
+    blockedBots: "Bots d'agents bloqués",
+    none: "Aucun",
+    unavailable: "La readiness ASO n'a pas été calculée pour cet audit.",
+  },
+
+  history: {
+    title: "Historique",
+    subtitle: "Audits passés pour ce domaine, du plus récent au plus ancien",
+    empty: "Aucun audit antérieur pour ce domaine.",
+    colDate: "Date",
+    colScore: "Score global",
+    colId: "Identifiant d'audit",
+    view: "Voir",
+    count: (n) => `${n} audit(s)`,
   },
 
   pillarFull: {
@@ -170,6 +206,32 @@ export const fr: Dict = {
     blurbStrong: "personne d'autre n'audite",
     webmcpPresent: "WebMCP présent",
     webmcpAbsent: (endpoints) => `WebMCP absent · ${endpoints} endpoint(s) de découverte IA`,
+  },
+
+  compare: {
+    title: "Concurrents",
+    subtitle: "Comparaison côte à côte de deux scorecards d'audit",
+    leftAudit: "RÉFÉRENCE",
+    rightAudit: "COMPARER AVEC",
+    domainPlaceholder: "domaine.com",
+    loadHistory: "Charger",
+    loadingHistory: "Chargement…",
+    compareBtn: "Comparer →",
+    noHistory: (d) => `Aucun audit trouvé pour ${d}`,
+    globalDelta: "DELTA GLOBAL",
+    recomputed: "Scores recalculés sur les critères communs uniquement (mode intersection)",
+    comparability: {
+      exact: "Exact",
+      compatible: "Compatible",
+      intersection: "Intersection",
+      incompatible: "Incompatible",
+    },
+    profileDiffs: (n) => `${n} différence(s) de profil`,
+    colLeft: "Gauche",
+    colRight: "Droite",
+    colDelta: "Delta critères",
+    onlyChanges: "Changements seuls",
+    errorCompare: "Comparaison échouée — les profils pourraient être incompatibles",
   },
 
   pillar: { measured: "mesurés", excluded: "exclus" },
