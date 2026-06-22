@@ -32,9 +32,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "audit",
-        sa.Column(
-            "measurement_profile", postgresql.JSONB(astext_type=sa.Text()), nullable=True
-        ),
+        sa.Column("measurement_profile", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     )
     op.add_column(
         "pillar_score",
