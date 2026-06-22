@@ -27,6 +27,7 @@ from collections.abc import Callable
 from itertools import pairwise
 from typing import Any, ClassVar
 
+from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import STATUS_OK_THRESHOLD, status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
@@ -82,7 +83,7 @@ class PageCriterion(Criterion):
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         scores = [score_page(page) for page in pages]
         score = _mean(scores)
@@ -97,8 +98,7 @@ class PageCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold=dict(self.threshold if threshold is None else threshold),
-            explanation=f"{self.label} : {passing}/{len(pages)} page(s) conforme(s) "
-            f"(score moyen {score}).",
+            explanation=t("expl.page_conformance", passing=passing, total=len(pages), score=score),
             evidence={**_EVIDENCE_HTML, "non_conformes": failing[:_MAX_EVIDENCE]},
             weight=self.weight,
         )
@@ -197,7 +197,7 @@ class MetaTitleUniqueCriterion(Criterion):
         titles = [p.title for p in signals.pages if p.title]
         if not titles:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucun title à comparer."
+                self.key, self.pillars, self.weight, t("reason.no_titles")
             )
         unique = len({t.strip().lower() for t in titles})
         score = round(unique / len(titles) * 100, 2)
@@ -208,7 +208,7 @@ class MetaTitleUniqueCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% de titles uniques"},
-            explanation=f"{unique} title(s) unique(s) sur {len(titles)} page(s) titrée(s).",
+            explanation=t("expl.title_unique", unique=unique, total=len(titles)),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )
@@ -399,7 +399,7 @@ class LinksOrphansCriterion(Criterion):
         pages = signals.pages
         if len(pages) < 2:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Maillage non évaluable (< 2 pages)."
+                self.key, self.pillars, self.weight, t("reason.link_graph")
             )
         linked: set[str] = set()
         for page in pages:
@@ -414,7 +414,7 @@ class LinksOrphansCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "0 page orpheline"},
-            explanation=f"{len(orphans)} page(s) orpheline(s) sur {len(non_home)} (hors home).",
+            explanation=t("expl.orphans", orphans=len(orphans), total=len(non_home)),
             evidence={**_EVIDENCE_HTML, "orphelines": orphans[:_MAX_EVIDENCE]},
             weight=self.weight,
         )
@@ -440,7 +440,7 @@ class ImgAltCriterion(Criterion):
         total = sum(p.images_total for p in signals.pages)
         if total == 0:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune image à évaluer."
+                self.key, self.pillars, self.weight, t("reason.no_images")
             )
         with_alt = sum(p.images_with_alt for p in signals.pages)
         score = round(with_alt / total * 100, 2)
@@ -451,7 +451,7 @@ class ImgAltCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% d'images avec alt"},
-            explanation=f"{with_alt}/{total} image(s) avec attribut alt.",
+            explanation=t("expl.img_alt", with_alt=with_alt, total=total),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )
@@ -474,7 +474,7 @@ class CrawlIndexableCriterion(Criterion):
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         indexable = sum(1 for p in pages if p.status_code == 200 and _is_indexable(p.meta_robots))
         score = round(indexable / len(pages) * 100, 2)
@@ -485,7 +485,7 @@ class CrawlIndexableCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% indexables (200, pas de noindex)"},
-            explanation=f"{indexable}/{len(pages)} page(s) indexable(s).",
+            explanation=t("expl.indexable", indexable=indexable, total=len(pages)),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )
@@ -515,9 +515,9 @@ class CrawlSitemapCriterion(Criterion):
             status=status_from_score(score),
             threshold={"valid": "sitemap récupéré et bien formé"},
             explanation=(
-                f"Sitemap valide ({signals.site.sitemap_url_count} URLs)."
+                t("expl.sitemap_valid", count=signals.site.sitemap_url_count)
                 if valid
-                else "Aucun sitemap valide trouvé."
+                else t("expl.sitemap_invalid")
             ),
             evidence={"source": "M1 Discovery"},
             weight=self.weight,
@@ -538,7 +538,7 @@ class CrawlHttpsCriterion(Criterion):
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         https = sum(1 for p in pages if p.url.startswith("https://"))
         score = round(https / len(pages) * 100, 2)
@@ -549,7 +549,7 @@ class CrawlHttpsCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% HTTPS"},
-            explanation=f"{https}/{len(pages)} page(s) en HTTPS.",
+            explanation=t("expl.https", https=https, total=len(pages)),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )
@@ -595,7 +595,7 @@ class HreflangCriterion(Criterion):
                 self.key,
                 self.pillars,
                 self.weight,
-                "Aucun hreflang déclaré (site monolingue présumé).",
+                t("reason.no_hreflang"),
             )
         scores = [100.0 if "x-default" in p.hreflang else 70.0 for p in with_hreflang]
         score = _mean(scores)
@@ -606,7 +606,7 @@ class HreflangCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"coherent": "x-default présent"},
-            explanation=f"{len(with_hreflang)} page(s) avec hreflang (score moyen {score}).",
+            explanation=t("expl.hreflang", count=len(with_hreflang), score=score),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )

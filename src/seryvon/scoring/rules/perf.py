@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
+from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import SignalBundle
@@ -42,7 +43,7 @@ class CoreWebVitalCriterion(Criterion):
                 self.key,
                 self.pillars,
                 self.weight,
-                f"{self.metric.upper()} indisponible (PSI ou données terrain absentes).",
+                t("reason.cwv_metric_unavailable", metric=self.metric.upper()),
             )
         if value <= self.good:
             score = 100.0
@@ -57,7 +58,13 @@ class CoreWebVitalCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"good": self.good, "poor": self.poor},
-            explanation=f"{self.metric.upper()} = {value}{self.unit} (seuil bon ≤ {self.good}).",
+            explanation=t(
+                "expl.cwv",
+                metric=self.metric.upper(),
+                value=value,
+                unit=self.unit,
+                good=self.good,
+            ),
             evidence=_PSI_SOURCE,
             weight=self.weight,
         )
@@ -118,7 +125,7 @@ class PerfLighthouseCriterion(Criterion):
                 self.key,
                 self.pillars,
                 self.weight,
-                "Score Lighthouse indisponible (PSI non configuré).",
+                t("reason.lighthouse_unavailable"),
             )
         score = round(min(100.0, max(0.0, raw * 100)), 2)
         return CriterionResult(
@@ -128,7 +135,7 @@ class PerfLighthouseCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"formula": "score Lighthouse ×100"},
-            explanation=f"Score de performance Lighthouse : {score}/100.",
+            explanation=t("expl.lighthouse", score=score),
             evidence={"source": "PageSpeed Insights (Lighthouse lab)"},
             weight=self.weight,
         )

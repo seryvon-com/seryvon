@@ -20,6 +20,7 @@ from __future__ import annotations
 import math
 from typing import ClassVar
 
+from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import SignalBundle
@@ -42,7 +43,7 @@ class AuthorityOprCriterion(Criterion):
         opr = signals.external.open_page_rank
         if opr is None:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "OpenPageRank non configuré (clé OPR absente)."
+                self.key, self.pillars, self.weight, t("reason.opr_not_configured")
             )
         score = round(min(100.0, max(0.0, opr * 10)), 2)
         return CriterionResult(
@@ -52,7 +53,7 @@ class AuthorityOprCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"formula": "PageRank (0–10) ×10", "proxy": True},
-            explanation=f"Autorité de domaine (proxy OpenPageRank) : {opr}/10.",
+            explanation=t("expl.authority_opr", opr=opr),
             evidence={"source": "OpenPageRank (proxy d'autorité)"},
             weight=self.weight,
         )
@@ -79,7 +80,7 @@ class AuthorityBacklinksCriterion(Criterion):
                 self.key,
                 self.pillars,
                 self.weight,
-                "Aucune source de domaines référents configurée (Common Crawl à venir).",
+                t("reason.no_backlink_source"),
             )
         score = round(min(100.0, math.log10(referring + 1) * _BACKLINKS_LOG_FACTOR), 2)
         return CriterionResult(
@@ -89,7 +90,7 @@ class AuthorityBacklinksCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"formula": "log10(domaines+1) normalisé"},
-            explanation=f"{referring} domaine(s) référent(s) (échelle log).",
+            explanation=t("expl.backlinks", count=referring),
             evidence={"source": "source de backlinks tierce"},
             weight=self.weight,
         )

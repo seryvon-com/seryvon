@@ -19,6 +19,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import ClassVar
 
+from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import status_from_score
 from seryvon.models.signals import SignalBundle
@@ -57,7 +58,7 @@ class GeoSsrCriterion(Criterion):
         modes = [p.render_mode for p in signals.pages if p.render_mode]
         if not modes:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Mode de rendu indisponible."
+                self.key, self.pillars, self.weight, t("reason.render_mode_unavailable")
             )
         ssr = sum(1 for mode in modes if mode == "ssr")
         score = round(ssr / len(modes) * 100, 2)
@@ -68,7 +69,7 @@ class GeoSsrCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% SSR"},
-            explanation=f"{ssr}/{len(modes)} page(s) en rendu serveur (heuristique M2).",
+            explanation=t("expl.ssr", ssr=ssr, total=len(modes)),
             evidence={"source": "heuristique SSR/CSR (M2)"},
             weight=self.weight,
         )
@@ -88,7 +89,7 @@ class GeoNoiseRatioCriterion(Criterion):
         ratios = [p.main_text_ratio for p in signals.pages if p.main_text_ratio is not None]
         if not ratios:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Ratio contenu/bruit indisponible."
+                self.key, self.pillars, self.weight, t("reason.noise_ratio_unavailable")
             )
         scores = [
             100.0 if r >= _NOISE_RATIO_TARGET else round(r / _NOISE_RATIO_TARGET * 100, 2)
@@ -102,7 +103,7 @@ class GeoNoiseRatioCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"min_ratio": _NOISE_RATIO_TARGET},
-            explanation=f"Ratio contenu/bruit moyen sur {len(ratios)} page(s).",
+            explanation=t("expl.noise_ratio", pages=len(ratios)),
             evidence={"source": "HTML (contenu principal)"},
             weight=self.weight,
         )
@@ -130,7 +131,7 @@ class GeoEntityDensityCriterion(Criterion):
         pages = [p for p in signals.pages if p.word_count > 0]
         if not pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page avec contenu textuel."
+                self.key, self.pillars, self.weight, t("reason.no_text_content")
             )
         score = _mean([self._score_page(p.entity_count, p.word_count) for p in pages])
         return CriterionResult(
@@ -140,7 +141,7 @@ class GeoEntityDensityCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"min": _ENTITY_DENSITY_MIN, "max": _ENTITY_DENSITY_MAX},
-            explanation=f"Densité d'entités estimée sur {len(pages)} page(s) (heuristique).",
+            explanation=t("expl.entity_density", pages=len(pages)),
             evidence={"source": "heuristique entités (M3.3)"},
             weight=self.weight,
         )
@@ -160,7 +161,7 @@ class GeoPrimarySourcesCriterion(Criterion):
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         with_sources = sum(1 for p in pages if p.external_link_domains)
         score = round(with_sources / len(pages) * 100, 2)
@@ -171,7 +172,7 @@ class GeoPrimarySourcesCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"min": "≥1 source sortante par page"},
-            explanation=f"{with_sources}/{len(pages)} page(s) citent une source externe.",
+            explanation=t("expl.primary_sources", with_sources=with_sources, total=len(pages)),
             evidence={"source": "liens sortants"},
             weight=self.weight,
         )
@@ -191,7 +192,7 @@ class GeoAuthorsCriterion(Criterion):
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         present = any(p.has_author for p in pages)
         score = 100.0 if present else 0.0
@@ -202,7 +203,7 @@ class GeoAuthorsCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"structured": "author/Person en JSON-LD"},
-            explanation="Auteur structuré présent." if present else "Aucun auteur structuré.",
+            explanation=t("expl.geo_authors_present") if present else t("expl.geo_authors_absent"),
             evidence={"source": "JSON-LD"},
             weight=self.weight,
         )
@@ -222,7 +223,7 @@ class GeoCrossPlatformCriterion(Criterion):
         pages = signals.pages
         if not pages:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune page crawlée."
+                self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         platforms = sorted({platform for p in pages for platform in p.social_platforms})
         score = round(min(100.0, len(platforms) / _CROSS_PLATFORM_TARGET * 100), 2)
@@ -233,7 +234,11 @@ class GeoCrossPlatformCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": _CROSS_PLATFORM_TARGET},
-            explanation=f"{len(platforms)} plateforme(s) liée(s) : {platforms or 'aucune'}.",
+            explanation=t(
+                "expl.cross_platform",
+                count=len(platforms),
+                platforms=platforms if platforms else t("word.none"),
+            ),
             evidence={"source": "sameAs + liens sociaux"},
             weight=self.weight,
         )
@@ -255,12 +260,12 @@ class GeoFreshnessCriterion(Criterion):
     ) -> CriterionResult:
         if signals.audited_at is None:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Date de référence d'audit indisponible."
+                self.key, self.pillars, self.weight, t("reason.no_audit_reference")
             )
         dates = [d for p in signals.pages if p.content_date and (d := _parse_date(p.content_date))]
         if not dates:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, "Aucune date de contenu structurée."
+                self.key, self.pillars, self.weight, t("reason.no_content_dates")
             )
         age = (signals.audited_at.date() - max(dates)).days
         score = 100.0 if age < _FRESH_DAYS else 50.0 if age < _STALE_DAYS else 0.0
@@ -271,7 +276,7 @@ class GeoFreshnessCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"fresh_days": _FRESH_DAYS},
-            explanation=f"Contenu le plus récent daté de {age} jour(s).",
+            explanation=t("expl.freshness", age=age),
             evidence={"source": "dates JSON-LD vs date d'audit"},
             weight=self.weight,
         )
@@ -279,7 +284,6 @@ class GeoFreshnessCriterion(Criterion):
 
 # LLM citation criteria (M4, Phase 3): read the aggregated, deterministic metrics
 # from `external.citation_metrics`. Without a BYOK key => `not_measured`.
-_CITATION_NOT_MEASURED = "Citation tracking LLM non disponible (clé API BYOK requise)."
 
 
 @register
@@ -296,7 +300,7 @@ class GeoCitationRateCriterion(Criterion):
         cm = signals.external.citation_metrics
         if cm is None:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, _CITATION_NOT_MEASURED
+                self.key, self.pillars, self.weight, t("reason.citation_unavailable")
             )
         score = round(cm.citation_rate * 100, 2)
         return CriterionResult(
@@ -306,8 +310,13 @@ class GeoCitationRateCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"formula": "% réponses retrieval citant le domaine"},
-            explanation=f"Taux de citation LLM : {score}% "
-            f"({cm.prompt_count} prompt(s) × {cm.repetitions} rép. × {len(cm.engines)} moteur(s)).",
+            explanation=t(
+                "expl.citation_rate",
+                score=score,
+                prompts=cm.prompt_count,
+                reps=cm.repetitions,
+                engines=len(cm.engines),
+            ),
             evidence={"source": "M4 citation tracking", "average_position": cm.average_position},
             weight=self.weight,
         )
@@ -327,7 +336,7 @@ class GeoMentionRateCriterion(Criterion):
         cm = signals.external.citation_metrics
         if cm is None:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, _CITATION_NOT_MEASURED
+                self.key, self.pillars, self.weight, t("reason.citation_unavailable")
             )
         score = round(cm.mention_rate * 100, 2)
         return CriterionResult(
@@ -340,7 +349,7 @@ class GeoMentionRateCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"formula": "% réponses mentionnant la marque"},
-            explanation=f"Taux de mention de marque : {score}%.",
+            explanation=t("expl.mention_rate", score=score),
             evidence={"source": "M4 citation tracking"},
             weight=self.weight,
         )
@@ -360,7 +369,7 @@ class GeoCitationConfidenceCriterion(Criterion):
         cm = signals.external.citation_metrics
         if cm is None:
             return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, _CITATION_NOT_MEASURED
+                self.key, self.pillars, self.weight, t("reason.citation_unavailable")
             )
         score = round(cm.citation_confidence * 100, 2)
         return CriterionResult(
@@ -373,7 +382,7 @@ class GeoCitationConfidenceCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"formula": "constance de citation sur K répétitions"},
-            explanation=f"Stabilité de citation : {score}% sur {cm.repetitions} répétition(s).",
+            explanation=t("expl.citation_confidence", score=score, reps=cm.repetitions),
             evidence={"source": "M4 citation tracking"},
             weight=self.weight,
         )
