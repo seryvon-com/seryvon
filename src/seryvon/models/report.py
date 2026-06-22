@@ -14,6 +14,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from seryvon.models.artifact import ArtifactRef
 from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import CoverageLabel, ReadinessLevel, Severity
 
@@ -95,3 +96,7 @@ class AuditReport(BaseModel):
 
     config_digest: str | None = None
     measurement_profile: MeasurementProfile | None = None
+
+    # Raw artifacts captured during collection (Observe layer, C-P2). Populated
+    # only when an artifact store is provided to `run_audit`; never affects scoring.
+    artifacts: list[ArtifactRef] = Field(default_factory=list)

@@ -54,6 +54,15 @@ class Settings(BaseSettings):
     # BYOK encryption (Fernet). Empty => BYOK features disabled (Phase 0).
     secret_key: str = ""
 
+    # Object store for raw artifacts (Observe layer, C-P2). Keys read from the
+    # S3_* convention (deployment .env). Empty endpoint/bucket => in-memory store
+    # (offline default; no artifact persistence).
+    s3_endpoint_url: str = Field(default="", validation_alias="S3_ENDPOINT")
+    s3_bucket: str = Field(default="", validation_alias="S3_BUCKET")
+    s3_region: str = Field(default="", validation_alias="S3_REGION")
+    s3_access_key: str = Field(default="", validation_alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(default="", validation_alias="S3_SECRET_KEY")
+
     # PageSpeed Insights (BYOK). Key read from the PSI_API_KEY variable (document
     # 04 convention); empty => perf.* criteria not_measured.
     psi_api_key: str = Field(default="", validation_alias="PSI_API_KEY")
@@ -111,6 +120,9 @@ class AuditConfig(BaseModel):
     criteria_overrides: dict[str, dict[str, Any]] = Field(default_factory=dict)
     thresholds: dict[str, dict[str, Any]] = Field(default_factory=dict)
     crawl: CrawlConfig = Field(default_factory=CrawlConfig)
+    # Locale for produced text (recommendations, explanations…). English base, FR
+    # second locale. Presentation only — never affects scores (see seryvon.i18n).
+    locale: str = "en"
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> AuditConfig:

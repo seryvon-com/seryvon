@@ -38,6 +38,8 @@ from seryvon.models.signals import PageSignals
 PageFetcher = Callable[[str], Awaitable[FetchResult]]
 #: Async pause (injectable: no-op in tests, asyncio.sleep in prod).
 Sleeper = Callable[[float], Awaitable[None]]
+#: Optional sink for raw HTML (final_url, html) — collection-side artifact capture.
+HtmlSink = Callable[[str, str], None]
 
 DEFAULT_MAX_CONCURRENCY = 5
 
@@ -96,6 +98,7 @@ async def _run_crawl(
     max_depth: int,
     max_concurrency: int,
     respect_robots: bool,
+    html_sink: HtmlSink | None = None,
 ) -> list[PageSignals]:
     """Deterministic BFS crawl loop from a fetcher (real or injected)."""
     robots = discovery.robots
@@ -140,6 +143,8 @@ async def _run_crawl(
             )
             signals.render_mode = detect_render_mode(result.html)
             results[result.final_url] = signals
+            if html_sink is not None:
+                html_sink(result.final_url, result.html)
             if depth < max_depth:
                 for link in extract_links(result.html, result.final_url):
                     if link not in seen and same_host(link, host):
@@ -162,6 +167,7 @@ async def crawl_site(
     timeout: float = 15.0,
     fetch: PageFetcher | None = None,
     sleep: Sleeper | None = None,
+    html_sink: HtmlSink | None = None,
 ) -> list[PageSignals]:
     """Crawl a site from the M1 frontier and return the per-page signals.
 
@@ -185,4 +191,5 @@ async def crawl_site(
         max_depth=max_depth,
         max_concurrency=max_concurrency,
         respect_robots=respect_robots,
+        html_sink=html_sink,
     )

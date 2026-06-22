@@ -11,7 +11,13 @@ from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import CoverageLabel, Status
 from seryvon.models.report import PillarScore
 from seryvon.models.signals import ExternalSignals, PageSignals, SignalBundle, SiteSignals
-from seryvon.scoring.engine import coverage_label, run_criteria, score_coverage, score_global, score_pillar
+from seryvon.scoring.engine import (
+    coverage_label,
+    run_criteria,
+    score_coverage,
+    score_global,
+    score_pillar,
+)
 
 PILLARS = ("seo", "geo", "gso", "aeo", "aso")
 

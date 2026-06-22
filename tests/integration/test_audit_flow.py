@@ -60,6 +60,40 @@ async def test_audit_is_deterministic(patched_crawl: None) -> None:
     assert {p: s.score for p, s in a.pillars.items()} == {p: s.score for p, s in b.pillars.items()}
 
 
+async def test_audit_stores_artifacts_when_store_provided(
+    monkeypatch: pytest.MonkeyPatch, sample_html: str
+) -> None:
+    """With an artifact store, raw HTML is captured and referenced (C-P2)."""
+    from seryvon.models.artifact import ArtifactType
+    from seryvon.storage import InMemoryArtifactStore
+
+    async def fake_discover(url: str, **kwargs: object) -> DiscoveryResult:
+        return _fake_discovery()
+
+    async def fake_crawl(discovery: DiscoveryResult, **kwargs: object) -> list[PageSignals]:
+        sink = kwargs.get("html_sink")
+        if sink is not None:
+            sink("https://example.com/", sample_html)  # type: ignore[operator]
+        return [extract_page_signals("https://example.com/", sample_html, status_code=200)]
+
+    monkeypatch.setattr(audit_module, "discover", fake_discover)
+    monkeypatch.setattr(audit_module, "crawl_site", fake_crawl)
+
+    store = InMemoryArtifactStore()
+    report = await run_audit("https://example.com", artifact_store=store)
+
+    assert len(report.artifacts) == 1
+    ref = report.artifacts[0]
+    assert ref.type is ArtifactType.HTML
+    assert ref.compression.value == "gzip"
+    assert store.get(ref).decode("utf-8") == sample_html
+
+
+async def test_audit_without_store_captures_no_artifacts(patched_crawl: None) -> None:
+    report = await run_audit("https://example.com")
+    assert report.artifacts == []
+
+
 async def test_audit_unreachable_site_is_graceful(monkeypatch: pytest.MonkeyPatch) -> None:
     """Unreachable site: no page crawled -> report produced, no exception (ENF-03)."""
 

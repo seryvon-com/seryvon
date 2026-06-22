@@ -1,0 +1,114 @@
+/* Seryvon — design tokens, PRISM identity (Claude Design mockup). AGPL-3.0-or-later.
+   Fonts are loaded via <link> in index.html (preconnect) rather than @import. */
+
+:root {
+  /* Surfaces */
+  --c-bg: #0e1016;
+  --c-sidebar: #0b0d12;
+  --c-surface: #13161d;
+  --c-surface-2: #161a23;
+  --c-surface-3: #0f1218;
+  --c-surface-grad: linear-gradient(160deg, #161a23, #11141b);
+  --c-control: #14171f;
+
+  /* Borders */
+  --c-border: #1c212c;
+  --c-border-card: #232936;
+  --c-border-control: #272c38;
+  --c-border-row: #1a1f29;
+  --c-border-hover: #3a4150;
+
+  /* Text */
+  --c-text: #eef1f6;
+  --c-text-muted: #a3acbd;
+  --c-text-soft: #8b94a6;
+  --c-text-faint: #6b7384;
+  --c-text-faint-2: #5b6273;
+  --c-text-label: #4d5566;
+
+  /* Brand accent */
+  --accent: #6c8fff;
+  --c-accent: #6c8fff;
+  --c-accent-shadow: rgba(108, 143, 255, 0.28);
+
+  /* Status */
+  --c-ok: #44d07b;
+  --c-warning: #f6b24b;
+  --c-critical: #ff6b6b;
+  --c-muted: #6b7384;
+
+  /* Prism — pillar accents (ASO = the differentiator, pink) */
+  --c-pillar-seo: #5b8cff;
+  --c-pillar-geo: #a77bff;
+  --c-pillar-gso: #3fd6a8;
+  --c-pillar-aeo: #f6b24b;
+  --c-pillar-aso: #ef72b0;
+
+  /* Typography */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Radii */
+  --r-sm: 6px;
+  --r-md: 9px;
+  --r-lg: 14px;
+  --r-xl: 16px;
+
+  /* Spacing */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 22px;
+  --sp-6: 30px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-border-control);
+  border-radius: 6px;
+  border: 2px solid var(--c-bg);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* The prism mark: conic gradient across the five pillar hues. */
+.prism-mark {
+  display: inline-block;
+  border-radius: 3px;
+  background: conic-gradient(from 210deg, #5b8cff, #a77bff, #3fd6a8, #f6b24b, #ef72b0);
+}
