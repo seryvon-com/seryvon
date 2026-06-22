@@ -104,7 +104,11 @@ async def fetch_wikidata(
     }
     own_client = client is None
     if client is None:
-        client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+        client = httpx.AsyncClient(
+            timeout=timeout,
+            follow_redirects=True,
+            headers={"User-Agent": "Seryvon/0.1 (+https://seryvon.com/bot) python-httpx"},
+        )
     payload: dict[str, Any] = {}
     t0 = time.monotonic()
     log.info("wikidata start name=%r", name)
