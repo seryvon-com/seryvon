@@ -21,6 +21,7 @@ from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
 from seryvon import PILLARS, __version__
+from seryvon.citation.promptset import generate_prompt_set
 from seryvon.connectors import (
     brand_coherence,
     fetch_gsc,
@@ -254,6 +255,11 @@ async def run_audit(
     pillar_scores = {p: score_pillar(p, results) for p in PILLARS}
     overall = score_global(pillar_scores, config)
 
+    try:
+        prompt_set = generate_prompt_set(bundle)
+    except Exception:
+        prompt_set = None
+
     config_digest = _config_digest(config)
     measurement_profile = _build_measurement_profile(config, active_connectors)
     return AuditReport(
@@ -271,4 +277,5 @@ async def run_audit(
         config_digest=config_digest,
         measurement_profile=measurement_profile,
         artifacts=artifacts,
+        prompt_set=prompt_set,
     )

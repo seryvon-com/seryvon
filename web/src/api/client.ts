@@ -15,6 +15,7 @@ import type {
   ComparisonMode,
   ComparisonResult,
   KeyEntry,
+  PromptSet,
 } from "./types";
 
 const BASE = "/api";
@@ -86,6 +87,9 @@ export const api = {
   /** Poll a citation-tracking job. */
   getCitationTask: (taskId: string) =>
     request<CitationTaskStatus>(`/citations/tasks/${taskId}`),
+
+  /** Prompt set generated deterministically from the audit crawl (M4b). */
+  getPromptSet: (auditId: string) => request<PromptSet>(`/audits/${auditId}/prompt-set`),
 
   /** List BYOK key statuses for all connectors (masked values only). */
   listKeys: () => request<KeyEntry[]>("/keys"),

@@ -3,7 +3,7 @@
 // English is the base locale; French is kept as a ready second locale. Dynamic
 // strings are functions so each locale controls its own interpolation/plurals.
 
-import type { Comparability, CoverageLabel, KeySource, Pillar, ReadinessLevel, Status } from "../api/types";
+import type { Comparability, CoverageLabel, KeySource, Pillar, PromptIntent, ReadinessLevel, Status } from "../api/types";
 
 export type Locale = "en" | "fr";
 
@@ -220,6 +220,25 @@ export interface Dict {
     deleted: string;
     errorSave: string;
     errorDelete: string;
+  };
+
+  promptSetPage: {
+    title: string;
+    subtitle: string;
+    noData: string;
+    themeProfile: string;
+    brand: string;
+    contentType: string;
+    topics: string;
+    entities: string;
+    none: string;
+    prompts: string;
+    promptCount: (n: number) => string;
+    colIntent: string;
+    colText: string;
+    colQuality: string;
+    contentTypes: Record<string, string>;
+    intents: Record<PromptIntent, string>;
   };
 
   pillar: { measured: string; excluded: string };

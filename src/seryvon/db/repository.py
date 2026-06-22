@@ -26,6 +26,7 @@ from seryvon.db import models as m
 from seryvon.models.artifact import ArtifactRef, ArtifactType, Compression
 from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import CoverageLabel, ReadinessLevel, Severity, Status
+from seryvon.models.prompts import PromptSet
 from seryvon.models.report import (
     AsoReadiness,
     AuditReport,
@@ -69,6 +70,9 @@ def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
             report.measurement_profile.model_dump()
             if report.measurement_profile is not None
             else None
+        ),
+        prompt_set=(
+            report.prompt_set.model_dump(mode="json") if report.prompt_set is not None else None
         ),
         started_at=report.started_at,
         finished_at=report.finished_at,
@@ -235,6 +239,9 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
             MeasurementProfile(**audit.measurement_profile)
             if audit.measurement_profile is not None
             else None
+        ),
+        prompt_set=(
+            PromptSet.model_validate(audit.prompt_set) if audit.prompt_set is not None else None
         ),
         pillars=pillars,
         criteria=criteria,
