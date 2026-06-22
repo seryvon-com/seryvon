@@ -9,6 +9,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { I18nProvider } from "./i18n";
 import { CriteriaPage } from "./pages/CriteriaPage";
 import { HomePage } from "./pages/HomePage";
+import { RankTrackingPage } from "./pages/RankTrackingPage";
 import { ReportPage } from "./pages/ReportPage";
 import "./styles/tokens.css";
 import "./styles/app.css";
@@ -18,6 +19,7 @@ const router = createBrowserRouter(
     { path: "/", element: <HomePage /> },
     { path: "/audits/:auditId", element: <ReportPage /> },
     { path: "/audits/:auditId/report", element: <CriteriaPage /> },
+    { path: "/audits/:auditId/rank-tracking", element: <RankTrackingPage /> },
   ],
   { future: { v7_relativeSplatPath: true } },
 );

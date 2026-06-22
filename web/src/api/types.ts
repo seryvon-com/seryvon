@@ -122,6 +122,23 @@ export interface AuditReport {
   artifacts: ArtifactRef[];
 }
 
+export interface GscQuery {
+  query: string;
+  position: number;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+}
+
+export interface GscResult {
+  queries: GscQuery[];
+  total_clicks: number;
+  total_impressions: number;
+  avg_ctr: number;
+  avg_position: number | null;
+  date_range_days: number;
+}
+
 export interface AuditSummary {
   audit_id: string;
   domain: string;

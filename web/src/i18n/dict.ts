@@ -19,10 +19,30 @@ export interface Dict {
     citation: string;
     asoReadiness: string;
     history: string;
+    rankTracking: string;
     promptSet: string;
     competitors: string;
     keys: string;
     soon: string;
+  };
+
+  rankTracking: {
+    title: string;
+    subtitle: string;
+    noData: string;
+    noKey: string;
+    avgPosition: string;
+    ctr: string;
+    clicks: string;
+    impressions: string;
+    dateRange: (days: number) => string;
+    table: {
+      keyword: string;
+      position: string;
+      clicks: string;
+      impressions: string;
+      ctr: string;
+    };
   };
 
   status: { mode: string; sub: string };

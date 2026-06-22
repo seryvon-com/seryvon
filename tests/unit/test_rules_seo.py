@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from seryvon.models.enums import Status
-from seryvon.models.signals import PageSignals, SignalBundle, SiteSignals
+from seryvon.models.signals import ExternalSignals, GscQuery, GscResult, PageSignals, SignalBundle, SiteSignals
 from seryvon.scoring.rules.seo import (
     ContentDepthCriterion,
     ContentTextRatioCriterion,
@@ -28,6 +28,8 @@ from seryvon.scoring.rules.seo import (
     StructHierarchyCriterion,
     StructSchemaCriterion,
     TwitterCardCriterion,
+    SeoAvgPositionCriterion,
+    SeoClickThroughRateCriterion,
 )
 
 
@@ -296,3 +298,83 @@ def test_hreflang_not_applicable_monolingual() -> None:
     # No hreflang declared -> the criterion is irrelevant (monolingual), not unmeasured.
     result = HreflangCriterion().evaluate(_pages(_page(), _page()))
     assert result.status is Status.NOT_APPLICABLE
+
+
+# --------------------------------------------------------------------------- #
+# GSC Rank Tracking (M10)                                                      #
+# --------------------------------------------------------------------------- #
+def _bundle_gsc(avg_position: float | None, impressions: int = 1000) -> SignalBundle:
+    queries = (
+        [GscQuery(query="kw", position=avg_position, clicks=50, impressions=impressions, ctr=0.05)]
+        if avg_position is not None
+        else []
+    )
+    gsc = GscResult(
+        queries=queries,
+        total_clicks=50 if queries else 0,
+        total_impressions=impressions if queries else 0,
+        avg_ctr=0.05 if queries else 0.0,
+        avg_position=avg_position,
+    )
+    return SignalBundle(
+        domain="ex.com",
+        pages=[_page()],
+        external=ExternalSignals(gsc_data=gsc),
+    )
+
+
+def test_avg_position_top3_scores_100() -> None:
+    result = SeoAvgPositionCriterion().evaluate(_bundle_gsc(2.0))
+    assert result.score == 100.0
+    assert result.status is Status.OK
+
+
+def test_avg_position_top10_scores_75() -> None:
+    result = SeoAvgPositionCriterion().evaluate(_bundle_gsc(7.5))
+    assert result.score == 75.0
+
+
+def test_avg_position_top20_scores_50() -> None:
+    result = SeoAvgPositionCriterion().evaluate(_bundle_gsc(15.0))
+    assert result.score == 50.0
+
+
+def test_avg_position_beyond_20_scores_25() -> None:
+    result = SeoAvgPositionCriterion().evaluate(_bundle_gsc(30.0))
+    assert result.score == 25.0
+
+
+def test_avg_position_not_measured_without_gsc() -> None:
+    bundle = SignalBundle(domain="ex.com", pages=[_page()])
+    result = SeoAvgPositionCriterion().evaluate(bundle)
+    assert result.status is Status.NOT_MEASURED
+
+
+def test_avg_position_raw_value_contains_queries() -> None:
+    result = SeoAvgPositionCriterion().evaluate(_bundle_gsc(5.0))
+    assert isinstance(result.raw_value, dict)
+    assert "queries" in result.raw_value
+
+
+def test_ctr_above_5pct_scores_100() -> None:
+    gsc = GscResult(
+        queries=[], total_clicks=600, total_impressions=10000, avg_ctr=0.06, avg_position=8.0
+    )
+    bundle = SignalBundle(domain="ex.com", pages=[_page()], external=ExternalSignals(gsc_data=gsc))
+    result = SeoClickThroughRateCriterion().evaluate(bundle)
+    assert result.score == 100.0
+
+
+def test_ctr_between_2_and_5_scores_75() -> None:
+    gsc = GscResult(
+        queries=[], total_clicks=300, total_impressions=10000, avg_ctr=0.03, avg_position=8.0
+    )
+    bundle = SignalBundle(domain="ex.com", pages=[_page()], external=ExternalSignals(gsc_data=gsc))
+    result = SeoClickThroughRateCriterion().evaluate(bundle)
+    assert result.score == 75.0
+
+
+def test_ctr_not_measured_without_gsc() -> None:
+    bundle = SignalBundle(domain="ex.com", pages=[_page()])
+    result = SeoClickThroughRateCriterion().evaluate(bundle)
+    assert result.status is Status.NOT_MEASURED

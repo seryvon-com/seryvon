@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     # aso.brand_coherence not_measured.
     wikidata_enabled: bool = True
 
+    # Google Search Console (BYOK, M10). Service account JSON (stringified).
+    # Empty => seo.avg_position / seo.click_through_rate stay not_measured.
+    gsc_service_account: str = Field(default="", validation_alias="GSC_SERVICE_ACCOUNT")
+
     # LLM citation tracking keys (BYOK, M4). Each empty => that engine is skipped;
     # with no key at all, geo.citation_* / aeo.llm_citation stay not_measured.
     perplexity_api_key: str = Field(default="", validation_alias="PERPLEXITY_API_KEY")

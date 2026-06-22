@@ -14,6 +14,7 @@ export const en: Dict = {
     citation: "Citation Tracking",
     asoReadiness: "ASO Readiness",
     history: "History",
+    rankTracking: "Rank Tracking",
     promptSet: "Prompt Set",
     competitors: "Competitors",
     keys: "Keys & BYOK",
@@ -161,6 +162,27 @@ export const en: Dict = {
     "aso.openapi": "OpenAPI / Swagger",
     "aso.brand_coherence": "Brand coherence",
     "aso.agent_access": "Agent bot access",
+    "seo.avg_position": "Avg. keyword position",
+    "seo.click_through_rate": "Organic CTR",
+  },
+
+  rankTracking: {
+    title: "Rank Tracking",
+    subtitle: "Google Search Console — keyword positions",
+    noData: "No GSC data available for this audit.",
+    noKey: "Configure a Google Search Console service account to track keyword positions.",
+    avgPosition: "Avg. position",
+    ctr: "Organic CTR",
+    clicks: "Clicks",
+    impressions: "Impressions",
+    dateRange: (days) => `Last ${days} days`,
+    table: {
+      keyword: "Keyword",
+      position: "Position",
+      clicks: "Clicks",
+      impressions: "Impressions",
+      ctr: "CTR",
+    },
   },
 
   aso: {

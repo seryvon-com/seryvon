@@ -12,7 +12,7 @@ interface Props {
   /** Persisted audit id, enabling the Overview / Audit report nav links. */
   auditId?: string;
   /** Which primary nav entry is the current screen. */
-  active?: "overview" | "report";
+  active?: "overview" | "report" | "rankTracking";
   /** Topbar heading; defaults to the Overview labels. */
   title?: string;
   subtitle?: string;
@@ -48,6 +48,12 @@ export function AppShell({
     { label: t.nav.citation, soon: true },
     { label: t.nav.asoReadiness, soon: true },
     { label: t.nav.history, soon: true },
+    {
+      label: t.nav.rankTracking,
+      active: active === "rankTracking",
+      to: auditId ? `/audits/${auditId}/rank-tracking` : undefined,
+      soon: !auditId,
+    },
   ];
   const navConfig = [
     { label: t.nav.promptSet, soon: true },

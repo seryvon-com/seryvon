@@ -17,7 +17,8 @@ a property covered by an explicit test (document 03, §9).
 4 = M3.2 GSO/AEO on-page signals + static ASO populated;
 5 = agent-bot access in `site`; 6 = NLWeb status in `external`;
 7 = M3.3 GEO on-page core signals + `audited_at`;
-8 = aggregated LLM citation metrics in `external` (M4, Phase 3)).
+8 = aggregated LLM citation metrics in `external` (M4, Phase 3);
+9 = GSC rank-tracking signals in `external` (M10)).
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 8
+SIGNAL_SCHEMA_VERSION = 9
 
 
 class WebMcpSignals(BaseModel):
@@ -137,6 +138,32 @@ class CitationMetrics(BaseModel):
     prompt_set_version: int | None = None  # temporal traceability (document 08 §8)
 
 
+class GscQuery(BaseModel):
+    """A single GSC search analytics row (M10, document 07 §5)."""
+
+    query: str
+    position: float  # average_position (GSC doc — never instantaneous)
+    clicks: int
+    impressions: int
+    ctr: float  # 0–1
+
+
+class GscResult(BaseModel):
+    """GSC search analytics snapshot for a domain (M10 Rank Tracking).
+
+    Populated by `connectors.gsc.fetch_gsc`; empty (`queries=[]`,
+    `avg_position=None`) when GSC is not configured or the property is not
+    accessible. `avg_position=None` => dependent criteria `not_measured`.
+    """
+
+    queries: list[GscQuery] = Field(default_factory=list)
+    total_clicks: int = 0
+    total_impressions: int = 0
+    avg_ctr: float = 0.0
+    avg_position: float | None = None
+    date_range_days: int = 90
+
+
 class ExternalSignals(BaseModel):
     """Signals from external APIs (PSI, OpenPageRank, LLM, SERP, GSC...).
 
@@ -155,6 +182,7 @@ class ExternalSignals(BaseModel):
     nlweb_status: str | None = None  # "conformant" / "present" / "absent"
     blocked_agent_bots: list[str] | None = None
     brand_coherence: dict[str, float] | None = None
+    gsc_data: GscResult | None = None  # M10 rank tracking (GSC service account BYOK)
 
 
 class SiteSignals(BaseModel):

@@ -76,6 +76,8 @@ _REC_EN: dict[str, str] = {
     "aso.openapi": "Expose a documented API (OpenAPI/Swagger).",
     "aso.brand_coherence": "Align name and description between the site and Wikidata.",
     "aso.agent_access": "Allow agent bots in robots.txt.",
+    "seo.avg_position": "Improve keyword rankings to reach the top 10 in Google Search.",
+    "seo.click_through_rate": "Improve titles and meta descriptions to raise organic CTR above 5%.",
 }
 
 _REC_FR: dict[str, str] = {
@@ -138,6 +140,12 @@ _REC_FR: dict[str, str] = {
     "aso.openapi": "Exposer une API documentée (OpenAPI/Swagger).",
     "aso.brand_coherence": "Aligner nom et description entre site et Wikidata.",
     "aso.agent_access": "Autoriser les bots d'agents dans robots.txt.",
+    "seo.avg_position": (
+        "Améliorer le positionnement des mots-clés pour atteindre le top 10 dans Google Search."
+    ),
+    "seo.click_through_rate": (
+        "Améliorer les titres et meta descriptions pour porter le CTR organique au-dessus de 5 %."
+    ),
 }
 
 # --------------------------------------------------------------------------- #
@@ -167,6 +175,10 @@ _REASON_EN: dict[str, str] = {
     "brand_not_measured": "Brand coherence not measured (Wikidata entity absent or disabled).",
     "agent_access_not_evaluated": "Agent bot access not evaluated.",
     "citation_unavailable": "LLM citation tracking unavailable (BYOK API key required).",
+    "gsc_not_configured": (
+        "Google Search Console not configured"
+        " (GSC_SERVICE_ACCOUNT missing or property inaccessible)."
+    ),
 }
 
 _REASON_FR: dict[str, str] = {
@@ -195,6 +207,10 @@ _REASON_FR: dict[str, str] = {
     ),
     "agent_access_not_evaluated": "Accès des bots d'agents non évalué.",
     "citation_unavailable": "Citation tracking LLM non disponible (clé API BYOK requise).",
+    "gsc_not_configured": (
+        "Google Search Console non configuré"
+        " (GSC_SERVICE_ACCOUNT absent ou propriété inaccessible)."
+    ),
 }
 
 # --------------------------------------------------------------------------- #
@@ -262,6 +278,10 @@ _EXPL_EN: dict[str, str] = {
     "brand_coherence": "Brand coherence: {score}% (site vs Wikidata).",
     "agent_blocked": "{count} agent bot(s) blocked: {bots}.",
     "agent_all_allowed": "All known agent bots are allowed.",
+    "seo_avg_position": (
+        "Average position {position} over {queries} tracked keyword(s) (last {days} days)."
+    ),
+    "seo_ctr": "Organic CTR: {ctr}% ({clicks} click(s) / {impressions} impression(s)).",
 }
 
 _EXPL_FR: dict[str, str] = {
@@ -324,6 +344,10 @@ _EXPL_FR: dict[str, str] = {
     "brand_coherence": "Cohérence de marque : {score}% (site vs Wikidata).",
     "agent_blocked": "{count} bot(s) d'agent bloqué(s) : {bots}.",
     "agent_all_allowed": "Tous les bots d'agents connus sont autorisés.",
+    "seo_avg_position": (
+        "Position moyenne {position} sur {queries} mot(s)-clé(s) suivi(s) (derniers {days} jours)."
+    ),
+    "seo_ctr": "CTR organique : {ctr} % ({clicks} clic(s) / {impressions} impression(s)).",
 }
 
 # Misc shared words.

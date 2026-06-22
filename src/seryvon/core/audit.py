@@ -23,6 +23,7 @@ from urllib.parse import urlsplit
 from seryvon import PILLARS, __version__
 from seryvon.connectors import (
     brand_coherence,
+    fetch_gsc,
     fetch_openpagerank,
     fetch_pagespeed,
     fetch_wikidata,
@@ -92,7 +93,7 @@ def _build_measurement_profile(
 async def _collect_external(
     domain: str, pages: list[PageSignals], settings: Settings
 ) -> ExternalSignals:
-    """Collect the external signals (PSI, OpenPageRank). BYOK: no key, no call.
+    """Collect the external signals (PSI, OpenPageRank, GSC). BYOK: no key, no call.
 
     Decision D4: PageSpeed Insights on the home page only. Without a key, the
     dependent criteria stay `not_measured` (graceful degradation, ENF-03).
@@ -112,6 +113,10 @@ async def _collect_external(
             domain, api_key=settings.opr_api_key, timeout=settings.request_timeout
         )
         external.open_page_rank = opr.page_rank
+    if settings.gsc_service_account and domain:
+        external.gsc_data = await fetch_gsc(
+            domain, service_account_json=settings.gsc_service_account
+        )
     return external
 
 
@@ -212,6 +217,8 @@ async def run_audit(
         active_connectors.append("pagespeed")
     if external.open_page_rank is not None:
         active_connectors.append("openpagerank")
+    if external.gsc_data is not None and external.gsc_data.avg_position is not None:
+        active_connectors.append("gsc")
     # Agentic discovery probes (free, keyless) — ASO pillar.
     external.ai_discovery_endpoints = await probe_ai_discovery(
         discovery.origin, timeout=settings.request_timeout

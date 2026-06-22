@@ -572,6 +572,124 @@ class CrawlRedirectsCriterion(PageCriterion):
 
 
 # --------------------------------------------------------------------------- #
+# GSC Rank Tracking (M10)                                                      #
+# --------------------------------------------------------------------------- #
+@register
+class SeoAvgPositionCriterion(Criterion):
+    """Average keyword position (`seo.avg_position`) from Google Search Console.
+
+    `not_measured` when GSC is not configured (`gsc_data` absent or has no
+    queries). Position thresholds follow the classic SEO CTR curve.
+    The `raw_value` carries the full query list so the Rank Tracking UI can
+    render the table without an extra API call.
+    """
+
+    key = "seo.avg_position"
+    pillars: ClassVar[list[str]] = ["seo"]
+    weight = 2.0
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        gsc = signals.external.gsc_data
+        if gsc is None or gsc.avg_position is None:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, t("reason.gsc_not_configured")
+            )
+        pos = gsc.avg_position
+        if pos <= 3:
+            score = 100.0
+        elif pos <= 10:
+            score = 75.0
+        elif pos <= 20:
+            score = 50.0
+        else:
+            score = 25.0
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={
+                "avg_position": pos,
+                "total_clicks": gsc.total_clicks,
+                "total_impressions": gsc.total_impressions,
+                "avg_ctr": gsc.avg_ctr,
+                "date_range_days": gsc.date_range_days,
+                "queries": [
+                    {
+                        "query": q.query,
+                        "position": q.position,
+                        "clicks": q.clicks,
+                        "impressions": q.impressions,
+                        "ctr": q.ctr,
+                    }
+                    for q in gsc.queries
+                ],
+            },
+            score=score,
+            status=status_from_score(score),
+            threshold={"target": "average_position ≤ 10"},
+            explanation=t(
+                "expl.seo_avg_position",
+                position=pos,
+                queries=len(gsc.queries),
+                days=gsc.date_range_days,
+            ),
+            evidence={"source": "Google Search Console API"},
+            weight=self.weight,
+        )
+
+
+@register
+class SeoClickThroughRateCriterion(Criterion):
+    """Organic click-through rate (`seo.click_through_rate`) from GSC.
+
+    `not_measured` when GSC is not configured or has no impressions.
+    """
+
+    key = "seo.click_through_rate"
+    pillars: ClassVar[list[str]] = ["seo"]
+    weight = 1.5
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        gsc = signals.external.gsc_data
+        if gsc is None or gsc.total_impressions == 0:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, t("reason.gsc_not_configured")
+            )
+        ctr_pct = round(gsc.avg_ctr * 100, 2)
+        if ctr_pct >= 5.0:
+            score = 100.0
+        elif ctr_pct >= 2.0:
+            score = 75.0
+        elif ctr_pct >= 0.5:
+            score = 50.0
+        else:
+            score = 25.0
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={
+                "avg_ctr": gsc.avg_ctr,
+                "total_clicks": gsc.total_clicks,
+                "total_impressions": gsc.total_impressions,
+            },
+            score=score,
+            status=status_from_score(score),
+            threshold={"target": "CTR ≥ 5%"},
+            explanation=t(
+                "expl.seo_ctr",
+                ctr=ctr_pct,
+                clicks=gsc.total_clicks,
+                impressions=gsc.total_impressions,
+            ),
+            evidence={"source": "Google Search Console API"},
+            weight=self.weight,
+        )
+
+
+# --------------------------------------------------------------------------- #
 # Internationalization                                                         #
 # --------------------------------------------------------------------------- #
 @register

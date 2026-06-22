@@ -6,6 +6,7 @@ criteria `not_measured` (never estimated).
 """
 
 from seryvon.connectors.ai_discovery import probe_ai_discovery, probe_nlweb
+from seryvon.connectors.gsc import fetch_gsc, parse_gsc
 from seryvon.connectors.openpagerank import (
     OpenPageRankResult,
     fetch_openpagerank,
@@ -18,15 +19,19 @@ from seryvon.connectors.wikidata import (
     fetch_wikidata,
     parse_wikidata,
 )
+from seryvon.models.signals import GscResult
 
 __all__ = [
+    "GscResult",
     "OpenPageRankResult",
     "PageSpeedResult",
     "WikidataResult",
     "brand_coherence",
+    "fetch_gsc",
     "fetch_openpagerank",
     "fetch_pagespeed",
     "fetch_wikidata",
+    "parse_gsc",
     "parse_openpagerank",
     "parse_pagespeed",
     "parse_wikidata",
