@@ -262,9 +262,7 @@ class ApiKeyRow(Base):
     id: Mapped[uuid.UUID] = _uuid_pk()
     connector: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     encrypted_value: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

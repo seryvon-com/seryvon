@@ -15,6 +15,7 @@ Celery (status/polling) comes in slice B3.
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from collections.abc import Iterator
 from datetime import datetime
@@ -134,7 +135,9 @@ def _connector_key_out(connector: str, session: Session) -> KeyOut:
             created_at=None,
             updated_at=None,
         )
-    return KeyOut(connector=connector, masked_value=None, source="none", created_at=None, updated_at=None)
+    return KeyOut(
+        connector=connector, masked_value=None, source="none", created_at=None, updated_at=None
+    )
 
 
 def _resolve_settings(session: Session) -> Settings:
@@ -148,10 +151,8 @@ def _resolve_settings(session: Session) -> Settings:
         if not getattr(base, field, ""):
             encrypted = repository.get_key_encrypted(session, connector)
             if encrypted:
-                try:
+                with contextlib.suppress(EncryptionError):
                     overrides[field] = decrypt_value(sk, encrypted)
-                except EncryptionError:
-                    pass
     return base.model_copy(update=overrides) if overrides else base
 
 
@@ -191,9 +192,7 @@ def list_keys(session: Session = Depends(get_session)) -> list[KeyOut]:
 
 
 @app.put("/keys/{connector}", response_model=KeyOut)
-def upsert_key(
-    connector: str, body: KeyIn, session: Session = Depends(get_session)
-) -> KeyOut:
+def upsert_key(connector: str, body: KeyIn, session: Session = Depends(get_session)) -> KeyOut:
     """Store or update an encrypted BYOK key for a connector."""
     if connector not in repository.CONNECTOR_FIELD:
         raise HTTPException(status_code=404, detail=f"Unknown connector: {connector}")
