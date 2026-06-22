@@ -151,6 +151,34 @@ export interface Dict {
     errorCompare: string;
   };
 
+  citationTrack: {
+    title: string;
+    subtitle: string;
+    domainLabel: string;
+    brandLabel: string;
+    brandPlaceholder: string;
+    competitorsLabel: string;
+    competitorsPlaceholder: string;
+    run: string;
+    running: string;
+    noKeys: string;
+    citationRate: string;
+    mentionRate: string;
+    confidence: string;
+    shareOfVoice: string;
+    avgPosition: string;
+    engines: string;
+    prompts: string;
+    repetitions: string;
+    perEngine: string;
+    colEngine: string;
+    colCitationRate: string;
+    colMentionRate: string;
+    colAvgPos: string;
+    na: string;
+    errorRun: string;
+  };
+
   keys: {
     title: string;
     subtitle: string;

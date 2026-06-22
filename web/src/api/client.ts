@@ -6,7 +6,16 @@
 // (see vite.config.ts) so the same code works in dev and behind a reverse proxy.
 
 import type { Locale } from "../i18n/dict";
-import type { AuditReport, AuditSummary, ComparisonMode, ComparisonResult, KeyEntry } from "./types";
+import type {
+  AuditReport,
+  AuditSummary,
+  AuditTask,
+  AuditTaskStatus,
+  CitationTaskStatus,
+  ComparisonMode,
+  ComparisonResult,
+  KeyEntry,
+} from "./types";
 
 const BASE = "/api";
 
@@ -41,13 +50,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<{ status: string; version: string }>("/health"),
 
-  /** Run + persist an audit, returns the full report. The locale freezes the
-   *  produced-text language (explanations, recommendations) at audit time. */
+  /** Submit an audit (async 202). Returns a task to poll with getAuditTask(). */
   createAudit: (url: string, locale: Locale) =>
-    request<AuditReport>("/audits", {
+    request<AuditTask>("/audits", {
       method: "POST",
       body: JSON.stringify({ url, locale }),
     }),
+
+  /** Poll an async audit job until done/failed. */
+  getAuditTask: (taskId: string) =>
+    request<AuditTaskStatus>(`/audits/tasks/${taskId}`),
 
   /** Reload a persisted audit report by id. */
   getAudit: (auditId: string) =>
@@ -63,6 +75,17 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ left_run_id: leftRunId, right_run_id: rightRunId, mode }),
     }),
+
+  /** Submit LLM citation tracking (async 202). Poll with getCitationTask(). */
+  runCitations: (domain: string, brand?: string, competitors?: string[]) =>
+    request<{ task_id: string; status_url: string }>("/citations", {
+      method: "POST",
+      body: JSON.stringify({ domain, brand: brand ?? null, competitors: competitors ?? [] }),
+    }),
+
+  /** Poll a citation-tracking job. */
+  getCitationTask: (taskId: string) =>
+    request<CitationTaskStatus>(`/citations/tasks/${taskId}`),
 
   /** List BYOK key statuses for all connectors (masked values only). */
   listKeys: () => request<KeyEntry[]>("/keys"),

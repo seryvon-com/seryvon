@@ -129,6 +129,46 @@ export interface AuditSummary {
   started_at: string;
 }
 
+export interface AuditTask {
+  task_id: string;
+  status_url: string;
+}
+
+export type JobStatus = "pending" | "running" | "done" | "failed";
+
+export interface AuditTaskStatus {
+  status: JobStatus;
+  audit_id: string | null;
+  error: string | null;
+}
+
+export interface EngineCitationMetrics {
+  citation_rate: number;
+  mention_rate: number;
+  citation_confidence: number;
+  average_position: number | null;
+}
+
+export interface CitationMetrics {
+  citation_rate: number;
+  mention_rate: number;
+  citation_confidence: number;
+  share_of_voice: number | null;
+  knowledge_presence: number | null;
+  average_position: number | null;
+  per_engine: Record<string, EngineCitationMetrics>;
+  engines: string[];
+  prompt_count: number;
+  repetitions: number;
+  prompt_set_version: number | null;
+}
+
+export interface CitationTaskStatus {
+  status: JobStatus;
+  metrics: CitationMetrics | null;
+  error: string | null;
+}
+
 export type KeySource = "db" | "env" | "none";
 
 export interface KeyEntry {
