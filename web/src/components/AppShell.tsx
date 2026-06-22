@@ -109,7 +109,12 @@ export function AppShell({
     <div className="shell">
       <aside className="sidebar">
         <Link to="/" className="brand">
-          <img src={logoSeryvon} alt="Seryvon" className="brand-logo" />
+          <div className="brand-row">
+            <span className="brand-icon-wrap">
+              <img src={logoSeryvon} alt="" className="brand-icon" />
+            </span>
+            <span className="brand-name">seryvon</span>
+          </div>
           <div className="brand-tagline">{t.nav.tagline}</div>
         </Link>
 
