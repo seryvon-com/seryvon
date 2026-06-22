@@ -1,10 +1,10 @@
-// Seryvon — home: launch an audit (PRISM). AGPL-3.0-or-later.
+// Seryvon — home: launch an audit inside the AppShell dashboard. AGPL-3.0-or-later.
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
-import { LanguageSelector } from "../components/LanguageSelector";
+import { AppShell } from "../components/AppShell";
 import { useI18n } from "../i18n";
 
 export function HomePage() {
@@ -16,7 +16,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef<number>(0);
-  const POLL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+  const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
   function stopPolling(errMsg?: string) {
     if (intervalRef.current) {
@@ -28,7 +28,6 @@ export function HomePage() {
     if (errMsg) setError(errMsg);
   }
 
-  // Poll the audit task until done or failed.
   useEffect(() => {
     if (!taskId) return;
     pollStartRef.current = Date.now();
@@ -54,7 +53,7 @@ export function HomePage() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId, navigate, t.home.errorBackend]);
 
   async function onSubmit(event: React.FormEvent) {
@@ -71,33 +70,36 @@ export function HomePage() {
       setTaskId(task.task_id);
     } catch (err) {
       setError(
-        err instanceof ApiError ? t.home.errorStatus(err.status, err.message) : t.home.errorBackend,
+        err instanceof ApiError
+          ? t.home.errorStatus(err.status, err.message)
+          : t.home.errorBackend,
       );
       setRunning(false);
     }
   }
 
   return (
-    <div className="content">
-      <div className="landing-lang">
-        <LanguageSelector />
-      </div>
-      <div className="landing">
-        <span className="prism-mark mark" />
-        <h2>seryvon</h2>
-        <p>{t.home.tagline("SEO · GEO · GSO · AEO · ASO")}</p>
-        <form className="audit-form" onSubmit={onSubmit}>
+    <AppShell
+      active="home"
+      title={t.home.newAudit}
+      subtitle={t.topbar.overviewSubtitle}
+    >
+      <div className="card home-audit-card">
+        <form className="home-audit-form" onSubmit={onSubmit}>
           <input
             type="text"
+            className="home-audit-input"
             placeholder={t.home.placeholder}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             aria-label="URL"
+            autoFocus
           />
-          <button className="btn" type="submit" disabled={running}>
+          <button className="btn home-audit-btn" type="submit" disabled={running}>
             {running ? t.home.auditing : t.home.audit}
           </button>
         </form>
+
         {running && (
           <div className="audit-progress" role="status" aria-live="polite">
             <div className="bar">
@@ -106,12 +108,13 @@ export function HomePage() {
             <div className="caption">{t.home.progress}</div>
           </div>
         )}
+
         {error && (
-          <div className="notice error" style={{ marginTop: 20, textAlign: "left" }}>
+          <div className="notice error" style={{ marginTop: 16 }}>
             {error}
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

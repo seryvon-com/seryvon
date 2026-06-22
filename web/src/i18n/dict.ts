@@ -61,6 +61,7 @@ export interface Dict {
   };
 
   home: {
+    newAudit: string;
     tagline: (pillars: string) => string;
     placeholder: string;
     audit: string;

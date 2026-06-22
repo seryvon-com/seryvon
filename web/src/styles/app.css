@@ -832,39 +832,35 @@
   }
 }
 
-/* ===== Home / landing ===== */
-.landing-lang {
-  display: flex;
-  justify-content: flex-end;
-  padding: 18px 22px 0;
+/* ===== Home — audit form card ===== */
+.home-audit-card {
+  max-width: 680px;
 }
-.landing {
-  max-width: 560px;
-  margin: 8vh auto 0;
-  text-align: center;
-}
-.landing .mark {
-  width: 46px;
-  height: 46px;
-  margin: 0 auto 18px;
-}
-.landing h2 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 26px;
-  margin: 0 0 8px;
-}
-.landing p {
-  color: var(--c-text-soft);
-  margin: 0 0 24px;
-  line-height: 1.6;
-}
-.audit-form {
+.home-audit-form {
   display: flex;
   gap: 10px;
 }
+.home-audit-input {
+  flex: 1;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-card);
+  border-radius: var(--r-md);
+  color: var(--c-text);
+  padding: 12px 15px;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  min-width: 0;
+}
+.home-audit-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.home-audit-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .audit-progress {
-  margin-top: 22px;
+  margin-top: 20px;
 }
 .audit-progress .bar {
   position: relative;
@@ -890,26 +886,8 @@
   font-family: var(--font-mono);
 }
 @keyframes audit-indeterminate {
-  0% {
-    left: -40%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-.audit-form input {
-  flex: 1;
-  background: var(--c-surface);
-  border: 1px solid var(--c-border-card);
-  border-radius: var(--r-md);
-  color: var(--c-text);
-  padding: 12px 15px;
-  font-size: 14px;
-  font-family: var(--font-sans);
-}
-.audit-form input:focus {
-  outline: none;
-  border-color: var(--accent);
+  0% { left: -40%; }
+  100% { left: 100%; }
 }
 
 /* ===== States ===== */

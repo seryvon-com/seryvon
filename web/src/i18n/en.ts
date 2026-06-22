@@ -31,6 +31,7 @@ export const en: Dict = {
   },
 
   home: {
+    newAudit: "New audit",
     tagline: (pillars) =>
       `Deterministic web audit across five pillars — ${pillars}. Every score is traceable to its source data and reproducible (variance < 2%).`,
     placeholder: "https://example.com",

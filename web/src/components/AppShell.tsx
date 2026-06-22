@@ -13,7 +13,7 @@ interface Props {
   /** Persisted audit id, enabling the Overview / Audit report nav links. */
   auditId?: string;
   /** Which primary nav entry is the current screen. */
-  active?: "overview" | "report" | "plan" | "citation" | "aso" | "history" | "compare" | "rankTracking" | "promptSet" | "keys";
+  active?: "home" | "overview" | "report" | "plan" | "citation" | "aso" | "history" | "compare" | "rankTracking" | "promptSet" | "keys";
   /** Topbar heading; defaults to the Overview labels. */
   title?: string;
   subtitle?: string;
@@ -169,9 +169,11 @@ export function AppShell({
                 <span>{t.topbar.lastAudit(lastAudit)}</span>
               </span>
             )}
-            <button className="btn" onClick={() => navigate("/")}>
-              {t.topbar.runAudit}
-            </button>
+            {active !== "home" && (
+              <button className="btn" onClick={() => navigate("/")}>
+                {t.topbar.runAudit}
+              </button>
+            )}
           </div>
         </header>
         <main className="content">
