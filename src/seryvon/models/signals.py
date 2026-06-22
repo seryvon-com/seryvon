@@ -27,7 +27,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 9
+SIGNAL_SCHEMA_VERSION = 10
 
 
 class WebMcpSignals(BaseModel):
@@ -59,7 +59,8 @@ class PageSignals(BaseModel):
 
     url: str
     status_code: int | None = None
-    render_mode: str | None = None  # "ssr" | "csr" (M2 heuristic, decision D2)
+    render_mode: str | None = None  # "ssr" | "csr"
+    render_source: str = "heuristic"  # "heuristic" (D2) | "playwright" (Playwright DOM diff)
     redirects: int = 0  # number of redirect hops before the final URL
 
     title: str | None = None
