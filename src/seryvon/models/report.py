@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from seryvon.models.artifact import ArtifactRef
 from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import CoverageLabel, ReadinessLevel, Severity
+from seryvon.models.prompts import PromptSet
 
 
 class MeasurementProfile(BaseModel):
@@ -100,3 +101,6 @@ class AuditReport(BaseModel):
     # Raw artifacts captured during collection (Observe layer, C-P2). Populated
     # only when an artifact store is provided to `run_audit`; never affects scoring.
     artifacts: list[ArtifactRef] = Field(default_factory=list)
+
+    # Citation prompt set generated deterministically from the crawl (M4b, doc 08).
+    prompt_set: PromptSet | None = None

@@ -122,6 +122,39 @@ export interface AuditReport {
   artifacts: ArtifactRef[];
 }
 
+export type PromptIntent =
+  | "definitional"
+  | "comparative"
+  | "recommendation"
+  | "explanatory"
+  | "listing"
+  | "use_case"
+  | "news";
+
+export interface Prompt {
+  text: string;
+  intent: PromptIntent;
+  source: string;
+  quality_score: number;
+}
+
+export interface ThemeProfile {
+  domain: string;
+  topics: string[];
+  entities: string[];
+  content_type: string;
+  brand: string | null;
+}
+
+export interface PromptSet {
+  version: number;
+  domain: string;
+  generated_by: string;
+  theme_profile: ThemeProfile;
+  prompts: Prompt[];
+  tracked_competitors: string[];
+}
+
 export interface GscQuery {
   query: string;
   position: number;

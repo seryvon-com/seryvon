@@ -75,6 +75,7 @@ class Audit(Base):
     score_global: Mapped[float | None] = mapped_column(Float)
     coverage: Mapped[float] = mapped_column(Float, default=0.0)
     measurement_profile: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    prompt_set: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

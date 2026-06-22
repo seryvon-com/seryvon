@@ -13,7 +13,7 @@ interface Props {
   /** Persisted audit id, enabling the Overview / Audit report nav links. */
   auditId?: string;
   /** Which primary nav entry is the current screen. */
-  active?: "overview" | "report" | "plan" | "citation" | "aso" | "history" | "compare" | "rankTracking" | "keys";
+  active?: "overview" | "report" | "plan" | "citation" | "aso" | "history" | "compare" | "rankTracking" | "promptSet" | "keys";
   /** Topbar heading; defaults to the Overview labels. */
   title?: string;
   subtitle?: string;
@@ -89,7 +89,12 @@ export function AppShell({
     },
   ];
   const navConfig = [
-    { label: t.nav.promptSet, soon: true },
+    {
+      label: t.nav.promptSet,
+      active: active === "promptSet",
+      to: effectiveAuditId ? `/audits/${effectiveAuditId}/prompt-set` : undefined,
+      soon: !effectiveAuditId,
+    },
     {
       label: t.nav.keys,
       active: active === "keys",

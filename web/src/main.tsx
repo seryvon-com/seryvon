@@ -15,6 +15,7 @@ import { HistoryPage } from "./pages/HistoryPage";
 import { HomePage } from "./pages/HomePage";
 import { KeysPage } from "./pages/KeysPage";
 import { PlanPage } from "./pages/PlanPage";
+import { PromptSetPage } from "./pages/PromptSetPage";
 import { RankTrackingPage } from "./pages/RankTrackingPage";
 import { ReportPage } from "./pages/ReportPage";
 import "./styles/tokens.css";
@@ -31,6 +32,7 @@ const router = createBrowserRouter(
     { path: "/audits/:auditId/history", element: <HistoryPage /> },
     { path: "/audits/:auditId/compare", element: <ComparePage /> },
     { path: "/audits/:auditId/rank-tracking", element: <RankTrackingPage /> },
+    { path: "/audits/:auditId/prompt-set", element: <PromptSetPage /> },
     { path: "/keys", element: <KeysPage /> },
   ],
   { future: { v7_relativeSplatPath: true } },
