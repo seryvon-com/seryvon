@@ -15,6 +15,7 @@ Celery (status/polling) comes in slice B3.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import uuid
 from collections.abc import Iterator
@@ -64,6 +65,9 @@ class _CitationJob(TypedDict):
 
 _audit_jobs: dict[str, _AuditJob] = {}
 _citation_jobs: dict[str, _CitationJob] = {}
+
+# Hard ceiling for a single audit (discovery + crawl + connectors + scoring).
+_AUDIT_TIMEOUT_SECONDS = 300
 
 app = FastAPI(
     title="Seryvon API",
@@ -264,10 +268,19 @@ async def _run_audit_job(task_id: str, url: str, locale: str, settings: Settings
     try:
         config = AuditConfig.default()
         config.locale = locale
-        report = await run_audit(url, config, settings=settings)
+        report = await asyncio.wait_for(
+            run_audit(url, config, settings=settings),
+            timeout=_AUDIT_TIMEOUT_SECONDS,
+        )
         with session_scope() as session:
             audit_id = repository.persist_report(report, session)
         _audit_jobs[task_id] = {"status": "done", "audit_id": str(audit_id), "error": None}
+    except TimeoutError:
+        _audit_jobs[task_id] = {
+            "status": "failed",
+            "audit_id": None,
+            "error": f"Audit timed out after {_AUDIT_TIMEOUT_SECONDS}s",
+        }
     except Exception as exc:
         _audit_jobs[task_id] = {"status": "failed", "audit_id": None, "error": str(exc)}
 

@@ -15,38 +15,46 @@ export function HomePage() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollStartRef = useRef<number>(0);
+  const POLL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+  function stopPolling(errMsg?: string) {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setTaskId(null);
+    setRunning(false);
+    if (errMsg) setError(errMsg);
+  }
 
   // Poll the audit task until done or failed.
   useEffect(() => {
     if (!taskId) return;
+    pollStartRef.current = Date.now();
     intervalRef.current = setInterval(() => {
+      if (Date.now() - pollStartRef.current > POLL_TIMEOUT_MS) {
+        stopPolling(t.home.errorBackend);
+        return;
+      }
       api
         .getAuditTask(taskId)
         .then((status) => {
           if (status.status === "done" && status.audit_id) {
-            clearInterval(intervalRef.current!);
+            if (intervalRef.current) clearInterval(intervalRef.current);
             intervalRef.current = null;
             setTaskId(null);
             navigate(`/audits/${status.audit_id}`);
           } else if (status.status === "failed") {
-            clearInterval(intervalRef.current!);
-            intervalRef.current = null;
-            setTaskId(null);
-            setRunning(false);
-            setError(status.error ?? t.home.errorBackend);
+            stopPolling(status.error ?? t.home.errorBackend);
           }
         })
-        .catch(() => {
-          clearInterval(intervalRef.current!);
-          intervalRef.current = null;
-          setTaskId(null);
-          setRunning(false);
-          setError(t.home.errorBackend);
-        });
+        .catch(() => stopPolling(t.home.errorBackend));
     }, 2000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId, navigate, t.home.errorBackend]);
 
   async function onSubmit(event: React.FormEvent) {
