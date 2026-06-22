@@ -19,24 +19,51 @@ import contextlib
 import uuid
 from collections.abc import Iterator
 from datetime import datetime
+from typing import Any, TypedDict
 
-from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, HttpUrl
 from sqlalchemy.orm import Session
 
 from seryvon import __version__
+from seryvon.citation.connector import LlmConnector
+from seryvon.citation.engines import AnthropicConnector, GeminiConnector, OpenAiConnector
+from seryvon.citation.perplexity import PerplexityConnector
+from seryvon.citation.tracking import run_tracking
 from seryvon.core.audit import run_audit
 from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.core.crypto import EncryptionError, decrypt_value, encrypt_value, mask_value
 from seryvon.db import repository
 from seryvon.db.base import session_scope
+from seryvon.models.prompts import Prompt, PromptIntent, PromptSet, ThemeProfile
 from seryvon.models.report import AuditReport
+from seryvon.models.signals import CitationMetrics
 from seryvon.scoring import (
     ComparisonMode,
     ComparisonResult,
     IncomparableError,
     compare_scorecards,
 )
+
+# ---------------------------------------------------------------------------
+# Async job stores (in-process; upgrade to Redis/Celery for multi-worker)
+# ---------------------------------------------------------------------------
+
+
+class _AuditJob(TypedDict):
+    status: str
+    audit_id: str | None
+    error: str | None
+
+
+class _CitationJob(TypedDict):
+    status: str
+    metrics: dict[str, Any] | None
+    error: str | None
+
+
+_audit_jobs: dict[str, _AuditJob] = {}
+_citation_jobs: dict[str, _CitationJob] = {}
 
 app = FastAPI(
     title="Seryvon API",
@@ -93,6 +120,44 @@ class KeyIn(BaseModel):
     value: str
 
 
+class AuditTaskOut(BaseModel):
+    """Response for async audit submission (202 Accepted)."""
+
+    task_id: str
+    status_url: str
+
+
+class AuditTaskStatus(BaseModel):
+    """Polling response for an async audit job."""
+
+    status: str  # pending | running | done | failed
+    audit_id: str | None = None
+    error: str | None = None
+
+
+class CitationRequest(BaseModel):
+    """Request body to launch LLM citation tracking."""
+
+    domain: str
+    brand: str | None = None
+    competitors: list[str] = []
+
+
+class CitationTaskOut(BaseModel):
+    """Response for async citation-tracking submission (202 Accepted)."""
+
+    task_id: str
+    status_url: str
+
+
+class CitationTaskStatus(BaseModel):
+    """Polling response for an async citation-tracking job."""
+
+    status: str  # pending | running | done | failed
+    metrics: dict[str, Any] | None = None
+    error: str | None = None
+
+
 def _encryption_guard() -> str:
     """Return SERYVON_SECRET_KEY or raise 503."""
     sk = get_settings().secret_key
@@ -140,6 +205,43 @@ def _connector_key_out(connector: str, session: Session) -> KeyOut:
     )
 
 
+def _build_connectors(settings: Settings) -> list[LlmConnector]:
+    """Build the list of active LLM connectors from configured BYOK keys."""
+    connectors: list[LlmConnector] = []
+    if settings.perplexity_api_key:
+        connectors.append(PerplexityConnector(api_key=settings.perplexity_api_key))
+    if settings.openai_api_key:
+        connectors.append(OpenAiConnector(api_key=settings.openai_api_key))
+    if settings.anthropic_api_key:
+        connectors.append(AnthropicConnector(api_key=settings.anthropic_api_key))
+    if settings.gemini_api_key:
+        connectors.append(GeminiConnector(api_key=settings.gemini_api_key))
+    return connectors
+
+
+def _minimal_prompt_set(domain: str, brand: str | None, competitors: list[str]) -> PromptSet:
+    """Build a minimal, generic prompt set for citation tracking without crawling."""
+    b = brand or domain
+    prompts = [
+        Prompt(text=f"What is {domain}?", intent=PromptIntent.DEFINITIONAL, quality_score=0.8),
+        Prompt(text=f"Tell me about {b}", intent=PromptIntent.DEFINITIONAL, quality_score=0.7),
+        Prompt(text=f"Should I use {b}?", intent=PromptIntent.RECOMMENDATION, quality_score=0.7),
+        Prompt(text=f"How does {b} work?", intent=PromptIntent.EXPLANATORY, quality_score=0.7),
+        Prompt(
+            text=f"What are the best alternatives to {b}?",
+            intent=PromptIntent.COMPARATIVE,
+            quality_score=0.6,
+        ),
+    ]
+    return PromptSet(
+        domain=domain,
+        generated_by="api",
+        theme_profile=ThemeProfile(domain=domain, brand=b),
+        prompts=prompts,
+        tracked_competitors=list(competitors),
+    )
+
+
 def _resolve_settings(session: Session) -> Settings:
     """Merge env settings with DB-stored keys (DB fills gaps, env takes precedence)."""
     base = get_settings()
@@ -156,24 +258,82 @@ def _resolve_settings(session: Session) -> Settings:
     return base.model_copy(update=overrides) if overrides else base
 
 
+async def _run_audit_job(task_id: str, url: str, locale: str, settings: Settings) -> None:
+    """Background coroutine: run audit, persist, update job store."""
+    _audit_jobs[task_id]["status"] = "running"
+    try:
+        config = AuditConfig.default()
+        config.locale = locale
+        report = await run_audit(url, config, settings=settings)
+        with session_scope() as session:
+            audit_id = repository.persist_report(report, session)
+        _audit_jobs[task_id] = {"status": "done", "audit_id": str(audit_id), "error": None}
+    except Exception as exc:
+        _audit_jobs[task_id] = {"status": "failed", "audit_id": None, "error": str(exc)}
+
+
+async def _run_citation_job(
+    task_id: str,
+    domain: str,
+    brand: str | None,
+    competitors: list[str],
+    settings: Settings,
+) -> None:
+    """Background coroutine: run LLM citation tracking, update job store."""
+    _citation_jobs[task_id]["status"] = "running"
+    try:
+        connectors = _build_connectors(settings)
+        if not connectors:
+            raise ValueError("No LLM API keys configured — add them via /keys")
+        prompt_set = _minimal_prompt_set(domain, brand, competitors)
+        metrics: CitationMetrics | None = await run_tracking(
+            prompt_set,
+            connectors,
+            target_domain=domain,
+            brand=brand,
+            competitors=competitors,
+            repetitions=2,
+        )
+        if metrics is None:
+            raise ValueError("No LLM responses collected")
+        _citation_jobs[task_id] = {
+            "status": "done",
+            "metrics": metrics.model_dump(mode="json"),
+            "error": None,
+        }
+    except Exception as exc:
+        _citation_jobs[task_id] = {"status": "failed", "metrics": None, "error": str(exc)}
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     """Liveness probe."""
     return {"status": "ok", "version": __version__}
 
 
-@app.post("/audits", response_model=AuditReport)
+@app.post("/audits", status_code=202, response_model=AuditTaskOut)
 async def create_audit(
-    request: AuditRequest, response: Response, session: Session = Depends(get_session)
-) -> AuditReport:
-    """Run an audit (synchronous), persist it and return the full report."""
-    config = AuditConfig.default()
-    config.locale = request.locale
+    request: AuditRequest,
+    background_tasks: BackgroundTasks,
+    response: Response,
+    session: Session = Depends(get_session),
+) -> AuditTaskOut:
+    """Submit an audit asynchronously. Poll /audits/tasks/{task_id} for completion."""
+    task_id = str(uuid.uuid4())
     settings = _resolve_settings(session)
-    report = await run_audit(str(request.url), config, settings=settings)
-    audit_id = repository.persist_report(report, session)
-    response.headers["Location"] = f"/audits/{audit_id}"
-    return report
+    _audit_jobs[task_id] = {"status": "pending", "audit_id": None, "error": None}
+    background_tasks.add_task(_run_audit_job, task_id, str(request.url), request.locale, settings)
+    response.headers["Location"] = f"/audits/tasks/{task_id}"
+    return AuditTaskOut(task_id=task_id, status_url=f"/audits/tasks/{task_id}")
+
+
+@app.get("/audits/tasks/{task_id}", response_model=AuditTaskStatus)
+def get_audit_task(task_id: str) -> AuditTaskStatus:
+    """Poll the status of an async audit job."""
+    job = _audit_jobs.get(task_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return AuditTaskStatus(**job)
 
 
 @app.get("/audits/{audit_id}", response_model=AuditReport)
@@ -222,6 +382,38 @@ def list_audits(
 ) -> list[repository.AuditSummary]:
     """Audit history of a domain (most recent first)."""
     return repository.list_audits(session, domain)
+
+
+@app.post("/citations", status_code=202, response_model=CitationTaskOut)
+async def create_citation_tracking(
+    request: CitationRequest,
+    background_tasks: BackgroundTasks,
+    response: Response,
+    session: Session = Depends(get_session),
+) -> CitationTaskOut:
+    """Submit LLM citation tracking (async). Poll /citations/tasks/{task_id}."""
+    task_id = str(uuid.uuid4())
+    settings = _resolve_settings(session)
+    _citation_jobs[task_id] = {"status": "pending", "metrics": None, "error": None}
+    background_tasks.add_task(
+        _run_citation_job,
+        task_id,
+        request.domain,
+        request.brand,
+        request.competitors,
+        settings,
+    )
+    response.headers["Location"] = f"/citations/tasks/{task_id}"
+    return CitationTaskOut(task_id=task_id, status_url=f"/citations/tasks/{task_id}")
+
+
+@app.get("/citations/tasks/{task_id}", response_model=CitationTaskStatus)
+def get_citation_task(task_id: str) -> CitationTaskStatus:
+    """Poll the status of an async citation-tracking job."""
+    job = _citation_jobs.get(task_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return CitationTaskStatus(**job)
 
 
 @app.post("/scorecards/compare", response_model=ComparisonResult)
