@@ -37,6 +37,7 @@ export function KeysPage() {
           setKeys([]);
         } else {
           setLoadError(err instanceof ApiError ? err.message : t.report.loadError);
+          setKeys([]);
         }
       });
   }
