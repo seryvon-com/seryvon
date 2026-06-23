@@ -1,12 +1,13 @@
 // Seryvon — app shell: PRISM sidebar + topbar. AGPL-3.0-or-later.
 
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import logoMark from "../assets/logo-mark.png";
 import seryvonText from "../assets/seryvon-text.png";
 
+import { api } from "../api/client";
 import { useI18n } from "../i18n";
 import { LanguageSelector } from "./LanguageSelector";
 
@@ -34,6 +35,15 @@ export function AppShell({
 }: Props) {
   const navigate = useNavigate();
   const { t } = useI18n();
+
+  const [hasLlmKey, setHasLlmKey] = useState(true);
+
+  useEffect(() => {
+    api.listKeys().then((keys) => {
+      const llm = ["perplexity", "openai", "anthropic", "gemini"];
+      setHasLlmKey(keys.some((k) => llm.includes(k.connector) && k.source !== "none"));
+    }).catch(() => {});
+  }, []);
 
   // Persist the last known auditId so config pages (e.g. /keys) can still link back.
   useEffect(() => {
@@ -63,8 +73,8 @@ export function AppShell({
     {
       label: t.nav.citation,
       active: active === "citation",
-      to: effectiveAuditId ? `/audits/${effectiveAuditId}/citations` : undefined,
-      soon: !effectiveAuditId,
+      to: effectiveAuditId && hasLlmKey ? `/audits/${effectiveAuditId}/citations` : undefined,
+      soon: !effectiveAuditId || !hasLlmKey,
     },
     {
       label: t.nav.asoReadiness,
@@ -198,14 +208,12 @@ function NavButton({
   soon?: boolean;
   onClick?: () => void;
 }) {
-  const { t } = useI18n();
   const cls = ["nav-item", active ? "active" : "", soon ? "disabled" : ""]
     .filter(Boolean)
     .join(" ");
   return (
     <button className={cls} disabled={soon} type="button" onClick={onClick}>
       <span style={{ flex: 1 }}>{label}</span>
-      {soon && <span className="badge-soon">{t.nav.soon}</span>}
     </button>
   );
 }

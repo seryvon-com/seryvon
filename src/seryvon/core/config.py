@@ -65,12 +65,18 @@ class Settings(BaseSettings):
 
     # PageSpeed Insights (BYOK). Key read from the PSI_API_KEY variable (document
     # 04 convention); empty => perf.* criteria not_measured.
+    # PSI runs Lighthouse in the cloud — 60 s is the safe floor (mobile audit
+    # regularly takes 30–50 s; 15 s general timeout is way too short).
     psi_api_key: str = Field(default="", validation_alias="PSI_API_KEY")
     pagespeed_strategy: str = DEFAULT_PSI_STRATEGY
+    psi_timeout: float = Field(default=60.0, validation_alias="PSI_TIMEOUT")
 
-    # OpenPageRank (BYOK). Key read from OPR_API_KEY; empty => authority.opr
-    # not_measured.
+    # OpenPageRank (BYOK, deprecated — acquired by Keywords Everywhere).
     opr_api_key: str = Field(default="", validation_alias="OPR_API_KEY")
+
+    # DataForSEO (BYOK). Stored as "login:password". Feeds authority.opr
+    # (domain_rank normalised 0–10) and authority.backlinks (referring_domains).
+    dataforseo_api_key: str = Field(default="", validation_alias="DATAFORSEO_API_KEY")
 
     # Wikidata (free, keyless). Disableable => aeo.kg_presence /
     # aso.brand_coherence not_measured.

@@ -33,7 +33,9 @@ export function CriteriaTable({ report }: { report: AuditReport }) {
   const { t } = useI18n();
   const [pillarFilter, setPillarFilter] = useState<Pillar | "all">("all");
   const [hidden, setHidden] = useState<Set<Status>>(() => new Set());
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(report.criteria.filter((c) => c.status === "not_measured").map((c) => c.key)),
+  );
 
   const filtered = useMemo(() => {
     return report.criteria.filter((c) => {

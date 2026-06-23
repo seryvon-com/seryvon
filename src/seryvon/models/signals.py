@@ -181,7 +181,7 @@ class AioResult(BaseModel):
 
     query: str
     aio_triggered: bool  # AIO was shown in the SERP
-    target_cited: bool   # target domain appears in AIO sources
+    target_cited: bool  # target domain appears in AIO sources
     target_position: int | None = None  # rank when cited (1-based)
     sources: list[AioSource] = Field(default_factory=list)
 
@@ -193,8 +193,8 @@ class AioMetrics(BaseModel):
     when SERP_API_KEY is not configured => `gso.ai_overview_presence` not_measured.
     """
 
-    presence_rate: float = 0.0   # fraction of queries where target cited in AIO (0–1)
-    trigger_rate: float = 0.0    # fraction of queries where AIO was shown (0–1)
+    presence_rate: float = 0.0  # fraction of queries where target cited in AIO (0–1)
+    trigger_rate: float = 0.0  # fraction of queries where AIO was shown (0–1)
     avg_position: float | None = None  # average AIO rank when cited
     results: list[AioResult] = Field(default_factory=list)
     query_count: int = 0
@@ -212,6 +212,9 @@ class ExternalSignals(BaseModel):
     lighthouse_performance: float | None = None
     open_page_rank: float | None = None
     referring_domains: int | None = None
+    # True when DataForSEO was called (key configured); False when key not set.
+    # Allows scoring rules to distinguish "not configured" from "no data for domain".
+    dataforseo_active: bool = False
     kg_presence: bool | None = None
     citation_metrics: CitationMetrics | None = None
     aio_metrics: AioMetrics | None = None  # M9 SERP / AI Overview (replaces ai_overview_presence)

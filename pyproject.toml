@@ -80,6 +80,10 @@ select = ["E", "F", "I", "UP", "B", "C4", "SIM", "RUF"]
 # RUF001/002/003 : caractères « ambigus » (tirets, apostrophes) — faux positifs en français.
 ignore = ["B008", "RUF001", "RUF002", "RUF003"]
 
+[tool.ruff.lint.per-file-ignores]
+# i18n catalog: long translation strings are expected.
+"src/seryvon/i18n/catalog.py" = ["E501"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["seryvon"]
 

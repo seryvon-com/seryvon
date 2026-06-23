@@ -39,12 +39,12 @@ class CoreWebVitalCriterion(Criterion):
         cwv = signals.external.core_web_vitals
         value = cwv.get(self.metric) if cwv else None
         if value is None:
-            return CriterionResult.not_measured(
-                self.key,
-                self.pillars,
-                self.weight,
-                t("reason.cwv_metric_unavailable", metric=self.metric.upper()),
-            )
+            # PSI active but CrUX field data absent (insufficient traffic) vs key not set.
+            if signals.external.lighthouse_performance is not None:
+                reason = t("reason.cwv_no_crux_data", metric=self.metric.upper())
+            else:
+                reason = t("reason.cwv_metric_unavailable", metric=self.metric.upper())
+            return CriterionResult.not_measured(self.key, self.pillars, self.weight, reason)
         if value <= self.good:
             score = 100.0
         elif value <= self.poor:

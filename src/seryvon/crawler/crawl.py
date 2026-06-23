@@ -44,6 +44,8 @@ PageFetcher = Callable[[str], Awaitable[FetchResult]]
 Sleeper = Callable[[float], Awaitable[None]]
 #: Optional sink for raw HTML (final_url, html) — collection-side artifact capture.
 HtmlSink = Callable[[str, str], None]
+#: Optional progress callback — called after each BFS wave.
+CrawlProgress = Callable[[int, int, int], None]  # (depth, wave_size, total_done)
 
 DEFAULT_MAX_CONCURRENCY = 5
 
@@ -105,6 +107,7 @@ async def _run_crawl(
     respect_robots: bool,
     html_sink: HtmlSink | None = None,
     playwright_renderer: PlaywrightRenderer | None = None,
+    on_progress: CrawlProgress | None = None,
 ) -> list[PageSignals]:
     """Deterministic BFS crawl loop from a fetcher (real or injected)."""
     robots = discovery.robots
@@ -196,6 +199,8 @@ async def _run_crawl(
                     if link not in seen and same_host(link, host):
                         next_frontier.add(link)
 
+        if on_progress is not None:
+            on_progress(depth, len(wave), len(results))
         current = sorted(next_frontier)
         depth += 1
 
@@ -216,6 +221,7 @@ async def crawl_site(
     sleep: Sleeper | None = None,
     html_sink: HtmlSink | None = None,
     playwright_renderer: PlaywrightRenderer | None = None,
+    on_progress: CrawlProgress | None = None,
 ) -> list[PageSignals]:
     """Crawl a site from the M1 frontier and return the per-page signals.
 
@@ -241,4 +247,5 @@ async def crawl_site(
         respect_robots=respect_robots,
         html_sink=html_sink,
         playwright_renderer=playwright_renderer,
+        on_progress=on_progress,
     )

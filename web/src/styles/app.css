@@ -899,6 +899,38 @@
   100% { left: 100%; }
 }
 
+/* ===== Audit log panel ===== */
+.audit-log {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--c-text-muted);
+  max-height: 180px;
+  overflow-y: auto;
+}
+.audit-log-line {
+  display: flex;
+  gap: 8px;
+}
+.audit-log-step {
+  color: var(--accent);
+  flex-shrink: 0;
+  width: 18px;
+  text-align: right;
+}
+.audit-log-waiting {
+  opacity: 0.5;
+  animation: blink 1.2s step-start infinite;
+}
+@keyframes blink {
+  50% { opacity: 0.1; }
+}
+
 /* ===== States ===== */
 .notice {
   background: var(--c-surface);
@@ -1008,6 +1040,19 @@
 }
 
 /* ===== Keys & BYOK page ===== */
+.keys-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.keys-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+  margin: 0 0 14px 0;
+}
 .keys-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -1087,6 +1132,15 @@
 }
 .key-flash.error {
   color: var(--c-critical);
+}
+.key-deprecated-notice {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 6px;
+  padding: 8px 12px;
 }
 .compare-badge-exact      { background: rgba(68, 208, 123, 0.14); color: var(--c-ok); }
 .compare-badge-compatible { background: rgba(68, 208, 123, 0.08); color: var(--c-ok); }

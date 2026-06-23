@@ -177,6 +177,7 @@ export interface AuditSummary {
   domain: string;
   score_global: number | null;
   started_at: string;
+  criteria_measured: number;
 }
 
 export interface AuditTask {
@@ -190,6 +191,7 @@ export interface AuditTaskStatus {
   status: JobStatus;
   audit_id: string | null;
   error: string | null;
+  logs: string[];
 }
 
 export interface EngineCitationMetrics {

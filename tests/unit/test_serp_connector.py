@@ -9,7 +9,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import Any
 
@@ -17,14 +16,12 @@ import httpx
 import pytest
 
 from seryvon.connectors.serp import (
-    AioMetrics,
     AioResult,
     aggregate_aio,
     build_queries,
     fetch_serp_aio,
     parse_serp_aio,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -56,9 +53,7 @@ _PAYLOAD_AIO_TRIGGERED_NOT_CITED: dict[str, Any] = {
 }
 
 _PAYLOAD_NO_AIO: dict[str, Any] = {
-    "organic_results": [
-        {"position": 1, "title": "Example", "link": "https://www.example.com/"}
-    ],
+    "organic_results": [{"position": 1, "title": "Example", "link": "https://www.example.com/"}],
 }
 
 
@@ -184,8 +179,10 @@ async def test_fetch_serp_aio_cited() -> None:
     payloads = [_PAYLOAD_WITH_AIO, _PAYLOAD_AIO_TRIGGERED_NOT_CITED, _PAYLOAD_NO_AIO]
     client = httpx.AsyncClient(transport=_make_transport(payloads))
     metrics = await fetch_serp_aio(
-        TARGET, api_key="test_key", queries=["example", "what is example", "example review"],
-        client=client
+        TARGET,
+        api_key="test_key",
+        queries=["example", "what is example", "example review"],
+        client=client,
     )
     assert metrics is not None
     assert metrics.query_count == 3
@@ -219,9 +216,7 @@ async def test_fetch_serp_aio_http_error_degrades_gracefully() -> None:
         return httpx.Response(200, content=json.dumps(_PAYLOAD_WITH_AIO).encode())
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    metrics = await fetch_serp_aio(
-        TARGET, api_key="key", queries=["q1", "q2"], client=client
-    )
+    metrics = await fetch_serp_aio(TARGET, api_key="key", queries=["q1", "q2"], client=client)
     assert metrics is not None
     assert metrics.query_count == 2
     # First query failed → no AIO; second cited → 1/2

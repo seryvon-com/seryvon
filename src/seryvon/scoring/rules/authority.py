@@ -31,7 +31,12 @@ _BACKLINKS_LOG_FACTOR = 25.0
 
 @register
 class AuthorityOprCriterion(Criterion):
-    """Domain authority via OpenPageRank (`authority.opr`): PageRank ×10."""
+    """Domain authority via DataForSEO backlink rank (`authority.opr`).
+
+    Uses `domain_rank` (0–1000+) from the Domain Analytics Technologies endpoint
+    (no Backlinks API subscription required, $0.01/req). Normalised to 0–10 by
+    ÷100. Equivalent to OPR semantics for scoring purposes.
+    """
 
     key = "authority.opr"
     pillars: ClassVar[list[str]] = ["seo"]
@@ -42,9 +47,12 @@ class AuthorityOprCriterion(Criterion):
     ) -> CriterionResult:
         opr = signals.external.open_page_rank
         if opr is None:
-            return CriterionResult.not_measured(
-                self.key, self.pillars, self.weight, t("reason.opr_not_configured")
+            reason = (
+                t("reason.opr_no_data")
+                if signals.external.dataforseo_active
+                else t("reason.opr_not_configured")
             )
+            return CriterionResult.not_measured(self.key, self.pillars, self.weight, reason)
         score = round(min(100.0, max(0.0, opr * 10)), 2)
         return CriterionResult(
             key=self.key,
@@ -63,8 +71,10 @@ class AuthorityOprCriterion(Criterion):
 class AuthorityBacklinksCriterion(Criterion):
     """Referring domains (`authority.backlinks`), normalized log scale.
 
-    `not_measured` in v0.1: no free backlink source is wired (decision D3). The
-    rule is ready for a later connector (Common Crawl).
+    DataForSEO Labs (standard plan) does not provide referring-domain counts.
+    The DataForSEO Backlinks API that does requires a separate $100 minimum
+    deposit — it is not called here. This criterion stays `not_measured` until
+    a free or standard-plan backlinks source is wired in.
     """
 
     key = "authority.backlinks"
@@ -76,12 +86,12 @@ class AuthorityBacklinksCriterion(Criterion):
     ) -> CriterionResult:
         referring = signals.external.referring_domains
         if referring is None:
-            return CriterionResult.not_measured(
-                self.key,
-                self.pillars,
-                self.weight,
-                t("reason.no_backlink_source"),
+            reason = (
+                t("reason.no_backlink_data")
+                if signals.external.dataforseo_active
+                else t("reason.no_backlink_source")
             )
+            return CriterionResult.not_measured(self.key, self.pillars, self.weight, reason)
         score = round(min(100.0, math.log10(referring + 1) * _BACKLINKS_LOG_FACTOR), 2)
         return CriterionResult(
             key=self.key,

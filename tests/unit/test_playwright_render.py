@@ -19,7 +19,6 @@ from seryvon.crawler.playwright_render import (
     make_renderer,
 )
 
-
 # ---------------------------------------------------------------------------
 # classify_render_mode — unit tests
 # ---------------------------------------------------------------------------
@@ -118,7 +117,9 @@ async def test_crawl_uses_playwright_for_home_page() -> None:
 
     raw_html = "<html><body><p>Tiny CSR shell</p></body></html>"
     # Rich rendered DOM → CSR detected
-    rendered_html = "<html><body>" + "<p>" + " ".join(f"word{i}" for i in range(500)) + "</p></body></html>"
+    rendered_html = (
+        "<html><body>" + "<p>" + " ".join(f"word{i}" for i in range(500)) + "</p></body></html>"
+    )
 
     discovery = DiscoveryResult(
         home_url="https://example.com/",
@@ -163,7 +164,9 @@ async def test_crawl_falls_back_to_heuristic_when_renderer_returns_none() -> Non
     from seryvon.crawler.discovery import DiscoveryResult, RobotsTxt
     from seryvon.crawler.fetch import FetchResult
 
-    rich_html = "<html><body>" + "<p>" + " ".join(f"word{i}" for i in range(200)) + "</p></body></html>"
+    rich_html = (
+        "<html><body>" + "<p>" + " ".join(f"word{i}" for i in range(200)) + "</p></body></html>"
+    )
 
     discovery = DiscoveryResult(
         home_url="https://example.com/",

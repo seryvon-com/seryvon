@@ -16,9 +16,27 @@ from seryvon.models.signals import GscResult
 
 SAMPLE_GSC: dict[str, Any] = {
     "rows": [
-        {"keys": ["seryvon audit"], "position": 3.2, "clicks": 120, "impressions": 980, "ctr": 0.1224},
-        {"keys": ["web audit tool"], "position": 8.1, "clicks": 45, "impressions": 1200, "ctr": 0.0375},
-        {"keys": ["seo checker free"], "position": 14.5, "clicks": 12, "impressions": 670, "ctr": 0.0179},
+        {
+            "keys": ["seryvon audit"],
+            "position": 3.2,
+            "clicks": 120,
+            "impressions": 980,
+            "ctr": 0.1224,
+        },
+        {
+            "keys": ["web audit tool"],
+            "position": 8.1,
+            "clicks": 45,
+            "impressions": 1200,
+            "ctr": 0.0375,
+        },
+        {
+            "keys": ["seo checker free"],
+            "position": 14.5,
+            "clicks": 12,
+            "impressions": 670,
+            "ctr": 0.0179,
+        },
     ]
 }
 

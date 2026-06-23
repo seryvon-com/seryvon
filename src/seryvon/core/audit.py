@@ -19,6 +19,7 @@ import json
 import logging
 import time
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
@@ -26,6 +27,7 @@ from seryvon import PILLARS, __version__
 from seryvon.citation.promptset import generate_prompt_set
 from seryvon.connectors import (
     brand_coherence,
+    fetch_dataforseo,
     fetch_gsc,
     fetch_openpagerank,
     fetch_pagespeed,
@@ -107,15 +109,31 @@ async def _collect_external(
     """
     external = ExternalSignals()
     if settings.psi_api_key and pages:
+        # PSI runs Lighthouse in the cloud — use psi_timeout (default 60 s), not
+        # the general request_timeout (15 s) which is far too short.
         psi = await fetch_pagespeed(
             pages[0].url,
             api_key=settings.psi_api_key,
             strategy=settings.pagespeed_strategy,
-            timeout=settings.request_timeout,
+            timeout=settings.psi_timeout,
         )
         external.core_web_vitals = psi.core_web_vitals
         external.lighthouse_performance = psi.lighthouse_performance
-    if settings.opr_api_key and domain:
+    # DataForSEO takes priority: provides both domain rank and referring domains.
+    # OPR is kept as legacy fallback (deprecated — acquired by Keywords Everywhere).
+    if settings.dataforseo_api_key and domain:
+        external.dataforseo_active = True
+        dfs = await fetch_dataforseo(domain, api_key=settings.dataforseo_api_key, timeout=30.0)
+        log.info(
+            "dataforseo result domain=%s domain_rank=%s etv=%s opr_equiv=%s",
+            domain,
+            dfs.domain_rank,
+            dfs.organic_etv,
+            dfs.open_page_rank_equivalent,
+        )
+        external.open_page_rank = dfs.open_page_rank_equivalent
+        external.referring_domains = dfs.referring_domains
+    elif settings.opr_api_key and domain:
         opr = await fetch_openpagerank(
             domain, api_key=settings.opr_api_key, timeout=settings.request_timeout
         )
@@ -168,6 +186,7 @@ async def run_audit(
     *,
     artifact_store: ArtifactStore | None = None,
     settings: Settings | None = None,
+    on_progress: Callable[[str], None] | None = None,
 ) -> AuditReport:
     """Run an audit on the given URL and return the report.
 
@@ -187,7 +206,12 @@ async def run_audit(
     started = datetime.now(UTC)
     user_agent = config.crawl.user_agent or settings.user_agent
 
+    def _progress(msg: str) -> None:
+        if on_progress:
+            on_progress(msg)
+
     log.info("audit start url=%s", url)
+    _progress(f"Discovering {url}…")
     t_discovery = time.monotonic()
     discovery = await discover(
         url,
@@ -201,6 +225,10 @@ async def run_audit(
         discovery.domain,
         len(discovery.sitemap_urls),
         int((time.monotonic() - t_discovery) * 1000),
+    )
+    _progress(
+        f"Discovery done — {len(discovery.sitemap_urls)} sitemap URL(s), "
+        f"frontier: {len(discovery.frontier)} URL(s) to crawl"
     )
 
     artifacts: list[ArtifactRef] = []
@@ -225,7 +253,12 @@ async def run_audit(
             user_agent=user_agent, timeout=settings.playwright_timeout
         )
 
+    _progress(f"Crawling up to {config.crawl.max_pages} pages…")
     t_crawl = time.monotonic()
+
+    def _crawl_progress(depth: int, wave_size: int, total_done: int) -> None:
+        _progress(f"  Depth {depth} — {wave_size} page(s) fetched · {total_done} total")
+
     pages = await crawl_site(
         discovery,
         user_agent=user_agent,
@@ -235,12 +268,15 @@ async def run_audit(
         timeout=settings.request_timeout,
         html_sink=html_sink,
         playwright_renderer=playwright_renderer,
+        on_progress=_crawl_progress,
     )
     log.info(
         "audit crawl done pages=%d elapsed_ms=%d",
         len(pages),
         int((time.monotonic() - t_crawl) * 1000),
     )
+    _progress(f"Crawl done — {len(pages)} page(s) collected")
+    _progress("Running external connectors (PSI, OPR, Wikidata…)")
     active_connectors: list[str] = ["crawler"]
     if pages and pages[0].render_source == "playwright":
         active_connectors.append("playwright")
@@ -250,7 +286,7 @@ async def run_audit(
     if external.core_web_vitals is not None or external.lighthouse_performance is not None:
         active_connectors.append("pagespeed")
     if external.open_page_rank is not None:
-        active_connectors.append("openpagerank")
+        active_connectors.append("dataforseo" if settings.dataforseo_api_key else "openpagerank")
     if external.gsc_data is not None and external.gsc_data.avg_position is not None:
         active_connectors.append("gsc")
     # SERP / AI Overview (M9, BYOK). gso.ai_overview_presence stays not_measured without key.
@@ -282,6 +318,23 @@ async def run_audit(
         int((time.monotonic() - t_ext) * 1000),
         active_connectors,
     )
+    _progress(f"Connectors done — active: {', '.join(active_connectors)}")
+    # Warn when a key is configured but the connector returned no data (silent failure).
+    if settings.psi_api_key and external.lighthouse_performance is None:
+        _progress(
+            "⚠ PSI key is set but Lighthouse returned no data"
+            " — check key validity or network access to googleapis.com"
+        )
+    if external.dataforseo_active and external.open_page_rank is None:
+        _progress(
+            f"⚠ DataForSEO called for '{discovery.domain}' but returned no rank data"
+            " — domain may not be indexed yet in DataForSEO's database"
+        )
+    if settings.opr_api_key and external.open_page_rank is None and not settings.dataforseo_api_key:
+        _progress(
+            "⚠ OPR key is set but returned no data"
+            " — the account may have been closed (Keywords Everywhere acquisition)"
+        )
     bundle = SignalBundle(
         domain=discovery.domain,
         signal_schema_version=SIGNAL_SCHEMA_VERSION,
@@ -298,6 +351,7 @@ async def run_audit(
         external=external,
     )
 
+    _progress(f"Scoring {len(bundle.pages)} page(s) across 5 pillars…")
     t_scoring = time.monotonic()
     results = run_criteria(bundle, config)
     pillar_scores = {p: score_pillar(p, results) for p in PILLARS}
@@ -307,6 +361,7 @@ async def run_audit(
         overall,
         int((time.monotonic() - t_scoring) * 1000),
     )
+    _progress(f"Scoring done — global score: {overall:.0f}/100 ({len(results)} criteria)")
 
     try:
         prompt_set = generate_prompt_set(bundle)

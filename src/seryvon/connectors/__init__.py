@@ -6,6 +6,7 @@ criteria `not_measured` (never estimated).
 """
 
 from seryvon.connectors.ai_discovery import probe_ai_discovery, probe_nlweb
+from seryvon.connectors.dataforseo import DataForSeoResult, fetch_dataforseo, parse_dataforseo
 from seryvon.connectors.gsc import fetch_gsc, parse_gsc
 from seryvon.connectors.openpagerank import (
     OpenPageRankResult,
@@ -26,6 +27,7 @@ __all__ = [
     "AioMetrics",
     "AioResult",
     "AioSource",
+    "DataForSeoResult",
     "GscResult",
     "OpenPageRankResult",
     "PageSpeedResult",
@@ -33,11 +35,13 @@ __all__ = [
     "aggregate_aio",
     "brand_coherence",
     "build_queries",
+    "fetch_dataforseo",
     "fetch_gsc",
     "fetch_openpagerank",
     "fetch_pagespeed",
     "fetch_serp_aio",
     "fetch_wikidata",
+    "parse_dataforseo",
     "parse_gsc",
     "parse_openpagerank",
     "parse_pagespeed",

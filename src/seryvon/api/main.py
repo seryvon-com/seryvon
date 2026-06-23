@@ -18,17 +18,20 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Iterator
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
 from celery.result import AsyncResult
-from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, HttpUrl
 from sqlalchemy.orm import Session
 
 from seryvon import __version__
-from seryvon.core.config import get_settings
+from seryvon.core.audit import run_audit
+from seryvon.core.config import AuditConfig, get_settings
 from seryvon.core.crypto import EncryptionError, decrypt_value, encrypt_value, mask_value
+from seryvon.core.settings_resolver import resolve_settings
 from seryvon.db import repository
 from seryvon.db.base import session_scope
 from seryvon.models.prompts import PromptSet
@@ -40,8 +43,9 @@ from seryvon.scoring import (
     compare_scorecards,
 )
 from seryvon.tasks.app import celery_app
-from seryvon.tasks.audit import run_audit_task
 from seryvon.tasks.citation import run_citation_task
+
+log = logging.getLogger(__name__)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -78,6 +82,7 @@ class AuditSummaryOut(BaseModel):
     domain: str
     score_global: float | None
     started_at: datetime
+    criteria_measured: int = 0
 
 
 class CompareRequest(BaseModel):
@@ -117,6 +122,18 @@ class AuditTaskStatus(BaseModel):
     status: str  # pending | running | done | failed
     audit_id: str | None = None
     error: str | None = None
+    logs: list[str] = []
+
+
+@dataclass
+class _AuditJob:
+    status: str = "pending"
+    audit_id: str | None = None
+    error: str | None = None
+    logs: list[str] = field(default_factory=list)
+
+
+_audit_jobs: dict[str, _AuditJob] = {}
 
 
 class CitationRequest(BaseModel):
@@ -189,17 +206,47 @@ def _connector_key_out(connector: str, session: Session) -> KeyOut:
     )
 
 
-def _audit_task_status(task_id: str) -> AuditTaskStatus:
-    """Map a Celery AsyncResult to our AuditTaskStatus schema."""
-    r = AsyncResult(task_id, app=celery_app)
-    if r.state == "SUCCESS":
-        data: dict[str, Any] = r.result or {}
-        return AuditTaskStatus(status="done", audit_id=data.get("audit_id"))
-    if r.state == "FAILURE":
-        return AuditTaskStatus(status="failed", error=str(r.result))
-    if r.state == "STARTED":
-        return AuditTaskStatus(status="running")
-    return AuditTaskStatus(status="pending")  # PENDING / RETRY / unknown
+async def _run_audit_bg(task_id: str, url: str, locale: str) -> None:
+    """Background coroutine: run an audit and update the in-memory job entry."""
+    job = _audit_jobs[task_id]
+    job.status = "running"
+    job.logs.append("Resolving BYOK keys…")
+    try:
+        with session_scope() as session:
+            settings = resolve_settings(session)
+
+        # Explicit key-resolution status — each connector shows ✓/✗ so the user
+        # can diagnose missing SERYVON_SECRET_KEY or misconfigured .env.
+        _key_flags = [
+            ("PSI", settings.psi_api_key),
+            ("DataForSEO", settings.dataforseo_api_key),
+            ("OPR", settings.opr_api_key),
+            ("Perplexity", settings.perplexity_api_key),
+            ("OpenAI", settings.openai_api_key),
+            ("Anthropic", settings.anthropic_api_key),
+            ("Gemini", settings.gemini_api_key),
+        ]
+        key_status = "  ".join(f"{k}:{'✓' if v else '✗'}" for k, v in _key_flags)
+        job.logs.append(f"Keys — {key_status}")
+        active = [k for k, v in _key_flags if v]
+        if active:
+            job.logs.append(f"Connectors active: {', '.join(active)}")
+        else:
+            job.logs.append("No external API keys configured (all connectors disabled)")
+
+        config = AuditConfig.default()
+        config.locale = locale
+        report = await run_audit(url, config, settings=settings, on_progress=job.logs.append)
+        with session_scope() as session:
+            audit_id = repository.persist_report(report, session)
+        job.status = "done"
+        job.audit_id = str(audit_id)
+        job.logs.append("Done.")
+    except Exception as exc:
+        log.exception("audit_bg failed url=%s", url)
+        job.status = "failed"
+        job.error = str(exc)
+        job.logs.append(f"Error: {exc}")
 
 
 def _citation_task_status(task_id: str) -> CitationTaskStatus:
@@ -224,17 +271,28 @@ def health() -> dict[str, str]:
 def create_audit(
     request: AuditRequest,
     response: Response,
+    background_tasks: BackgroundTasks,
 ) -> AuditTaskOut:
-    """Submit an audit asynchronously via Celery. Poll /audits/tasks/{task_id}."""
-    result = run_audit_task.delay(str(request.url), request.locale)
-    response.headers["Location"] = f"/audits/tasks/{result.id}"
-    return AuditTaskOut(task_id=result.id, status_url=f"/audits/tasks/{result.id}")
+    """Submit an audit asynchronously. Poll /audits/tasks/{task_id} until done."""
+    task_id = str(uuid.uuid4())
+    _audit_jobs[task_id] = _AuditJob()
+    background_tasks.add_task(_run_audit_bg, task_id, str(request.url), request.locale)
+    response.headers["Location"] = f"/audits/tasks/{task_id}"
+    return AuditTaskOut(task_id=task_id, status_url=f"/audits/tasks/{task_id}")
 
 
 @app.get("/audits/tasks/{task_id}", response_model=AuditTaskStatus)
 def get_audit_task(task_id: str) -> AuditTaskStatus:
     """Poll the status of an async audit job."""
-    return _audit_task_status(task_id)
+    job = _audit_jobs.get(task_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Unknown task")
+    return AuditTaskStatus(
+        status=job.status,
+        audit_id=job.audit_id,
+        error=job.error,
+        logs=list(job.logs),
+    )
 
 
 @app.get("/audits/{audit_id}", response_model=AuditReport)
@@ -263,15 +321,157 @@ def list_keys(session: Session = Depends(get_session)) -> list[KeyOut]:
     return [_connector_key_out(c, session) for c in repository.CONNECTOR_FIELD]
 
 
+async def _validate_key(connector: str, value: str) -> None:
+    """Live-probe a BYOK key before storing it. Raises HTTPException(422) on failure.
+
+    Uses the cheapest possible test call for each connector: no side effects,
+    no LLM tokens consumed (auth-only endpoints where available).
+    """
+    import httpx
+
+    if connector == "dataforseo":
+        from seryvon.connectors.dataforseo import _dataforseo_credentials
+
+        creds = _dataforseo_credentials(value)
+        if creds is None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "DataForSEO key must be 'login:password'"
+                    " or a base64 token from the DataForSEO dashboard"
+                ),
+            )
+        # Auth-only probe: GET /v3/merchant/google/locations — returns 200 on valid
+        # credentials regardless of plan; 401/403 on bad credentials.
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.get(
+                    "https://api.dataforseo.com/v3/appendix/user_data",
+                    headers={"Authorization": f"Basic {creds}"},
+                )
+            if r.status_code in (401, 403):
+                raise HTTPException(
+                    status_code=422,
+                    detail="DataForSEO: authentication failed — check credentials",
+                )
+            if r.status_code not in (200, 429):
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"DataForSEO: unexpected response {r.status_code}",
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=422, detail=f"DataForSEO: network error — {exc}"
+            ) from exc
+
+    elif connector == "psi":
+        from seryvon.connectors.pagespeed import fetch_pagespeed
+
+        psi_probe = await fetch_pagespeed("https://www.google.com", api_key=value, timeout=60.0)
+        if psi_probe.lighthouse_performance is None:
+            raise HTTPException(
+                status_code=422,
+                detail="PSI: key rejected by Google API — verify on console.cloud.google.com",
+            )
+
+    elif connector == "opr":
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                r = await client.get(
+                    "https://openpagerank.com/api/v1.0/getPageRank",
+                    params={"domains[]": "google.com"},
+                    headers={"API-OPR": value},
+                )
+            if r.status_code == 401:
+                raise HTTPException(status_code=422, detail="OPR: invalid API key")
+            if r.status_code not in (200, 429):
+                raise HTTPException(
+                    status_code=422, detail=f"OPR: unexpected response {r.status_code}"
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=422, detail=f"OPR: network error — {exc}") from exc
+
+    elif connector == "openai":
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                r = await client.get(
+                    "https://api.openai.com/v1/models",
+                    headers={"Authorization": f"Bearer {value}"},
+                )
+            if r.status_code == 401:
+                raise HTTPException(status_code=422, detail="OpenAI: invalid API key")
+            if r.status_code not in (200, 429):
+                raise HTTPException(
+                    status_code=422, detail=f"OpenAI: unexpected response {r.status_code}"
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=422, detail=f"OpenAI: network error — {exc}") from exc
+
+    elif connector == "anthropic":
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                r = await client.get(
+                    "https://api.anthropic.com/v1/models",
+                    headers={"x-api-key": value, "anthropic-version": "2023-06-01"},
+                )
+            if r.status_code == 401:
+                raise HTTPException(status_code=422, detail="Anthropic: invalid API key")
+            if r.status_code not in (200, 429):
+                raise HTTPException(
+                    status_code=422, detail=f"Anthropic: unexpected response {r.status_code}"
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=422, detail=f"Anthropic: network error — {exc}"
+            ) from exc
+
+    elif connector == "gemini":
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                r = await client.get(
+                    "https://generativelanguage.googleapis.com/v1beta/models",
+                    params={"key": value},
+                )
+            if r.status_code == 400:
+                raise HTTPException(status_code=422, detail="Gemini: invalid API key")
+            if r.status_code not in (200, 429):
+                raise HTTPException(
+                    status_code=422, detail=f"Gemini: unexpected response {r.status_code}"
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=422, detail=f"Gemini: network error — {exc}") from exc
+
+    elif connector == "perplexity":
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                r = await client.get(
+                    "https://api.perplexity.ai/models",
+                    headers={"Authorization": f"Bearer {value}"},
+                )
+            if r.status_code == 401:
+                raise HTTPException(status_code=422, detail="Perplexity: invalid API key")
+            if r.status_code not in (200, 404, 429):
+                raise HTTPException(
+                    status_code=422, detail=f"Perplexity: unexpected response {r.status_code}"
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=422, detail=f"Perplexity: network error — {exc}"
+            ) from exc
+
+
 @app.put("/keys/{connector}", response_model=KeyOut)
-def upsert_key(connector: str, body: KeyIn, session: Session = Depends(get_session)) -> KeyOut:
-    """Store or update an encrypted BYOK key for a connector."""
+async def upsert_key(
+    connector: str, body: KeyIn, session: Session = Depends(get_session)
+) -> KeyOut:
+    """Store or update an encrypted BYOK key. Validates the key live before storing."""
     if connector not in repository.CONNECTOR_FIELD:
         raise HTTPException(status_code=404, detail=f"Unknown connector: {connector}")
     sk = _encryption_guard()
     value = body.value.strip()
     if not value:
         raise HTTPException(status_code=422, detail="Key value must not be empty")
+    await _validate_key(connector, value)
     encrypted = encrypt_value(sk, value)
     repository.upsert_key(session, connector, encrypted)
     return _connector_key_out(connector, session)

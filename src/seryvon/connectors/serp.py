@@ -36,8 +36,8 @@ log = logging.getLogger(__name__)
 
 SERPAPI_ENDPOINT = "https://serpapi.com/search.json"
 
-_DEFAULT_GL = "us"   # country for Google SERP
-_DEFAULT_HL = "en"   # language
+_DEFAULT_GL = "us"  # country for Google SERP
+_DEFAULT_HL = "en"  # language
 
 
 # ---------------------------------------------------------------------------

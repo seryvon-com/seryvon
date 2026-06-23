@@ -7,16 +7,21 @@ import type { KeyEntry } from "../api/types";
 import { AppShell } from "../components/AppShell";
 import { useI18n } from "../i18n";
 
-const CONNECTORS = ["psi", "opr", "perplexity", "openai", "anthropic", "gemini"] as const;
-
 const HELP_URLS: Record<string, string> = {
   psi: "https://console.cloud.google.com/apis/credentials",
+  dataforseo: "https://app.dataforseo.com/register",
   opr: "https://www.domcop.com/openpagerank/documentation",
   perplexity: "https://www.perplexity.ai/settings/api",
   openai: "https://platform.openai.com/api-keys",
   anthropic: "https://console.anthropic.com/settings/keys",
   gemini: "https://aistudio.google.com/app/apikey",
 };
+
+const CONNECTOR_GROUPS: { groupKey: string; connectors: string[] }[] = [
+  { groupKey: "performance", connectors: ["psi"] },
+  { groupKey: "authority",   connectors: ["dataforseo", "opr"] },
+  { groupKey: "llm",         connectors: ["perplexity", "openai", "anthropic", "gemini"] },
+];
 
 export function KeysPage() {
   const { t } = useI18n();
@@ -54,17 +59,26 @@ export function KeysPage() {
       {noEncryption && <div className="notice">{t.keys.noEncryption}</div>}
       {!loadError && keys === null && <div className="notice">{t.report.loading}</div>}
       {keys !== null && (
-        <div className="keys-grid">
-          {CONNECTORS.map((connector) => (
-            <ConnectorCard
-              key={connector}
-              connector={connector}
-              entry={keyMap.get(connector) ?? null}
-              noEncryption={noEncryption}
-              t={t}
-              onSaved={reload}
-              onDeleted={reload}
-            />
+        <div className="keys-sections">
+          {CONNECTOR_GROUPS.map(({ groupKey, connectors }) => (
+            <section key={groupKey} className="keys-section">
+              <h2 className="keys-section-title">
+                {t.keys.connectorGroups[groupKey] ?? groupKey}
+              </h2>
+              <div className="keys-grid">
+                {connectors.map((connector) => (
+                  <ConnectorCard
+                    key={connector}
+                    connector={connector}
+                    entry={keyMap.get(connector) ?? null}
+                    noEncryption={noEncryption}
+                    t={t}
+                    onSaved={reload}
+                    onDeleted={reload}
+                  />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
@@ -110,9 +124,10 @@ function ConnectorCard({
         showFlash(t.keys.saved, "ok");
         onSaved();
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         setSaving(false);
-        showFlash(t.keys.errorSave, "error");
+        const msg = err instanceof ApiError ? err.message : t.keys.errorSave;
+        showFlash(msg, "error");
       });
   }
 
@@ -137,6 +152,7 @@ function ConnectorCard({
   const sourceCls =
     source === "db" ? "key-source-db" : source === "env" ? "key-source-env" : "key-source-none";
   const helpUrl = HELP_URLS[connector];
+  const deprecationNotice = t.keys.connectorDeprecated[connector] ?? null;
 
   return (
     <div className="card key-card">
@@ -144,7 +160,7 @@ function ConnectorCard({
         <div>
           <div className="key-connector">{connector.toUpperCase()}</div>
           <div className="key-desc">{t.keys.connectorDesc[connector] ?? ""}</div>
-          {helpUrl && (
+          {helpUrl && !deprecationNotice && (
             <a
               className="key-help-link"
               href={helpUrl}
@@ -157,6 +173,9 @@ function ConnectorCard({
         </div>
         <span className={`key-source-badge ${sourceCls}`}>{sourceLabel}</span>
       </div>
+      {deprecationNotice && (
+        <div className="key-deprecated-notice">{deprecationNotice}</div>
+      )}
 
       {entry?.masked_value && (
         <div className="key-masked">{entry.masked_value}</div>

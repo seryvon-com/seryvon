@@ -13,6 +13,7 @@ export function HomePage() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [auditLogs, setAuditLogs] = useState<string[]>([]);
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef<number>(0);
@@ -39,6 +40,7 @@ export function HomePage() {
       api
         .getAuditTask(taskId)
         .then((status) => {
+          if (status.logs?.length) setAuditLogs(status.logs);
           if (status.status === "done" && status.audit_id) {
             if (intervalRef.current) clearInterval(intervalRef.current);
             intervalRef.current = null;
@@ -61,6 +63,7 @@ export function HomePage() {
     if (!url.trim() || running) return;
     setRunning(true);
     setError(null);
+    setAuditLogs([]);
     try {
       let normalizedUrl = url.trim();
       if (!normalizedUrl.match(/^https?:\/\//)) {
@@ -106,6 +109,19 @@ export function HomePage() {
               <span className="fill" />
             </div>
             <div className="caption">{t.home.progress}</div>
+          </div>
+        )}
+
+        {(running || auditLogs.length > 0) && (
+          <div className="audit-log" aria-live="polite">
+            {auditLogs.map((line, i) => (
+              <div key={i} className="audit-log-line">
+                <span className="audit-log-step">{i + 1}.</span> {line}
+              </div>
+            ))}
+            {running && auditLogs.length === 0 && (
+              <div className="audit-log-line audit-log-waiting">Connecting to backend…</div>
+            )}
           </div>
         )}
 

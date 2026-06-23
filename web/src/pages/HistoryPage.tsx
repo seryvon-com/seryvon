@@ -63,6 +63,7 @@ export function HistoryPage() {
               <tr>
                 <th>{t.history.colDate}</th>
                 <th style={{ textAlign: "right" }}>{t.history.colScore}</th>
+                <th style={{ textAlign: "right" }}>{t.history.colMeasured}</th>
                 <th>{t.history.colId}</th>
                 <th />
               </tr>
@@ -73,6 +74,9 @@ export function HistoryPage() {
                   <td>{formatDate(h.started_at)}</td>
                   <td style={{ textAlign: "right", fontFamily: "var(--font-mono)" }}>
                     {h.score_global == null ? "—" : Math.round(h.score_global)}
+                  </td>
+                  <td style={{ textAlign: "right", fontFamily: "var(--font-mono)", color: "var(--c-text-muted)" }}>
+                    {h.criteria_measured > 0 ? h.criteria_measured : "—"}
                   </td>
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--c-text-faint)" }}>
                     {h.audit_id}

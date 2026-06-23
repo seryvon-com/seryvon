@@ -6,7 +6,14 @@
 from __future__ import annotations
 
 from seryvon.models.enums import Status
-from seryvon.models.signals import ExternalSignals, GscQuery, GscResult, PageSignals, SignalBundle, SiteSignals
+from seryvon.models.signals import (
+    ExternalSignals,
+    GscQuery,
+    GscResult,
+    PageSignals,
+    SignalBundle,
+    SiteSignals,
+)
 from seryvon.scoring.rules.seo import (
     ContentDepthCriterion,
     ContentTextRatioCriterion,
@@ -24,12 +31,12 @@ from seryvon.scoring.rules.seo import (
     MetaTitleCriterion,
     MetaTitleUniqueCriterion,
     OpenGraphCriterion,
+    SeoAvgPositionCriterion,
+    SeoClickThroughRateCriterion,
     StructH1Criterion,
     StructHierarchyCriterion,
     StructSchemaCriterion,
     TwitterCardCriterion,
-    SeoAvgPositionCriterion,
-    SeoClickThroughRateCriterion,
 )
 
 

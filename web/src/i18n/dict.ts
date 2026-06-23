@@ -138,6 +138,7 @@ export interface Dict {
     empty: string;
     colDate: string;
     colScore: string;
+    colMeasured: string;
     colId: string;
     view: string;
     count: (n: number) => string;
@@ -217,6 +218,8 @@ export interface Dict {
     placeholder: string;
     source: Record<KeySource, string>;
     connectorDesc: Record<string, string>;
+    connectorDeprecated: Record<string, string>;
+    connectorGroups: Record<string, string>;
     getKey: string;
     saved: string;
     deleted: string;

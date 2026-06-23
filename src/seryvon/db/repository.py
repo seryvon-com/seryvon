@@ -19,7 +19,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from seryvon.db import models as m
@@ -44,6 +44,7 @@ class AuditSummary:
     domain: str
     score_global: float | None
     started_at: datetime
+    criteria_measured: int = 0
 
 
 def _get_or_create_domain(session: Session, host: str) -> m.Domain:
@@ -260,6 +261,7 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
 CONNECTOR_FIELD: dict[str, str] = {
     "psi": "psi_api_key",
     "opr": "opr_api_key",
+    "dataforseo": "dataforseo_api_key",
     "perplexity": "perplexity_api_key",
     "openai": "openai_api_key",
     "anthropic": "anthropic_api_key",
@@ -307,9 +309,20 @@ def delete_key(session: Session, connector: str) -> bool:
 
 def list_audits(session: Session, host: str) -> list[AuditSummary]:
     """Audit history of a domain, most recent first."""
-    rows = session.scalars(
-        select(m.Audit)
+    _NOT_SCORED = ("not_measured", "not_applicable")
+    measured_sq = (
+        select(
+            m.CriterionResultRow.audit_id,
+            func.count().label("cnt"),
+        )
+        .where(m.CriterionResultRow.status.notin_(_NOT_SCORED))
+        .group_by(m.CriterionResultRow.audit_id)
+        .subquery()
+    )
+    rows = session.execute(
+        select(m.Audit, func.coalesce(measured_sq.c.cnt, 0).label("criteria_measured"))
         .join(m.Domain)
+        .outerjoin(measured_sq, measured_sq.c.audit_id == m.Audit.id)
         .where(m.Domain.host == host)
         .order_by(m.Audit.started_at.desc())
     )
@@ -319,6 +332,7 @@ def list_audits(session: Session, host: str) -> list[AuditSummary]:
             domain=host,
             score_global=a.score_global,
             started_at=a.started_at,
+            criteria_measured=int(cnt),
         )
-        for a in rows
+        for a, cnt in rows
     ]
