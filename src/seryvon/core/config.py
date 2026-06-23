@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     # Playwright rendering (optional, geo.ssr). Install: `playwright install chromium`.
     # Disabled by default — opt-in via PLAYWRIGHT_ENABLED=true.
     playwright_enabled: bool = Field(default=False, validation_alias="PLAYWRIGHT_ENABLED")
-    playwright_timeout: float = Field(default=10.0, validation_alias="PLAYWRIGHT_TIMEOUT")
+    playwright_timeout: float = Field(default=30.0, validation_alias="PLAYWRIGHT_TIMEOUT")
 
     # LLM citation tracking keys (BYOK, M4). Each empty => that engine is skipped;
     # with no key at all, geo.citation_* / aeo.llm_citation stay not_measured.

@@ -41,7 +41,8 @@ _AUDIT_TIMEOUT_SECONDS = 300
 def run_audit_task(self: Any, url: str, locale: str = "en") -> dict[str, Any]:
     """Run an audit end-to-end and persist the result.
 
-    Celery state transitions: PENDING → STARTED → SUCCESS | FAILURE.
+    Celery state transitions: PENDING → STARTED → PROGRESS → SUCCESS | FAILURE.
+    PROGRESS meta: ``{"logs": [...], "status": "running"}``.
     On SUCCESS the result dict contains ``audit_id`` (str UUID).
     On FAILURE the exception message is the error.
     """
@@ -53,9 +54,15 @@ def run_audit_task(self: Any, url: str, locale: str = "en") -> dict[str, Any]:
     config = AuditConfig.default()
     config.locale = locale
 
+    logs: list[str] = []
+
+    def _on_progress(msg: str) -> None:
+        logs.append(msg)
+        self.update_state(state="PROGRESS", meta={"logs": list(logs), "status": "running"})
+
     async def _run() -> Any:
         return await asyncio.wait_for(
-            run_audit(url, config, settings=settings),
+            run_audit(url, config, settings=settings, on_progress=_on_progress),
             timeout=float(_AUDIT_TIMEOUT_SECONDS),
         )
 
@@ -65,4 +72,4 @@ def run_audit_task(self: Any, url: str, locale: str = "en") -> dict[str, Any]:
         audit_id = repository.persist_report(report, session)
 
     log.info("audit_task done url=%s audit_id=%s", url, audit_id)
-    return {"audit_id": str(audit_id)}
+    return {"audit_id": str(audit_id), "logs": logs}

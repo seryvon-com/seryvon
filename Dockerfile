@@ -29,3 +29,15 @@ EXPOSE 8000
 
 # Par défaut : API. Les workers surchargent la commande dans docker-compose.
 CMD ["uvicorn", "seryvon.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# ---------------------------------------------------------------------------
+# Stage worker-cpu : ajoute Playwright + Chromium pour le rendu SSR (geo.ssr).
+# Séparé de l'image API pour ne pas alourdir celle-ci.
+# ---------------------------------------------------------------------------
+FROM base AS worker
+
+USER root
+RUN pip install "playwright>=1.44" \
+    && playwright install chromium --with-deps \
+    && rm -rf /var/lib/apt/lists/*
+USER seryvon

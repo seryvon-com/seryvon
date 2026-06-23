@@ -66,15 +66,19 @@ services:
     depends_on:
       - api
 
-  # File CPU-bound : crawl, rendu, scoring, ASO statique.
+  # File CPU-bound : crawl, rendu Playwright (SSR), scoring, ASO statique.
   worker-cpu:
-    build: .
+    build:
+      context: .
+      target: worker
     command: celery -A seryvon.tasks.app:celery_app worker -Q cpu -c 2 -l info
     env_file: .env
     environment:
       SERYVON_DATABASE_URL: postgresql+psycopg://seryvon:seryvon@postgres:5432/seryvon
       SERYVON_CELERY_BROKER_URL: redis://redis:6379/1
       SERYVON_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      PLAYWRIGHT_ENABLED: "true"
+      PLAYWRIGHT_TIMEOUT: "30"
     depends_on:
       migrate:
         condition: service_completed_successfully
