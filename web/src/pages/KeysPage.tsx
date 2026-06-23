@@ -11,6 +11,7 @@ const HELP_URLS: Record<string, string> = {
   psi: "https://console.cloud.google.com/apis/credentials",
   dataforseo: "https://app.dataforseo.com/register",
   opr: "https://www.domcop.com/openpagerank/documentation",
+  serp: "https://serpapi.com/manage-api-key",
   perplexity: "https://www.perplexity.ai/settings/api",
   openai: "https://platform.openai.com/api-keys",
   anthropic: "https://console.anthropic.com/settings/keys",
@@ -20,6 +21,7 @@ const HELP_URLS: Record<string, string> = {
 const CONNECTOR_GROUPS: { groupKey: string; connectors: string[] }[] = [
   { groupKey: "performance", connectors: ["psi"] },
   { groupKey: "authority",   connectors: ["dataforseo", "opr"] },
+  { groupKey: "serp",        connectors: ["serp"] },
   { groupKey: "llm",         connectors: ["perplexity", "openai", "anthropic", "gemini"] },
 ];
 

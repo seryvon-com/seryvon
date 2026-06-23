@@ -284,6 +284,7 @@ export const fr: Dict = {
       psi: "PageSpeed Insights — Core Web Vitals (LCP, CLS, INP) + score Lighthouse",
       dataforseo: "DataForSEO — autorité de domaine (0–100) + domaines référents",
       opr: "OpenPageRank — score d'autorité de domaine (déprécié)",
+      serp: "SerpAPI — présence dans les AI Overviews Google (gso.ai_overview_presence)",
       perplexity: "Perplexity AI — citation tracking LLM",
       openai: "OpenAI — citation tracking LLM (GPT)",
       anthropic: "Anthropic — citation tracking LLM (Claude)",
@@ -292,6 +293,7 @@ export const fr: Dict = {
     connectorGroups: {
       performance: "Performance",
       authority: "Autorité & Backlinks",
+      serp: "SERP / AI Overviews",
       llm: "Citation Tracking LLM",
     },
     connectorDeprecated: {

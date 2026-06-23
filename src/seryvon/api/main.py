@@ -407,6 +407,24 @@ async def _validate_key(connector: str, value: str) -> None:
                 status_code=422, detail=f"Perplexity: network error — {exc}"
             ) from exc
 
+    elif connector == "serp":
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                r = await client.get(
+                    "https://serpapi.com/account.json",
+                    params={"api_key": value},
+                )
+            if r.status_code == 401:
+                raise HTTPException(status_code=422, detail="SerpAPI: invalid API key")
+            if r.status_code not in (200, 429):
+                raise HTTPException(
+                    status_code=422, detail=f"SerpAPI: unexpected response {r.status_code}"
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=422, detail=f"SerpAPI: network error — {exc}"
+            ) from exc
+
 
 @app.put("/keys/{connector}", response_model=KeyOut)
 async def upsert_key(
