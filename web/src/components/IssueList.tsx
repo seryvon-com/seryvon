@@ -2,33 +2,34 @@
 
 import type { Issue } from "../api/types";
 import { useI18n } from "../i18n";
+import { useIssueTracking } from "../hooks/useIssueTracking";
+import { TrackableIssue } from "./TrackableIssue";
 
-export function IssueList({ issues }: { issues: Issue[] }) {
+interface Props {
+  issues: Issue[];
+  auditId?: string;
+}
+
+export function IssueList({ issues, auditId }: Props) {
   const { t } = useI18n();
+  const { getTracking, toggleDone, setDoneAt, addProof, removeProof } =
+    useIssueTracking(auditId);
+
   if (issues.length === 0) {
     return <div className="notice">{t.report.noIssues}</div>;
   }
   return (
     <div className="issues">
       {issues.map((issue, i) => (
-        <div className="issue" key={`${issue.criterion_key}-${i}`}>
-          <span className="bucket">{issue.priority_bucket}</span>
-          <div className="grow">
-            <div className="label">{issue.recommendation || issue.criterion_key}</div>
-            <div className="key">{issue.criterion_key}</div>
-          </div>
-          <span className={`sev ${issue.severity}`}>{issue.severity}</span>
-          <div style={{ textAlign: "right", minWidth: 84 }}>
-            <div
-              style={{ fontSize: 10, color: "var(--c-text-faint)", fontFamily: "var(--font-mono)" }}
-            >
-              {t.issue.effort(issue.effort)}
-            </div>
-            <div style={{ fontSize: 11, color: "var(--c-text-muted)", marginTop: 2 }}>
-              {t.issue.prio(issue.priority_score)}
-            </div>
-          </div>
-        </div>
+        <TrackableIssue
+          key={`${issue.criterion_key}-${i}`}
+          issue={issue}
+          tracking={getTracking(issue.criterion_key)}
+          onToggle={() => toggleDone(issue.criterion_key)}
+          onSetDate={(date) => setDoneAt(issue.criterion_key, date)}
+          onAddProof={(proof) => addProof(issue.criterion_key, proof)}
+          onRemoveProof={(id) => removeProof(issue.criterion_key, id)}
+        />
       ))}
     </div>
   );

@@ -249,6 +249,16 @@ export interface Dict {
   pillar: { measured: string; excluded: string };
   issue: { effort: (n: number) => string; prio: (n: number) => string };
 
+  tracking: {
+    markDone: string;
+    markUndone: string;
+    doneOn: (date: string) => string;
+    addProof: string;
+    proofUrlPlaceholder: string;
+    proofFile: string;
+    fileTooBig: string;
+  };
+
   durationSeconds: (s: number) => string;
   durationMinutes: (m: number, s: number) => string;
 }

@@ -67,3 +67,4 @@ export function useI18n(): I18nContextValue {
 
 export const LOCALES: Locale[] = ["en", "fr"];
 export const LOCALE_NAMES: Record<Locale, string> = { en: en.localeName, fr: fr.localeName };
+

@@ -366,6 +366,16 @@ export const fr: Dict = {
   pillar: { measured: "mesurés", excluded: "exclus" },
   issue: { effort: (n) => `EFFORT ${n}/3`, prio: (n) => `prio ${n.toFixed(1)}` },
 
+  tracking: {
+    markDone: "Marquer comme fait",
+    markUndone: "Marquer comme non fait",
+    doneOn: (date) => `Fait le ${date}`,
+    addProof: "Joindre une preuve",
+    proofUrlPlaceholder: "https://… ou coller une URL",
+    proofFile: "Joindre un fichier (image ou PDF)",
+    fileTooBig: "Fichier trop volumineux (max 2 Mo).",
+  },
+
   durationSeconds: (s) => `${s} s`,
   durationMinutes: (m, s) => `${m} m ${String(s).padStart(2, "0")} s`,
 };

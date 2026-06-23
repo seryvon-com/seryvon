@@ -51,7 +51,7 @@ export function PlanPage() {
             <h3>{t.plan.title}</h3>
             <span className="section-sub">{t.plan.total(report.issues.length)}</span>
           </div>
-          <IssueList issues={report.issues} />
+          <IssueList issues={report.issues} auditId={auditId} />
         </div>
       )}
     </AppShell>
