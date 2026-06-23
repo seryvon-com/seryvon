@@ -44,11 +44,8 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
 
-    # Crawl
+    # Crawl (limits per audit are in CrawlConfig; user_agent and timeout are global)
     user_agent: str = "Seryvon/0.1 (+https://seryvon.com/bot)"
-    max_pages: int = 200
-    max_depth: int = 3
-    respect_robots: bool = True
     request_timeout: float = 15.0
 
     # BYOK encryption (Fernet). Empty => BYOK features disabled (Phase 0).

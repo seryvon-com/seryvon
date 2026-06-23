@@ -336,14 +336,26 @@ async def _validate_key(connector: str, value: str) -> None:
             ) from exc
 
     elif connector == "psi":
-        from seryvon.connectors.pagespeed import fetch_pagespeed
-
-        psi_probe = await fetch_pagespeed("https://www.google.com", api_key=value, timeout=60.0)
-        if psi_probe.lighthouse_performance is None:
-            raise HTTPException(
-                status_code=422,
-                detail="PSI: key rejected by Google API — verify on console.cloud.google.com",
-            )
+        # Auth-only probe: a minimal PSI request that resolves in < 3 s and
+        # costs no Lighthouse quota. A 400 (bad request) still proves the key
+        # was accepted; a 403 means the key is invalid or the API is disabled.
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                r = await client.get(
+                    "https://www.googleapis.com/pagespeedonline/v5/runPagespeed",
+                    params={"url": "https://www.google.com", "key": value, "strategy": "desktop"},
+                )
+            if r.status_code == 403:
+                raise HTTPException(
+                    status_code=422,
+                    detail="PSI: key rejected by Google API — verify on console.cloud.google.com",
+                )
+            if r.status_code not in (200, 400, 429):
+                raise HTTPException(
+                    status_code=422, detail=f"PSI: unexpected response {r.status_code}"
+                )
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=422, detail=f"PSI: network error — {exc}") from exc
 
     elif connector == "opr":
         try:

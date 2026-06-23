@@ -31,7 +31,7 @@ def decrypt_value(secret_key: str, token: bytes) -> str:
     """Decrypt a Fernet token back to plaintext."""
     try:
         return Fernet(secret_key.encode()).decrypt(token).decode("utf-8")
-    except (InvalidToken, Exception) as exc:
+    except (InvalidToken, ValueError) as exc:
         raise EncryptionError("Decryption failed — wrong key or corrupted token") from exc
 
 
