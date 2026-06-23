@@ -45,18 +45,31 @@ _SITE_TEMPLATES = ("sc-domain:{domain}", "https://{domain}/")
 
 
 def _get_access_token(service_account_json: str) -> str | None:
-    """Exchange a service account JSON for a short-lived access token (sync)."""
+    """Exchange a service account JSON for a short-lived access token (sync).
+
+    Returns ``None`` on any failure (graceful degradation, ENF-03), but logs the
+    cause so a misconfigured GSC connector is diagnosable instead of silently
+    yielding `not_measured`. A missing `google-auth` dependency (declared in
+    pyproject) is surfaced distinctly from an auth/network failure.
+    """
     try:
         from google.auth.transport.requests import Request
         from google.oauth2 import service_account
-
+    except ImportError:
+        log.warning(
+            "gsc: google-auth is not installed — run `pip install -e '.[dev]'`"
+            " or `pip install google-auth`; rank tracking stays not_measured"
+        )
+        return None
+    try:
         info = json.loads(service_account_json)
         creds = service_account.Credentials.from_service_account_info(  # type: ignore[no-untyped-call]
             info, scopes=[_GSC_SCOPE]
         )
         creds.refresh(Request())
         return str(creds.token)
-    except Exception:
+    except Exception as exc:
+        log.warning("gsc: failed to obtain access token — %s", exc)
         return None
 
 
