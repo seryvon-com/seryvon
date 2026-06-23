@@ -55,6 +55,7 @@ export const fr: Dict = {
     issuesSub: "Priorité calculée : (impact × sévérité) / effort",
     noIssues: "Aucune action prioritaire — tous les critères mesurés sont au vert.",
     spectrum: "Spectre de visibilité",
+    downloadPdf: "Télécharger le PDF",
     loading: "Chargement du rapport…",
     notFound: (status) => `Rapport introuvable (${status})`,
     loadError: "Échec du chargement — le backend est-il démarré ?",

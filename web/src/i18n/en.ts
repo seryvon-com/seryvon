@@ -55,6 +55,7 @@ export const en: Dict = {
     issuesSub: "Priority = (impact × severity) / effort",
     noIssues: "No priority action — every measured criterion is green.",
     spectrum: "Visibility spectrum",
+    downloadPdf: "Download PDF",
     loading: "Loading report…",
     notFound: (status) => `Report not found (${status})`,
     loadError: "Failed to load — is the backend running?",

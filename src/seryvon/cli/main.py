@@ -47,7 +47,7 @@ from seryvon.models.enums import Status
 from seryvon.models.prompts import PromptSet
 from seryvon.models.report import AuditReport
 from seryvon.models.signals import CitationMetrics, SignalBundle
-from seryvon.reporting import report_to_html, report_to_json, report_to_markdown
+from seryvon.reporting import report_to_html, report_to_json, report_to_markdown, report_to_pdf
 
 
 class OutputFormat(StrEnum):
@@ -56,6 +56,7 @@ class OutputFormat(StrEnum):
     json = "json"
     html = "html"
     md = "md"
+    pdf = "pdf"
     both = "both"  # json + html
 
 
@@ -150,7 +151,7 @@ def _write_report(
     report: AuditReport, output: Path | None, fmt: OutputFormat, *, quiet: bool
 ) -> None:
     """Write the report in the requested format(s), to a file or stdout."""
-    renderers = {
+    text_renderers = {
         OutputFormat.json: report_to_json,
         OutputFormat.html: report_to_html,
         OutputFormat.md: report_to_markdown,
@@ -158,23 +159,35 @@ def _write_report(
 
     if output is None:
         if quiet:
-            # `both` on stdout: emit the JSON (source of truth).
-            typer.echo(renderers.get(fmt, report_to_json)(report))
+            # PDF cannot be emitted on stdout; fall back to JSON.
+            renderer = text_renderers.get(fmt, report_to_json)
+            typer.echo(renderer(report))
         return
 
     if fmt is OutputFormat.both:
-        targets = {
+        text_targets: dict[Path, Any] = {
             output.with_suffix(".json"): report_to_json,
             output.with_suffix(".html"): report_to_html,
         }
+        for path, render in text_targets.items():
+            path.write_text(render(report), encoding="utf-8")
+        written_paths = list(text_targets)
+    elif fmt is OutputFormat.pdf:
+        try:
+            pdf_bytes = report_to_pdf(report)
+        except ImportError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=1) from exc
+        pdf_path = output.with_suffix(".pdf")
+        pdf_path.write_bytes(pdf_bytes)
+        written_paths = [pdf_path]
     else:
-        targets = {output: renderers[fmt]}
-
-    for path, render in targets.items():
-        path.write_text(render(report), encoding="utf-8")
+        path = output
+        path.write_text(text_renderers[fmt](report), encoding="utf-8")
+        written_paths = [path]
 
     if not quiet:
-        written = ", ".join(str(p) for p in targets)
+        written = ", ".join(str(p) for p in written_paths)
         console.print(f"[green]Rapport écrit :[/green] {written}")
 
 

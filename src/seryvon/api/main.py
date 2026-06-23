@@ -252,6 +252,29 @@ def get_audit(audit_id: uuid.UUID, session: Session = Depends(get_session)) -> A
     return report
 
 
+@app.get("/audits/{audit_id}/report.pdf")
+def get_audit_pdf(audit_id: uuid.UUID, session: Session = Depends(get_session)) -> Response:
+    """Render a persisted audit as a PDF file (requires seryvon[pdf])."""
+    from seryvon.reporting.pdf_report import report_to_pdf
+
+    report = repository.load_report(session, audit_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    try:
+        pdf_bytes = report_to_pdf(report)
+    except ImportError:
+        raise HTTPException(
+            status_code=501,
+            detail="PDF export not available — install WeasyPrint: pip install 'seryvon[pdf]'",
+        )
+    filename = f"seryvon-{report.domain}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @app.get("/audits/{audit_id}/prompt-set", response_model=PromptSet)
 def get_prompt_set(audit_id: uuid.UUID, session: Session = Depends(get_session)) -> PromptSet:
     """Return the deterministic prompt set generated during the audit (M4b, doc 08)."""

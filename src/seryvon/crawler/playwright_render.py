@@ -78,7 +78,7 @@ def make_renderer(*, user_agent: str, timeout: float) -> PlaywrightRenderer | No
     the renderer is safe to use from asyncio without a shared event loop.
     """
     try:
-        from playwright.async_api import async_playwright  # type: ignore[import-not-found]
+        from playwright.async_api import async_playwright
     except ImportError:
         return None
 

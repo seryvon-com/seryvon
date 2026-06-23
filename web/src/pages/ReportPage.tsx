@@ -42,7 +42,20 @@ export function ReportPage() {
     >
       {error && <div className="notice error">{error}</div>}
       {!error && !report && <div className="notice">{t.report.loading}</div>}
-      {report && <ReportView report={report} />}
+      {report && (
+        <>
+          <div className="report-toolbar">
+            <a
+              className="btn btn-ghost btn-sm"
+              href={`/api/audits/${auditId}/report.pdf`}
+              download={`seryvon-${report.domain}.pdf`}
+            >
+              ↓ {t.report.downloadPdf}
+            </a>
+          </div>
+          <ReportView report={report} />
+        </>
+      )}
     </AppShell>
   );
 }

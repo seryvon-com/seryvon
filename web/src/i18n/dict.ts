@@ -83,6 +83,7 @@ export interface Dict {
     issuesSub: string;
     noIssues: string;
     spectrum: string;
+    downloadPdf: string;
     loading: string;
     notFound: (status: number) => string;
     loadError: string;
