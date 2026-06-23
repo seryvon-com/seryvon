@@ -370,6 +370,7 @@ export const fr: Dict = {
     markDone: "Marquer comme fait",
     markUndone: "Marquer comme non fait",
     doneOn: (date) => `Fait le ${date}`,
+    regressedOn: (date) => `Régression — était fait le ${date}`,
     addProof: "Joindre une preuve",
     proofUrlPlaceholder: "https://… ou coller une URL",
     proofFile: "Joindre un fichier (image ou PDF)",

@@ -1,4 +1,4 @@
-// Seryvon — issue tracking hook (localStorage, per audit). AGPL-3.0-or-later.
+// Seryvon — issue tracking hook (localStorage, per domain). AGPL-3.0-or-later.
 
 import { useCallback, useState } from "react";
 
@@ -12,7 +12,8 @@ export interface ProofItem {
 
 export interface IssueTracking {
   done: boolean;
-  doneAt?: string; // YYYY-MM-DD, auto-set on first toggle
+  doneAt?: string;        // YYYY-MM-DD
+  doneInAuditId?: string; // audit in which this was marked done
   proofs: ProofItem[];
 }
 
@@ -20,30 +21,30 @@ export type TrackingStore = Record<string, IssueTracking>;
 
 export const MAX_FILE_BYTES = 2 * 1024 * 1024;
 
-function storageKey(auditId: string) {
-  return `seryvon:tracking:${auditId}`;
+function storageKey(domain: string) {
+  return `seryvon:tracking:domain:${domain}`;
 }
 
-function loadStore(auditId: string): TrackingStore {
+function loadStore(domain: string): TrackingStore {
   try {
-    const raw = localStorage.getItem(storageKey(auditId));
+    const raw = localStorage.getItem(storageKey(domain));
     return raw ? (JSON.parse(raw) as TrackingStore) : {};
   } catch {
     return {};
   }
 }
 
-function saveStore(auditId: string, store: TrackingStore) {
+function saveStore(domain: string, store: TrackingStore) {
   try {
-    localStorage.setItem(storageKey(auditId), JSON.stringify(store));
+    localStorage.setItem(storageKey(domain), JSON.stringify(store));
   } catch {
     // localStorage quota exceeded — silent fail
   }
 }
 
-export function useIssueTracking(auditId: string | undefined) {
+export function useIssueTracking(domain: string | undefined) {
   const [store, setStore] = useState<TrackingStore>(() =>
-    auditId ? loadStore(auditId) : {}
+    domain ? loadStore(domain) : {}
   );
 
   const getTracking = useCallback(
@@ -52,70 +53,72 @@ export function useIssueTracking(auditId: string | undefined) {
   );
 
   const toggleDone = useCallback(
-    (key: string) => {
-      if (!auditId) return;
+    (key: string, auditId: string) => {
+      if (!domain) return;
       setStore((prev) => {
         const cur = prev[key] ?? { done: false, proofs: [] };
+        const becomingDone = !cur.done;
         const next: TrackingStore = {
           ...prev,
           [key]: {
             ...cur,
-            done: !cur.done,
-            doneAt: !cur.done
+            done: becomingDone,
+            doneAt: becomingDone
               ? new Date().toISOString().slice(0, 10)
               : cur.doneAt,
+            doneInAuditId: becomingDone ? auditId : cur.doneInAuditId,
           },
         };
-        saveStore(auditId, next);
+        saveStore(domain, next);
         return next;
       });
     },
-    [auditId]
+    [domain]
   );
 
   const setDoneAt = useCallback(
     (key: string, date: string) => {
-      if (!auditId) return;
+      if (!domain) return;
       setStore((prev) => {
         const cur = prev[key] ?? { done: false, proofs: [] };
         const next: TrackingStore = { ...prev, [key]: { ...cur, doneAt: date } };
-        saveStore(auditId, next);
+        saveStore(domain, next);
         return next;
       });
     },
-    [auditId]
+    [domain]
   );
 
   const addProof = useCallback(
     (key: string, proof: ProofItem) => {
-      if (!auditId) return;
+      if (!domain) return;
       setStore((prev) => {
         const cur = prev[key] ?? { done: false, proofs: [] };
         const next: TrackingStore = {
           ...prev,
           [key]: { ...cur, proofs: [...cur.proofs, proof] },
         };
-        saveStore(auditId, next);
+        saveStore(domain, next);
         return next;
       });
     },
-    [auditId]
+    [domain]
   );
 
   const removeProof = useCallback(
     (key: string, proofId: string) => {
-      if (!auditId) return;
+      if (!domain) return;
       setStore((prev) => {
         const cur = prev[key] ?? { done: false, proofs: [] };
         const next: TrackingStore = {
           ...prev,
           [key]: { ...cur, proofs: cur.proofs.filter((p) => p.id !== proofId) },
         };
-        saveStore(auditId, next);
+        saveStore(domain, next);
         return next;
       });
     },
-    [auditId]
+    [domain]
   );
 
   return { getTracking, toggleDone, setDoneAt, addProof, removeProof };

@@ -8,12 +8,13 @@ import { TrackableIssue } from "./TrackableIssue";
 interface Props {
   issues: Issue[];
   auditId?: string;
+  domain?: string;
 }
 
-export function IssueList({ issues, auditId }: Props) {
+export function IssueList({ issues, auditId, domain }: Props) {
   const { t } = useI18n();
   const { getTracking, toggleDone, setDoneAt, addProof, removeProof } =
-    useIssueTracking(auditId);
+    useIssueTracking(domain);
 
   if (issues.length === 0) {
     return <div className="notice">{t.report.noIssues}</div>;
@@ -25,7 +26,8 @@ export function IssueList({ issues, auditId }: Props) {
           key={`${issue.criterion_key}-${i}`}
           issue={issue}
           tracking={getTracking(issue.criterion_key)}
-          onToggle={() => toggleDone(issue.criterion_key)}
+          currentAuditId={auditId}
+          onToggle={() => auditId && toggleDone(issue.criterion_key, auditId)}
           onSetDate={(date) => setDoneAt(issue.criterion_key, date)}
           onAddProof={(proof) => addProof(issue.criterion_key, proof)}
           onRemoveProof={(id) => removeProof(issue.criterion_key, id)}

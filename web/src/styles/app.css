@@ -557,6 +557,28 @@
   border-left: 3px solid var(--c-ok);
   opacity: 0.72;
 }
+
+/* Regressed: done in a previous audit but still failing */
+.issue.trackable.regressed {
+  border-left: 3px solid var(--c-warning);
+  opacity: 1;
+}
+.issue.trackable.regressed .label {
+  text-decoration: none;
+}
+.regression-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--c-warning);
+  background: color-mix(in srgb, var(--c-warning) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-warning) 30%, transparent);
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
 .issue.trackable.done .label {
   text-decoration: line-through;
   color: var(--c-text-muted);

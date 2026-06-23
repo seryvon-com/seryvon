@@ -9,6 +9,7 @@ import { MAX_FILE_BYTES } from "../hooks/useIssueTracking";
 interface Props {
   issue: Issue;
   tracking: IssueTracking;
+  currentAuditId?: string;
   onToggle: () => void;
   onSetDate: (date: string) => void;
   onAddProof: (proof: ProofItem) => void;
@@ -80,13 +81,19 @@ function ProofThumb({
 export function TrackableIssue({
   issue,
   tracking,
+  currentAuditId,
   onToggle,
   onSetDate,
   onAddProof,
   onRemoveProof,
 }: Props) {
   const { t } = useI18n();
-  const { done, doneAt, proofs } = tracking;
+  const { done, doneAt, doneInAuditId, proofs } = tracking;
+  const regressed =
+    done &&
+    doneInAuditId !== undefined &&
+    currentAuditId !== undefined &&
+    doneInAuditId !== currentAuditId;
   const [proofOpen, setProofOpen] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -128,7 +135,7 @@ export function TrackableIssue({
   }
 
   return (
-    <div className={`issue trackable${done ? " done" : ""}`}>
+    <div className={`issue trackable${done ? " done" : ""}${regressed ? " regressed" : ""}`}>
       {/* ── top row ── */}
       <div className="issue-top-row">
         <button
@@ -178,7 +185,12 @@ export function TrackableIssue({
       {/* ── bottom strip (done state + proofs) ── */}
       {showBottom && (
         <div className="issue-bottom">
-          {done && (
+          {regressed && doneAt && (
+            <span className="regression-badge" title={t.tracking.regressedOn(doneAt)}>
+              ⚠ {t.tracking.regressedOn(doneAt)}
+            </span>
+          )}
+          {done && !regressed && (
             <input
               type="date"
               className="done-date-input"

@@ -253,6 +253,7 @@ export interface Dict {
     markDone: string;
     markUndone: string;
     doneOn: (date: string) => string;
+    regressedOn: (date: string) => string;
     addProof: string;
     proofUrlPlaceholder: string;
     proofFile: string;
