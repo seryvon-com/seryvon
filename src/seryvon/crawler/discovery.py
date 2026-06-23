@@ -30,6 +30,7 @@ import httpx
 from protego import Protego
 
 from seryvon.crawler.fetch import FetchedResource
+from seryvon.crawler.safety import safe_get
 
 # Sitemap size limit (sitemaps.org spec: 50 MiB uncompressed).
 _MAX_SITEMAP_BYTES = 52_428_800
@@ -373,13 +374,13 @@ async def discover(
         )
 
     async with httpx.AsyncClient(
-        follow_redirects=True,
+        follow_redirects=False,
         timeout=timeout,
         headers={"User-Agent": user_agent},
     ) as client:
 
         async def _fetch(url: str) -> FetchedResource:
-            response = await client.get(url)
+            response, _ = await safe_get(client, url)
             return FetchedResource(
                 url=url,
                 final_url=str(response.url),

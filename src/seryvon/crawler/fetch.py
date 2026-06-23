@@ -19,6 +19,8 @@ from dataclasses import dataclass
 
 import httpx
 
+from seryvon.crawler.safety import safe_get
+
 log = logging.getLogger(__name__)
 
 
@@ -56,25 +58,27 @@ async def fetch_page(
 ) -> FetchResult:
     """Fetch a page following redirects.
 
-    Raises `httpx.HTTPError` on a network failure; the HTTP status (including
-    4xx/5xx) is, however, returned as-is so the indexability criteria can score it.
+    Raises `httpx.HTTPError` on a network failure or an SSRF-unsafe target
+    (`UnsafeUrlError`); the HTTP status (including 4xx/5xx) is, however, returned
+    as-is so the indexability criteria can score it. Redirects are followed
+    manually with per-hop SSRF validation (SIC doc 10 §2).
     """
     headers = {"User-Agent": user_agent}
     t0 = time.monotonic()
     log.debug("fetch_page start url=%s", url)
     async with httpx.AsyncClient(
-        follow_redirects=True,
+        follow_redirects=False,
         timeout=timeout,
         headers=headers,
     ) as client:
-        response = await client.get(url)
+        response, redirects = await safe_get(client, url)
     elapsed = int((time.monotonic() - t0) * 1000)
     log.debug(
         "fetch_page done url=%s final=%s status=%d redirects=%d elapsed_ms=%d",
         url,
         response.url,
         response.status_code,
-        len(response.history),
+        redirects,
         elapsed,
     )
     return FetchResult(
@@ -82,7 +86,7 @@ async def fetch_page(
         final_url=str(response.url),
         status_code=response.status_code,
         html=response.text,
-        redirects=len(response.history),
+        redirects=redirects,
     )
 
 
@@ -96,17 +100,18 @@ async def fetch_resource(
 
     The body is not decoded to text: sitemaps may be gzipped. The HTTP status
     (including 4xx) is returned as-is; a missing robots.txt (404) is interpreted
-    by the caller as "everything allowed" (RFC 9309).
+    by the caller as "everything allowed" (RFC 9309). Redirects are followed
+    manually with per-hop SSRF validation (SIC doc 10 §2).
     """
     headers = {"User-Agent": user_agent}
     t0 = time.monotonic()
     log.debug("fetch_resource start url=%s", url)
     async with httpx.AsyncClient(
-        follow_redirects=True,
+        follow_redirects=False,
         timeout=timeout,
         headers=headers,
     ) as client:
-        response = await client.get(url)
+        response, _ = await safe_get(client, url)
     elapsed = int((time.monotonic() - t0) * 1000)
     log.debug(
         "fetch_resource done url=%s status=%d elapsed_ms=%d", url, response.status_code, elapsed

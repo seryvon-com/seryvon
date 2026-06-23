@@ -83,8 +83,13 @@ def make_renderer(*, user_agent: str, timeout: float) -> PlaywrightRenderer | No
         return None
 
     async def _render(url: str) -> RenderedPage | None:
+        from seryvon.crawler.safety import assert_url_safe
+
         t0 = time.monotonic()
         try:
+            # Defence in depth: re-validate before driving a real browser to the
+            # URL (SIC doc 10 §2/§5). UnsafeUrlError is caught below -> heuristic.
+            await assert_url_safe(url)
             async with async_playwright() as pw:
                 browser = await pw.chromium.launch(headless=True)
                 try:
