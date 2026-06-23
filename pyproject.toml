@@ -97,7 +97,7 @@ disallow_untyped_defs = true
 files = ["src/seryvon"]
 
 [[tool.mypy.overrides]]
-module = ["selectolax.*", "celery.*", "vcr.*", "protego.*", "boto3.*", "botocore.*"]
+module = ["selectolax.*", "celery.*", "vcr.*", "protego.*", "boto3.*", "botocore.*", "playwright.*", "weasyprint.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

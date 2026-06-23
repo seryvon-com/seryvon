@@ -71,7 +71,7 @@ def _inject_print_css(html: str) -> str:
     return html.replace(_INJECT_MARKER, _PRINT_CSS + _INJECT_MARKER, 1)
 
 
-def report_to_pdf(report: "AuditReport") -> bytes:
+def report_to_pdf(report: AuditReport) -> bytes:
     """Convert an AuditReport to a PDF byte string.
 
     Raises ``ImportError`` if WeasyPrint is not installed (``pip install 'seryvon[pdf]'``).

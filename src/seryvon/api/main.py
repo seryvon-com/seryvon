@@ -262,11 +262,11 @@ def get_audit_pdf(audit_id: uuid.UUID, session: Session = Depends(get_session)) 
         raise HTTPException(status_code=404, detail="Audit not found")
     try:
         pdf_bytes = report_to_pdf(report)
-    except ImportError:
+    except ImportError as exc:
         raise HTTPException(
             status_code=501,
             detail="PDF export not available — install WeasyPrint: pip install 'seryvon[pdf]'",
-        )
+        ) from exc
     filename = f"seryvon-{report.domain}.pdf"
     return Response(
         content=pdf_bytes,

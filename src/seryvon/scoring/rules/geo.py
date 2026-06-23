@@ -394,7 +394,10 @@ class GeoCitationConfidenceCriterion(Criterion):
 
 @register
 class GeoKnowledgePresenceCriterion(Criterion):
-    """Brand knowledge presence (`geo.knowledge_presence`): % knowledge-mode responses mentioning domain."""
+    """Brand knowledge presence (`geo.knowledge_presence`).
+
+    Fraction of knowledge-mode LLM responses that mention the domain.
+    """
 
     key = "geo.knowledge_presence"
     pillars: ClassVar[list[str]] = ["geo"]
@@ -462,7 +465,10 @@ def _position_score(avg_pos: float) -> float:
 
 @register
 class GeoCitationPositionCriterion(Criterion):
-    """Average citation position (`geo.citation_position`): mean rank when domain is cited by LLMs."""
+    """Average citation position (`geo.citation_position`).
+
+    Mean rank when the domain is cited by LLMs (lower is better).
+    """
 
     key = "geo.citation_position"
     pillars: ClassVar[list[str]] = ["geo"]

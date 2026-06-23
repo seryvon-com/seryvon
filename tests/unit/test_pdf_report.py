@@ -9,15 +9,17 @@
 
 from __future__ import annotations
 
+import datetime
 import uuid
-from datetime import datetime, timezone
 
 import pytest
 
 from seryvon.models.report import AuditReport
 
 # Skip the whole module if WeasyPrint is not installed.
-weasyprint = pytest.importorskip("weasyprint", reason="WeasyPrint not installed (pip install 'seryvon[pdf]')")
+weasyprint = pytest.importorskip(
+    "weasyprint", reason="WeasyPrint not installed (pip install 'seryvon[pdf]')"
+)
 
 
 def _minimal_report() -> AuditReport:
@@ -31,8 +33,8 @@ def _minimal_report() -> AuditReport:
         criteria=[],
         issues=[],
         active_connectors=[],
-        started_at=datetime(2026, 6, 23, 12, 0, 0, tzinfo=timezone.utc),
-        finished_at=datetime(2026, 6, 23, 12, 0, 30, tzinfo=timezone.utc),
+        started_at=datetime(2026, 6, 23, 12, 0, 0, tzinfo=datetime.UTC),
+        finished_at=datetime(2026, 6, 23, 12, 0, 30, tzinfo=datetime.UTC),
     )
 
 
@@ -64,8 +66,9 @@ def test_report_to_pdf_importerror_without_weasyprint(monkeypatch: pytest.Monkey
 
     monkeypatch.setattr(builtins, "__import__", _block_weasyprint)
 
-    from seryvon.reporting import pdf_report
     import importlib
+
+    from seryvon.reporting import pdf_report
 
     importlib.reload(pdf_report)
 
