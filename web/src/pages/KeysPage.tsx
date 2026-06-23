@@ -12,16 +12,21 @@ const HELP_URLS: Record<string, string> = {
   dataforseo: "https://app.dataforseo.com/register",
   opr: "https://www.domcop.com/openpagerank/documentation",
   serp: "https://serpapi.com/manage-api-key",
+  gsc: "https://developers.google.com/search/apis/indexing-api/v3/prereqs",
   perplexity: "https://www.perplexity.ai/settings/api",
   openai: "https://platform.openai.com/api-keys",
   anthropic: "https://console.anthropic.com/settings/keys",
   gemini: "https://aistudio.google.com/app/apikey",
 };
 
+// Connectors whose value is a JSON blob — rendered as a textarea instead of password input.
+const JSON_CONNECTORS = new Set(["gsc"]);
+
 const CONNECTOR_GROUPS: { groupKey: string; connectors: string[] }[] = [
   { groupKey: "performance", connectors: ["psi"] },
   { groupKey: "authority",   connectors: ["dataforseo", "opr"] },
   { groupKey: "serp",        connectors: ["serp"] },
+  { groupKey: "gsc",         connectors: ["gsc"] },
   { groupKey: "llm",         connectors: ["perplexity", "openai", "anthropic", "gemini"] },
 ];
 
@@ -74,6 +79,7 @@ export function KeysPage() {
                     connector={connector}
                     entry={keyMap.get(connector) ?? null}
                     noEncryption={noEncryption}
+                    isJson={JSON_CONNECTORS.has(connector)}
                     t={t}
                     onSaved={reload}
                     onDeleted={reload}
@@ -92,6 +98,7 @@ function ConnectorCard({
   connector,
   entry,
   noEncryption,
+  isJson = false,
   t,
   onSaved,
   onDeleted,
@@ -99,6 +106,7 @@ function ConnectorCard({
   connector: string;
   entry: KeyEntry | null;
   noEncryption: boolean;
+  isJson?: boolean;
   t: ReturnType<typeof useI18n>["t"];
   onSaved: () => void;
   onDeleted: () => void;
@@ -184,16 +192,28 @@ function ConnectorCard({
       )}
 
       {!noEncryption && (
-        <div className="key-input-row">
-          <input
-            className="compare-input"
-            type="password"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            placeholder={t.keys.placeholder}
-            autoComplete="off"
-          />
+        <div className="key-input-row" style={isJson ? { flexDirection: "column", alignItems: "stretch" } : {}}>
+          {isJson ? (
+            <textarea
+              className="compare-input"
+              rows={4}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={t.keys.placeholderJson}
+              autoComplete="off"
+              style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", resize: "vertical" }}
+            />
+          ) : (
+            <input
+              className="compare-input"
+              type="password"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              placeholder={t.keys.placeholder}
+              autoComplete="off"
+            />
+          )}
           <button
             className="btn"
             onClick={handleSave}

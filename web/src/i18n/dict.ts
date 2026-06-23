@@ -217,6 +217,7 @@ export interface Dict {
     saving: string;
     delete: string;
     placeholder: string;
+    placeholderJson: string;
     source: Record<KeySource, string>;
     connectorDesc: Record<string, string>;
     connectorDeprecated: Record<string, string>;

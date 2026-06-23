@@ -276,6 +276,7 @@ export const en: Dict = {
     saving: "Saving…",
     delete: "Delete",
     placeholder: "Paste your API key…",
+    placeholderJson: "Paste service account JSON…",
     source: {
       db: "Stored",
       env: "Env var",
@@ -286,6 +287,7 @@ export const en: Dict = {
       dataforseo: "DataForSEO — domain authority (0–100) + referring domains",
       opr: "OpenPageRank — domain authority score (deprecated)",
       serp: "SerpAPI — AI Overview presence across Google SERP queries (gso.ai_overview_presence)",
+      gsc: "Google Search Console — rank tracking (avg position, CTR, clicks) via service account JSON",
       perplexity: "Perplexity AI — LLM citation tracking",
       openai: "OpenAI — LLM citation tracking (GPT)",
       anthropic: "Anthropic — LLM citation tracking (Claude)",
@@ -295,6 +297,7 @@ export const en: Dict = {
       performance: "Performance",
       authority: "Authority & Backlinks",
       serp: "SERP / AI Overviews",
+      gsc: "Rank Tracking",
       llm: "LLM Citation Tracking",
     },
     connectorDeprecated: {

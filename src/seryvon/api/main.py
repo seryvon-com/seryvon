@@ -448,6 +448,29 @@ async def _validate_key(connector: str, value: str) -> None:
                 status_code=422, detail=f"SerpAPI: network error — {exc}"
             ) from exc
 
+    elif connector == "gsc":
+        import json as _json
+
+        try:
+            info = _json.loads(value)
+        except _json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=422, detail="GSC: value must be a valid service account JSON"
+            ) from exc
+        required = ("type", "client_email", "private_key")
+        missing = [k for k in required if not info.get(k)]
+        if missing:
+            fields = ", ".join(missing)
+            raise HTTPException(
+                status_code=422,
+                detail=f"GSC: missing required fields in service account JSON: {fields}",
+            )
+        if info.get("type") != "service_account":
+            raise HTTPException(
+                status_code=422,
+                detail='GSC: "type" must be "service_account"',
+            )
+
 
 @app.put("/keys/{connector}", response_model=KeyOut)
 async def upsert_key(
