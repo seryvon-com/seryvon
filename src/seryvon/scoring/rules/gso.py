@@ -220,7 +220,7 @@ class GsoAiOverviewCriterion(Criterion):
     """AI Overview presence (`gso.ai_overview_presence`) — SERP API BYOK (M9)."""
 
     key = "gso.ai_overview_presence"
-    pillars: ClassVar[list[str]] = ["gso"]
+    pillars: ClassVar[list[str]] = ["gso", "geo"]
     weight = 1.5
 
     def evaluate(

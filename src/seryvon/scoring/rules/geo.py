@@ -390,3 +390,101 @@ class GeoCitationConfidenceCriterion(Criterion):
             evidence={"source": "M4 citation tracking"},
             weight=self.weight,
         )
+
+
+@register
+class GeoKnowledgePresenceCriterion(Criterion):
+    """Brand knowledge presence (`geo.knowledge_presence`): % knowledge-mode responses mentioning domain."""
+
+    key = "geo.knowledge_presence"
+    pillars: ClassVar[list[str]] = ["geo"]
+    weight = 0.8
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        cm = signals.external.citation_metrics
+        if cm is None or cm.knowledge_presence is None:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, t("reason.citation_unavailable")
+            )
+        score = round(cm.knowledge_presence * 100, 2)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={"knowledge_presence": cm.knowledge_presence, "engines": cm.engines},
+            score=score,
+            status=status_from_score(score),
+            threshold={"formula": "% réponses knowledge citant la marque"},
+            explanation=t("expl.knowledge_presence", score=score),
+            evidence={"source": "M4 citation tracking (knowledge mode)"},
+            weight=self.weight,
+        )
+
+
+@register
+class GeoShareOfVoiceCriterion(Criterion):
+    """Citation share of voice (`geo.share_of_voice`): domain citations / (domain + competitors).
+
+    `not_measured` unless competitors were declared when running citation tracking.
+    """
+
+    key = "geo.share_of_voice"
+    pillars: ClassVar[list[str]] = ["geo"]
+    weight = 1.0
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        cm = signals.external.citation_metrics
+        if cm is None or cm.share_of_voice is None:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, t("reason.sov_no_competitors")
+            )
+        score = round(cm.share_of_voice * 100, 2)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={"share_of_voice": cm.share_of_voice},
+            score=score,
+            status=status_from_score(score),
+            threshold={"formula": "citations domaine / (domaine + concurrents)"},
+            explanation=t("expl.share_of_voice", score=score),
+            evidence={"source": "M4 citation tracking"},
+            weight=self.weight,
+        )
+
+
+# Scoring function for average citation position: position 1 → 100, each step -20, floor 0.
+def _position_score(avg_pos: float) -> float:
+    return round(max(0.0, 100.0 - (avg_pos - 1.0) * 20.0), 2)
+
+
+@register
+class GeoCitationPositionCriterion(Criterion):
+    """Average citation position (`geo.citation_position`): mean rank when domain is cited by LLMs."""
+
+    key = "geo.citation_position"
+    pillars: ClassVar[list[str]] = ["geo"]
+    weight = 0.8
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        cm = signals.external.citation_metrics
+        if cm is None or cm.average_position is None:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, t("reason.citation_unavailable")
+            )
+        score = _position_score(cm.average_position)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={"average_position": cm.average_position},
+            score=score,
+            status=status_from_score(score),
+            threshold={"formula": "position 1 = 100 ; −20 par rang ; plancher 0"},
+            explanation=t("expl.citation_position", position=cm.average_position, score=score),
+            evidence={"source": "M4 citation tracking"},
+            weight=self.weight,
+        )

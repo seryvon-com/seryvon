@@ -66,6 +66,9 @@ _REC_EN: dict[str, str] = {
     "geo.citation_rate": "Earn generative citations (citable reference content).",
     "geo.mention_rate": "Strengthen brand awareness (mentions, editorial presence).",
     "geo.citation_confidence": "Stabilize citation (consistent canonical content, authority).",
+    "geo.knowledge_presence": "Build brand awareness in LLM knowledge bases (Wikipedia, Wikidata, authoritative mentions).",
+    "geo.share_of_voice": "Increase citation share vs competitors (more citable, authoritative content).",
+    "geo.citation_position": "Improve citation rank (be cited first, not buried in source lists).",
     "aeo.llm_citation": "Optimize for answer engines (direct answers, reliable sources).",
     "aso.mcp_readiness": "Expose a WebMCP server (registerTool / toolname).",
     "aso.potential_actions": "Add executable potentialAction (Buy/Order…).",
@@ -130,6 +133,9 @@ _REC_FR: dict[str, str] = {
     "geo.citation_rate": "Gagner des citations génératives (contenu de référence citable).",
     "geo.mention_rate": "Renforcer la notoriété de marque (mentions, présence éditoriale).",
     "geo.citation_confidence": "Stabiliser la citation (contenu canonique constant, autorité).",
+    "geo.knowledge_presence": "Développer la notoriété de marque dans les bases LLM (Wikipedia, Wikidata, mentions faisant autorité).",
+    "geo.share_of_voice": "Augmenter la part de voix vs concurrents (contenu plus citable et plus autoritaire).",
+    "geo.citation_position": "Améliorer le rang de citation (être cité en premier, pas enfoui dans les sources).",
     "aeo.llm_citation": "Optimiser pour les answer engines (réponses directes, sources fiables).",
     "aso.mcp_readiness": "Exposer un serveur WebMCP (registerTool / toolname).",
     "aso.potential_actions": "Ajouter des potentialAction exécutables (Buy/Order…).",
@@ -178,6 +184,7 @@ _REASON_EN: dict[str, str] = {
     "brand_not_measured": "Brand coherence not measured (Wikidata entity absent or disabled).",
     "agent_access_not_evaluated": "Agent bot access not evaluated.",
     "citation_unavailable": "LLM citation tracking unavailable (BYOK API key required).",
+    "sov_no_competitors": "Share of voice unavailable — no competitors declared in citation tracking run.",
     "gsc_not_configured": (
         "Google Search Console not configured"
         " (GSC_SERVICE_ACCOUNT missing or property inaccessible)."
@@ -213,6 +220,7 @@ _REASON_FR: dict[str, str] = {
     ),
     "agent_access_not_evaluated": "Accès des bots d'agents non évalué.",
     "citation_unavailable": "Citation tracking LLM non disponible (clé API BYOK requise).",
+    "sov_no_competitors": "Part de voix non disponible — aucun concurrent déclaré lors du citation tracking.",
     "gsc_not_configured": (
         "Google Search Console non configuré"
         " (GSC_SERVICE_ACCOUNT absent ou propriété inaccessible)."
@@ -269,6 +277,9 @@ _EXPL_EN: dict[str, str] = {
     ),
     "mention_rate": "Brand mention rate: {score}%.",
     "citation_confidence": "Citation stability: {score}% over {reps} repetition(s).",
+    "knowledge_presence": "Brand knowledge presence: {score}% (knowledge-mode responses).",
+    "share_of_voice": "Citation share of voice: {score}% (domain vs competitors).",
+    "citation_position": "Average citation position: {position:.1f} → score {score}/100.",
     "webmcp_full": "WebMCP detected (agents can call tools).",
     "webmcp_partial": "Partial WebMCP signals.",
     "webmcp_none": "No WebMCP signal.",
@@ -335,6 +346,9 @@ _EXPL_FR: dict[str, str] = {
     ),
     "mention_rate": "Taux de mention de marque : {score}%.",
     "citation_confidence": "Stabilité de citation : {score}% sur {reps} répétition(s).",
+    "knowledge_presence": "Présence de marque (mode knowledge) : {score}%.",
+    "share_of_voice": "Part de voix de citation : {score}% (domaine vs concurrents).",
+    "citation_position": "Position de citation moyenne : {position:.1f} → score {score}/100.",
     "webmcp_full": "WebMCP détecté (agents peuvent appeler des outils).",
     "webmcp_partial": "Signaux WebMCP partiels.",
     "webmcp_none": "Aucun signal WebMCP.",

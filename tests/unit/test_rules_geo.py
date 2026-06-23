@@ -13,13 +13,17 @@ from seryvon.models.signals import CitationMetrics, ExternalSignals, PageSignals
 from seryvon.scoring.rules.geo import (
     GeoAuthorsCriterion,
     GeoCitationConfidenceCriterion,
+    GeoCitationPositionCriterion,
     GeoCitationRateCriterion,
     GeoCrossPlatformCriterion,
     GeoEntityDensityCriterion,
     GeoFreshnessCriterion,
+    GeoKnowledgePresenceCriterion,
     GeoMentionRateCriterion,
     GeoNoiseRatioCriterion,
     GeoPrimarySourcesCriterion,
+    GeoShareOfVoiceCriterion,
+    _position_score,
 )
 
 
@@ -132,3 +136,52 @@ def test_citation_confidence_scored_from_metrics() -> None:
     assert result.score == 80.0
     assert result.weight == 0.8
     assert GeoCitationConfidenceCriterion().evaluate(_bundle(_page())).status is Status.NOT_MEASURED
+
+
+def test_knowledge_presence_scored() -> None:
+    bundle = _with_metrics(knowledge_presence=0.7)
+    result = GeoKnowledgePresenceCriterion().evaluate(bundle)
+    assert result.score == 70.0
+    assert result.weight == 0.8
+    assert result.pillars == ["geo"]
+
+
+def test_knowledge_presence_not_measured_when_none() -> None:
+    assert GeoKnowledgePresenceCriterion().evaluate(_bundle(_page())).status is Status.NOT_MEASURED
+    bundle = _with_metrics()  # knowledge_presence defaults to None
+    assert GeoKnowledgePresenceCriterion().evaluate(bundle).status is Status.NOT_MEASURED
+
+
+def test_share_of_voice_scored() -> None:
+    bundle = _with_metrics(share_of_voice=0.55)
+    result = GeoShareOfVoiceCriterion().evaluate(bundle)
+    assert result.score == 55.0
+    assert result.weight == 1.0
+
+
+def test_share_of_voice_not_measured_without_competitors() -> None:
+    assert GeoShareOfVoiceCriterion().evaluate(_bundle(_page())).status is Status.NOT_MEASURED
+    bundle = _with_metrics()  # share_of_voice defaults to None
+    assert GeoShareOfVoiceCriterion().evaluate(bundle).status is Status.NOT_MEASURED
+
+
+def test_citation_position_score_formula() -> None:
+    assert _position_score(1.0) == 100.0
+    assert _position_score(2.0) == 80.0
+    assert _position_score(3.0) == 60.0
+    assert _position_score(6.0) == 0.0
+    assert _position_score(7.0) == 0.0  # clamped at 0
+
+
+def test_citation_position_criterion_scored() -> None:
+    bundle = _with_metrics(average_position=2.0)
+    result = GeoCitationPositionCriterion().evaluate(bundle)
+    assert result.score == 80.0
+    assert result.weight == 0.8
+    assert result.pillars == ["geo"]
+
+
+def test_citation_position_not_measured_when_none() -> None:
+    assert GeoCitationPositionCriterion().evaluate(_bundle(_page())).status is Status.NOT_MEASURED
+    bundle = _with_metrics()  # average_position defaults to None
+    assert GeoCitationPositionCriterion().evaluate(bundle).status is Status.NOT_MEASURED
