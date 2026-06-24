@@ -361,10 +361,8 @@ async def _validate_key(connector: str, value: str) -> None:
                     status_code=422,
                     detail=f"DataForSEO: unexpected response {r.status_code}",
                 )
-        except httpx.HTTPError as exc:
-            raise HTTPException(
-                status_code=422, detail=f"DataForSEO: network error — {exc}"
-            ) from exc
+        except httpx.HTTPError:
+            pass  # cannot reach DataForSEO — store key, let audit surface the error
 
     elif connector == "psi":
         # Auth-only probe: a minimal PSI request that resolves in < 3 s and
@@ -385,8 +383,11 @@ async def _validate_key(connector: str, value: str) -> None:
                 raise HTTPException(
                     status_code=422, detail=f"PSI: unexpected response {r.status_code}"
                 )
-        except httpx.HTTPError as exc:
-            raise HTTPException(status_code=422, detail=f"PSI: network error — {exc}") from exc
+        except httpx.HTTPError:
+            # Network unreachable from this environment (Docker, firewall, …).
+            # We cannot prove the key is invalid, so we store it and let the
+            # real PSI call surface the error at audit time.
+            pass
 
     elif connector == "opr":
         try:
@@ -402,8 +403,8 @@ async def _validate_key(connector: str, value: str) -> None:
                 raise HTTPException(
                     status_code=422, detail=f"OPR: unexpected response {r.status_code}"
                 )
-        except httpx.HTTPError as exc:
-            raise HTTPException(status_code=422, detail=f"OPR: network error — {exc}") from exc
+        except httpx.HTTPError:
+            pass  # cannot reach OPR — store key, let audit surface the error
 
     elif connector == "openai":
         try:
@@ -418,8 +419,8 @@ async def _validate_key(connector: str, value: str) -> None:
                 raise HTTPException(
                     status_code=422, detail=f"OpenAI: unexpected response {r.status_code}"
                 )
-        except httpx.HTTPError as exc:
-            raise HTTPException(status_code=422, detail=f"OpenAI: network error — {exc}") from exc
+        except httpx.HTTPError:
+            pass  # cannot reach OpenAI — store key, let audit surface the error
 
     elif connector == "anthropic":
         try:
@@ -434,10 +435,8 @@ async def _validate_key(connector: str, value: str) -> None:
                 raise HTTPException(
                     status_code=422, detail=f"Anthropic: unexpected response {r.status_code}"
                 )
-        except httpx.HTTPError as exc:
-            raise HTTPException(
-                status_code=422, detail=f"Anthropic: network error — {exc}"
-            ) from exc
+        except httpx.HTTPError:
+            pass  # cannot reach Anthropic — store key, let audit surface the error
 
     elif connector == "gemini":
         try:
@@ -452,8 +451,8 @@ async def _validate_key(connector: str, value: str) -> None:
                 raise HTTPException(
                     status_code=422, detail=f"Gemini: unexpected response {r.status_code}"
                 )
-        except httpx.HTTPError as exc:
-            raise HTTPException(status_code=422, detail=f"Gemini: network error — {exc}") from exc
+        except httpx.HTTPError:
+            pass  # cannot reach Gemini — store key, let audit surface the error
 
     elif connector == "perplexity":
         try:
@@ -468,10 +467,8 @@ async def _validate_key(connector: str, value: str) -> None:
                 raise HTTPException(
                     status_code=422, detail=f"Perplexity: unexpected response {r.status_code}"
                 )
-        except httpx.HTTPError as exc:
-            raise HTTPException(
-                status_code=422, detail=f"Perplexity: network error — {exc}"
-            ) from exc
+        except httpx.HTTPError:
+            pass  # cannot reach Perplexity — store key, let audit surface the error
 
     elif connector == "serp":
         try:
@@ -486,10 +483,8 @@ async def _validate_key(connector: str, value: str) -> None:
                 raise HTTPException(
                     status_code=422, detail=f"SerpAPI: unexpected response {r.status_code}"
                 )
-        except httpx.HTTPError as exc:
-            raise HTTPException(
-                status_code=422, detail=f"SerpAPI: network error — {exc}"
-            ) from exc
+        except httpx.HTTPError:
+            pass  # cannot reach SerpAPI — store key, let audit surface the error
 
     elif connector == "gsc":
         import json as _json
