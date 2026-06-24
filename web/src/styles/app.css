@@ -530,6 +530,35 @@
   color: var(--c-text-faint);
   margin-top: 2px;
 }
+.issue-explanation {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  margin-top: 4px;
+  line-height: 1.45;
+}
+.issue-affected-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0 2px 36px;
+}
+.issue-page-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--c-text-muted);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.issue-page-more {
+  color: var(--c-text-faint);
+  border-style: dashed;
+}
 .issue .grow {
   flex: 1;
   min-width: 0;

@@ -61,6 +61,8 @@ class Issue(BaseModel):
     priority_score: float
     priority_bucket: str  # P1 / P2 / P3 / P4
     recommendation: str = ""
+    explanation: str = ""   # what the tool found on the audited site
+    raw_value: str = ""     # measured value that triggered the issue
     affected_pages: list[str] = Field(default_factory=list)
     affected_pillars: int = 0  # informational only (not a priority multiplier, review §13)
 

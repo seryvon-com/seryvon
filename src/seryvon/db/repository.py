@@ -113,6 +113,8 @@ def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
             priority_score=i.priority_score,
             priority_bucket=i.priority_bucket,
             recommendation=i.recommendation,
+            explanation=i.explanation,
+            raw_value=i.raw_value,
             affected_pages=list(i.affected_pages),
         )
         for i in report.issues
@@ -179,6 +181,8 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
             priority_score=row.priority_score,
             priority_bucket=row.priority_bucket,
             recommendation=row.recommendation,
+            explanation=row.explanation,
+            raw_value=row.raw_value,
             affected_pages=list(row.affected_pages),
         )
         for row in sorted(audit.issues, key=lambda r: (-r.priority_score, r.criterion_key))

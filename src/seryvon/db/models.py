@@ -191,6 +191,8 @@ class IssueRow(Base):
     priority_score: Mapped[float] = mapped_column(Float, nullable=False)
     priority_bucket: Mapped[str] = mapped_column(String(4), nullable=False)
     recommendation: Mapped[str] = mapped_column(Text, default="")
+    explanation: Mapped[str] = mapped_column(Text, default="")
+    raw_value: Mapped[str] = mapped_column(Text, default="")
     affected_pages: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
 
     audit: Mapped[Audit] = relationship(back_populates="issues")

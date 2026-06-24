@@ -159,6 +159,8 @@ def build_issues(results: list[CriterionResult]) -> list[Issue]:
                 priority_score=priority,
                 priority_bucket=_bucket(priority),
                 recommendation=_recommendation(result.key),
+                explanation=result.explanation,
+                raw_value=str(result.raw_value) if result.raw_value is not None else "",
                 affected_pages=_affected_pages(result),
                 affected_pillars=len(result.pillars),
             )

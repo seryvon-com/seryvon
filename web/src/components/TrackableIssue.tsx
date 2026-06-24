@@ -155,6 +155,9 @@ export function TrackableIssue({
 
         <div className="grow">
           <div className="label">{issue.recommendation || issue.criterion_key}</div>
+          {issue.explanation && (
+            <div className="issue-explanation">{issue.explanation}</div>
+          )}
           <div className="key">{issue.criterion_key}</div>
         </div>
 
@@ -181,6 +184,22 @@ export function TrackableIssue({
           </svg>
         </button>
       </div>
+
+      {/* ── affected pages ── */}
+      {issue.affected_pages.length > 0 && (
+        <div className="issue-affected-pages">
+          {issue.affected_pages.slice(0, 5).map((p) => (
+            <span key={p} className="issue-page-chip" title={p}>
+              {p}
+            </span>
+          ))}
+          {issue.affected_pages.length > 5 && (
+            <span className="issue-page-chip issue-page-more">
+              +{issue.affected_pages.length - 5}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ── bottom strip (done state + proofs) ── */}
       {showBottom && (
