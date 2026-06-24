@@ -7,6 +7,9 @@
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
 """DataForSEO connector — domain authority (dual-endpoint strategy).
 
+Adapted from OpenSEO (Ben Senescu, MIT) — dataforseo/core and rank-tracking
+modules. See NOTICE for the full attribution.
+
 Two endpoints are called in order of preference. Both cost $0.01/req and
 require only standard credits (no $100 Backlinks API deposit needed).
 

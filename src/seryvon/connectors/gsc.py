@@ -7,6 +7,9 @@
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
 """Google Search Console connector (M10 Rank Tracking), free BYOK.
 
+Adapted from OpenSEO (Ben Senescu, MIT) — gsc/searchAnalytics and
+gsc/selfHostedOAuth modules. See NOTICE for the full attribution.
+
 Authentication uses a **service account JSON** (BYOK via `GSC_SERVICE_ACCOUNT`
 env variable). The user grants read-only Search Console access to the service
 account email in their GSC property settings.
