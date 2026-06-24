@@ -30,6 +30,63 @@ def test_health() -> None:
     assert resp.json()["status"] == "ok"
 
 
+# --------------------------------------------------------------------------- #
+# API-key middleware                                                           #
+# --------------------------------------------------------------------------- #
+
+def test_api_key_not_required_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No SERYVON_API_KEY configured → all requests pass through."""
+    monkeypatch.setattr("seryvon.core.config.get_settings.cache_clear", lambda: None)
+    from seryvon.core.config import get_settings
+    get_settings.cache_clear()
+    monkeypatch.setenv("SERYVON_API_KEY", "")
+    get_settings.cache_clear()
+    resp = TestClient(app).get("/health")
+    assert resp.status_code == 200
+
+
+def test_api_key_enforced_when_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    """SERYVON_API_KEY set → request without header returns 401."""
+    from seryvon.core.config import get_settings
+    get_settings.cache_clear()
+    monkeypatch.setenv("SERYVON_API_KEY", "test-secret")
+    get_settings.cache_clear()
+    try:
+        resp = TestClient(app).get("/audits")
+        assert resp.status_code == 401
+    finally:
+        monkeypatch.delenv("SERYVON_API_KEY", raising=False)
+        get_settings.cache_clear()
+
+
+def test_api_key_accepted_with_correct_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Correct X-API-Key header → request is forwarded (not 401)."""
+    from seryvon.core.config import get_settings
+    get_settings.cache_clear()
+    monkeypatch.setenv("SERYVON_API_KEY", "test-secret")
+    get_settings.cache_clear()
+    try:
+        resp = TestClient(app).get("/health", headers={"X-API-Key": "test-secret"})
+        assert resp.status_code == 200
+    finally:
+        monkeypatch.delenv("SERYVON_API_KEY", raising=False)
+        get_settings.cache_clear()
+
+
+def test_health_exempt_from_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """/health is reachable without X-API-Key even when a key is configured."""
+    from seryvon.core.config import get_settings
+    get_settings.cache_clear()
+    monkeypatch.setenv("SERYVON_API_KEY", "test-secret")
+    get_settings.cache_clear()
+    try:
+        resp = TestClient(app).get("/health")
+        assert resp.status_code == 200
+    finally:
+        monkeypatch.delenv("SERYVON_API_KEY", raising=False)
+        get_settings.cache_clear()
+
+
 @pytest.fixture
 def _mock_crawl(monkeypatch: pytest.MonkeyPatch, sample_html: str) -> None:
     async def fake_discover(url: str, **kwargs: object) -> DiscoveryResult:

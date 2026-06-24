@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     user_agent: str = "Seryvon/0.1 (+https://seryvon.com/bot)"
     request_timeout: float = 15.0
 
+    # API authentication. When set, every request (except GET /health) must
+    # carry `X-API-Key: <value>`. Empty (default) => no auth enforced, suitable
+    # for local / docker-compose dev. Set via SERYVON_API_KEY env var.
+    api_key: str = Field(default="", validation_alias="SERYVON_API_KEY")
+
     # BYOK encryption (Fernet). Empty => BYOK features disabled (Phase 0).
     secret_key: str = ""
 

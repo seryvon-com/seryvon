@@ -22,7 +22,7 @@ from datetime import datetime
 from typing import Any
 
 from celery.result import AsyncResult
-from fastapi import Depends, FastAPI, HTTPException, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, HttpUrl
 from sqlalchemy.orm import Session
 
@@ -56,6 +56,27 @@ app = FastAPI(
     version=__version__,
     summary="Deterministic SEO / GEO / GSO / AEO / ASO audit.",
 )
+
+
+@app.middleware("http")
+async def api_key_middleware(request: Request, call_next: Any) -> Any:
+    """Enforce X-API-Key when SERYVON_API_KEY is configured.
+
+    Unauthenticated requests to any route other than GET /health return 401.
+    When SERYVON_API_KEY is empty (default), all requests pass through —
+    suitable for local dev / docker-compose without a reverse proxy.
+    """
+    required = get_settings().api_key
+    if required and request.url.path != "/health":
+        provided = request.headers.get("X-API-Key", "")
+        if provided != required:
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Missing or invalid X-API-Key header"},
+            )
+    return await call_next(request)
 
 
 def get_session() -> Iterator[Session]:
