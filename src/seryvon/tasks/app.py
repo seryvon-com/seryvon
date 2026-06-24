@@ -27,6 +27,7 @@ celery_app = Celery(
     "seryvon",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
+    include=["seryvon.tasks.audit", "seryvon.tasks.citation"],
 )
 
 celery_app.conf.update(
