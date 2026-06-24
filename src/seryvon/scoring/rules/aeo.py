@@ -18,7 +18,7 @@ from typing import Any, ClassVar
 
 from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
-from seryvon.models.enums import status_from_score
+from seryvon.models.enums import Status, status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
 
 # URL/title hints of an "About / editorial transparency" page.
@@ -190,12 +190,38 @@ class AeoComparisonTablesCriterion(Criterion):
             return CriterionResult.not_measured(
                 self.key, self.pillars, self.weight, t("reason.no_pages")
             )
-        present = any(p.tables_count > 0 for p in signals.pages)
-        return _flag(
+        pages_with_tables = [p for p in signals.pages if p.tables_count > 0]
+        present = len(pages_with_tables) > 0
+        # Detect compare pages that exist but have no static <table> (JS-rendered)
+        compare_pages = [
+            p for p in signals.pages
+            if "/compare" in p.url or "/vs-" in p.url or "-vs-" in p.url
+        ]
+        js_only = not present and len(compare_pages) > 0
+        if js_only:
+            explanation = t(
+                "expl.comparison_tables_js",
+                compare_count=len(compare_pages),
+            )
+        elif present:
+            explanation = t(
+                "expl.comparison_tables_present",
+                page_count=len(pages_with_tables),
+            )
+        else:
+            explanation = t("expl.comparison_tables_absent")
+        n_tables = len(pages_with_tables)
+        n_compare = len(compare_pages)
+        return CriterionResult(
             key=self.key,
             pillars=self.pillars,
+            raw_value={"pages_with_tables": n_tables, "compare_pages": n_compare},
+            score=100.0 if present else 0.0,
+            status=Status.OK if present else Status.CRITICAL,
+            threshold={"required": "≥1 page with <table>"},
+            explanation=explanation,
+            evidence={"source": "HTML <table> tags + /compare URL pattern"},
             weight=self.weight,
-            present=present,
         )
 
 
