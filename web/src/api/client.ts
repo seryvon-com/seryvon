@@ -53,6 +53,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<{ status: string; version: string }>("/health"),
 
+  /** Indicative cost breakdown for one audit based on active BYOK keys. */
+  getAuditCostEstimate: () =>
+    request<import("./types").AuditCostEstimate>("/audits/cost-estimate"),
+
   /** Submit an audit (async 202). Returns a task to poll with getAuditTask(). */
   createAudit: (url: string, locale: Locale) =>
     request<AuditTask>("/audits", {

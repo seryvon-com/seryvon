@@ -250,6 +250,16 @@ def health() -> dict[str, str]:
     return {"status": "ok", "version": __version__}
 
 
+@app.get("/audits/cost-estimate")
+def audit_cost_estimate(session: Session = Depends(get_session)) -> dict[str, object]:
+    """Return an indicative cost breakdown for one audit based on active BYOK keys."""
+    from seryvon.core.audit_cost import estimate_audit_cost
+    from seryvon.core.settings_resolver import resolve_settings
+
+    settings = resolve_settings(session)
+    return estimate_audit_cost(settings).as_dict()
+
+
 @app.post("/audits", status_code=202, response_model=AuditTaskOut)
 def create_audit(request: AuditRequest, response: Response) -> AuditTaskOut:
     """Submit an audit asynchronously via Celery CPU queue. Poll /audits/tasks/{task_id}."""

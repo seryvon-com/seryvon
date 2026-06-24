@@ -5,6 +5,22 @@
 // TypeScript mirror of the FastAPI/Pydantic response models (src/seryvon/models/
 // report.py). Kept hand-written and minimal until an OpenAPI codegen step lands.
 
+export interface CostLine {
+  connector: string;
+  active: boolean;
+  calls: number;
+  unit_usd: number;
+  total_usd: number;
+  note: string;
+}
+
+export interface AuditCostEstimate {
+  currency: string;
+  total_usd: number;
+  indicative: boolean;
+  lines: CostLine[];
+}
+
 export type Pillar = "seo" | "geo" | "gso" | "aeo" | "aso";
 
 export const PILLARS: Pillar[] = ["seo", "geo", "gso", "aeo", "aso"];

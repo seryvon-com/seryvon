@@ -41,6 +41,9 @@ export const fr: Dict = {
     errorBackend: "Échec de l'audit — le backend FastAPI est-il démarré ?",
     errorStatus: (status, message) => `Échec de l'audit (${status}) : ${message}`,
     progress: "Crawl, scoring et assemblage du rapport en cours…",
+    queuedWorker: "En attente d'un worker — le worker Celery est-il démarré ?",
+    costFree: "Coût estimé : gratuit (aucun connecteur payant configuré)",
+    costEstimate: (usd) => `Coût estimé : ~${usd.toFixed(3)} $ par audit (indicatif)`,
   },
 
   report: {

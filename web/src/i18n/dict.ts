@@ -70,6 +70,9 @@ export interface Dict {
     errorBackend: string;
     errorStatus: (status: number, message: string) => string;
     progress: string;
+    queuedWorker: string;
+    costFree: string;
+    costEstimate: (usd: number) => string;
   };
 
   report: {

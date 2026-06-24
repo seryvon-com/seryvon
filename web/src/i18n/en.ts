@@ -41,6 +41,9 @@ export const en: Dict = {
     errorBackend: "Audit failed — is the FastAPI backend running?",
     errorStatus: (status, message) => `Audit failed (${status}): ${message}`,
     progress: "Crawling, scoring and assembling the report…",
+    queuedWorker: "Queued — waiting for a worker (is the Celery worker running?)",
+    costFree: "Estimated cost: free (no paid connectors configured)",
+    costEstimate: (usd) => `Estimated cost: ~$${usd.toFixed(3)} per audit (indicative)`,
   },
 
   report: {

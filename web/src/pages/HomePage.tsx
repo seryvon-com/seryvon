@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
+import type { AuditCostEstimate } from "../api/types";
 import { AppShell } from "../components/AppShell";
 import { useI18n } from "../i18n";
 
@@ -14,6 +15,8 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [auditLogs, setAuditLogs] = useState<string[]>([]);
+  const [taskStatus, setTaskStatus] = useState<string>("pending");
+  const [costEstimate, setCostEstimate] = useState<AuditCostEstimate | null>(null);
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef<number>(0);
@@ -30,6 +33,10 @@ export function HomePage() {
   }
 
   useEffect(() => {
+    api.getAuditCostEstimate().then(setCostEstimate).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!taskId) return;
     pollStartRef.current = Date.now();
     intervalRef.current = setInterval(() => {
@@ -40,6 +47,7 @@ export function HomePage() {
       api
         .getAuditTask(taskId)
         .then((status) => {
+          setTaskStatus(status.status);
           if (status.logs?.length) setAuditLogs(status.logs);
           if (status.status === "done" && status.audit_id) {
             if (intervalRef.current) clearInterval(intervalRef.current);
@@ -64,6 +72,7 @@ export function HomePage() {
     setRunning(true);
     setError(null);
     setAuditLogs([]);
+    setTaskStatus("pending");
     try {
       let normalizedUrl = url.trim();
       if (!normalizedUrl.match(/^https?:\/\//)) {
@@ -103,6 +112,14 @@ export function HomePage() {
           </button>
         </form>
 
+        {costEstimate && (
+          <div className="cost-estimate-badge">
+            {costEstimate.total_usd === 0
+              ? t.home.costFree
+              : t.home.costEstimate(costEstimate.total_usd)}
+          </div>
+        )}
+
         {running && (
           <div className="audit-progress" role="status" aria-live="polite">
             <div className="bar">
@@ -120,7 +137,9 @@ export function HomePage() {
               </div>
             ))}
             {running && auditLogs.length === 0 && (
-              <div className="audit-log-line audit-log-waiting">Connecting to backend…</div>
+              <div className="audit-log-line audit-log-waiting">
+                {taskStatus === "pending" ? t.home.queuedWorker : "Connecting to backend…"}
+              </div>
             )}
           </div>
         )}

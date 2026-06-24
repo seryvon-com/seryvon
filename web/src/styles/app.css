@@ -1138,6 +1138,12 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+.cost-estimate-badge {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: right;
+}
 .audit-progress {
   margin-top: 20px;
 }
