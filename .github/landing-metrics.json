@@ -1,0 +1,69 @@
+{
+  "stats": {
+    "testsPassing": "401",
+    "testCoverage": "87%",
+    "mypyStrictErrors": "0",
+    "varianceOnRerun": "<2%",
+    "currentRelease": "v1.0-rc",
+    "pillarsUnified": "5",
+    "auditDuration": "~4min",
+    "ssrfGuard": "SSRF"
+  },
+  "roadmap": {
+    "titleEn": "Five phases complete. Public launch imminent.",
+    "titleFr": "Cinq phases livrees. Publication imminente.",
+    "subEn": "The full open-core engine - all five pillars, React UI, i18n, BYOK, SSRF guard - is written, tested and hardened. One outstanding item before v1.0: API auth middleware for public exposure.",
+    "subFr": "Le moteur open core complet - cinq piliers, UI React, i18n, BYOK, garde SSRF - est ecrit, teste et durci. Un seul point restant avant v1.0: middleware d'auth API pour exposition publique."
+  },
+  "milestones": [
+    {
+      "ver": "v0.1",
+      "labelEn": "SEO audit, CLI, JSON/HTML export",
+      "labelFr": "Audit SEO, CLI, exports JSON/HTML",
+      "done": true,
+      "current": false
+    },
+    {
+      "ver": "v0.2",
+      "labelEn": "Five pillars on-page - ASO static included, 4 export formats",
+      "labelFr": "Cinq piliers on-page - ASO statique inclus, 4 formats d'export",
+      "done": true,
+      "current": false
+    },
+    {
+      "ver": "v0.3",
+      "labelEn": "LLM citation tracking multi-engine (BYOK)",
+      "labelFr": "Citation tracking LLM multi-moteurs (BYOK)",
+      "done": true,
+      "current": false
+    },
+    {
+      "ver": "v0.4",
+      "labelEn": "Measurement profile + comparison M6",
+      "labelFr": "Profil de mesure + comparaison M6",
+      "done": true,
+      "current": false
+    },
+    {
+      "ver": "v1.0-rc",
+      "labelEn": "React UI, EN/FR, full BYOK, SSRF guard - 401 tests, 87% coverage",
+      "labelFr": "UI React, EN/FR, BYOK complet, garde SSRF - 401 tests, 87 % couverture",
+      "done": true,
+      "current": true
+    },
+    {
+      "ver": "v1.0",
+      "labelEn": "Public OSS release - API auth + git history cleanup",
+      "labelFr": "Publication OSS publique - auth API + nettoyage historique git",
+      "done": false,
+      "current": false
+    },
+    {
+      "ver": "Cloud",
+      "labelEn": "Operated offering - monitoring, history, multi-user, white-label",
+      "labelFr": "Offre operee - monitoring, historisation, multi-user, marque blanche",
+      "done": false,
+      "current": false
+    }
+  ]
+}
