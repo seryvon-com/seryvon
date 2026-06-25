@@ -207,6 +207,37 @@ def test_citations_requires_key(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "LLM" in result.stdout
 
 
+def test_compare_outputs_summary() -> None:
+    """compare runs two audits and prints a comparison summary."""
+    result = runner.invoke(
+        app, ["compare", "https://example.com", "https://competitor.com"]
+    )
+    assert result.exit_code == 0
+    assert "Comparaison" in result.stdout
+    assert "Par pilier" in result.stdout
+
+
+def test_compare_invalid_mode() -> None:
+    result = runner.invoke(
+        app, ["compare", "https://example.com", "https://competitor.com", "--mode", "bogus"]
+    )
+    assert result.exit_code == 1
+    assert "Mode invalide" in result.stdout
+
+
+def test_compare_writes_json_output(tmp_path: Path) -> None:
+    out = tmp_path / "compare.json"
+    result = runner.invoke(
+        app,
+        ["compare", "https://example.com", "https://competitor.com", "-o", str(out)],
+    )
+    assert result.exit_code == 0
+    assert out.exists()
+    data = json.loads(out.read_text())
+    assert "comparability" in data
+    assert "global_delta" in data
+
+
 def test_citations_real_run_with_fake_connector(monkeypatch: pytest.MonkeyPatch) -> None:
     class _Settings:
         perplexity_api_key = "pk"

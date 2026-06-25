@@ -562,12 +562,127 @@ def _print_citations_summary(payload: dict[str, Any], *, dry_run: bool) -> None:
 
 @app.command()
 def compare(
-    url: Annotated[str, typer.Argument(help="URL de référence.")],
-    competitor: Annotated[str, typer.Argument(help="URL concurrente.")],
+    url: Annotated[str, typer.Argument(help="URL de référence (gauche).")],
+    competitor: Annotated[str, typer.Argument(help="URL à comparer (droite).")],
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", help="Fichier YAML de configuration."),
+    ] = None,
+    mode: Annotated[
+        str,
+        typer.Option(
+            "--mode",
+            "-m",
+            help="Mode de comparaison : strict | intersection | descriptive.",
+        ),
+    ] = "descriptive",
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Fichier JSON de résultat (sinon stdout)."),
+    ] = None,
 ) -> None:
-    """Compare un site à un concurrent. — implémenté en Phase 4 (module M6)."""
-    console.print("[yellow]Commande `compare` prévue en Phase 4 (module M6).[/yellow]")
-    raise typer.Exit(code=2)
+    """Compare deux sites côte à côte (module M6 — comparaison de scorecards).
+
+    Lance un audit complet sur chaque URL puis compare les scorecards selon
+    le mode demandé (descriptive par défaut — toujours autorisé).
+    """
+    from seryvon.scoring.comparison import ComparisonMode, IncomparableError, compare_scorecards
+
+    audit_config = AuditConfig.from_yaml(config) if config else AuditConfig.default()
+
+    try:
+        comparison_mode = ComparisonMode(mode)
+    except ValueError:
+        console.print(f"[red]Mode invalide :[/red] {mode!r}  (strict | intersection | descriptive)")
+        raise typer.Exit(code=1) from None
+
+    console.print(f"[bold]Audit 1 :[/bold] {url}")
+    try:
+        left_report = asyncio.run(run_audit(url, audit_config))
+    except Exception as exc:
+        console.print(f"[red]Échec de l'audit 1 :[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"[bold]Audit 2 :[/bold] {competitor}")
+    try:
+        right_report = asyncio.run(run_audit(competitor, audit_config))
+    except Exception as exc:
+        console.print(f"[red]Échec de l'audit 2 :[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    try:
+        result = compare_scorecards(left_report, right_report, comparison_mode)
+    except IncomparableError as exc:
+        allowed = [m.value for m in exc.allowed_modes]
+        console.print(
+            f"[red]Comparaison impossible en mode {mode!r} :[/red]"
+            f" profils {exc.comparability.value}. Modes autorisés : {allowed}"
+        )
+        raise typer.Exit(code=3) from exc
+
+    if output:
+        output.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+        console.print(f"[green]Résultat écrit :[/green] {output}")
+    else:
+        _print_comparison(left_report.domain, right_report.domain, result)
+
+
+def _print_comparison(left_domain: str, right_domain: str, result: Any) -> None:
+    from rich.text import Text
+
+    def _delta_str(d: float | None) -> Text:
+        if d is None:
+            return Text("—", style="dim")
+        sign = "+" if d >= 0 else ""
+        color = "green" if d > 0 else "red" if d < 0 else "dim"
+        return Text(f"{sign}{d:.1f}", style=color)
+
+    console.print(
+        f"\n[bold]Comparaison[/bold]  {left_domain} vs {right_domain}  "
+        f"· comparabilité : [bold]{result.comparability.value}[/bold]"
+    )
+    if result.recomputed:
+        console.print(
+            f"  [dim]Scores recalculés sur {len(result.common_criteria)} critères communs[/dim]"
+        )
+    if result.profile_differences:
+        console.print(
+            f"  [dim]Différences de profil : {', '.join(result.profile_differences)}[/dim]"
+        )
+
+    # Global summary
+    left_g = "—" if result.left_global is None else f"{result.left_global:.1f}"
+    right_g = "—" if result.right_global is None else f"{result.right_global:.1f}"
+    console.print(f"\n  Score global : {left_g} → {right_g}  Δ ", end="")
+    console.print(_delta_str(result.global_delta))
+
+    # Pillar table
+    if result.pillars:
+        table = Table(title="Par pilier")
+        table.add_column("Pilier")
+        table.add_column(left_domain[:20], justify="right")
+        table.add_column("Δ", justify="right")
+        table.add_column(right_domain[:20], justify="right")
+        for pd in result.pillars:
+            ls = "—" if pd.left_score is None else f"{pd.left_score:.1f}"
+            rs = "—" if pd.right_score is None else f"{pd.right_score:.1f}"
+            table.add_row(pd.pillar.upper(), ls, _delta_str(pd.delta), rs)
+        console.print(table)
+
+    # Top changed criteria
+    changed = [c for c in result.criteria if c.delta is not None and c.delta != 0]
+    changed.sort(key=lambda c: abs(c.delta or 0), reverse=True)
+    if changed:
+        table2 = Table(title=f"Critères les plus impactés (top {min(15, len(changed))})")
+        table2.add_column("Critère")
+        table2.add_column(left_domain[:20], justify="right")
+        table2.add_column("Δ", justify="right")
+        table2.add_column(right_domain[:20], justify="right")
+        for c in changed[:15]:
+            ls = "—" if c.left_score is None else f"{c.left_score:.0f}"
+            rs = "—" if c.right_score is None else f"{c.right_score:.0f}"
+            table2.add_row(c.key, ls, _delta_str(c.delta), rs)
+        console.print(table2)
 
 
 if __name__ == "__main__":
