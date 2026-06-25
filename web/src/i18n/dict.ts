@@ -256,7 +256,13 @@ export interface Dict {
   };
 
   pillar: { measured: string; excluded: string };
-  issue: { effort: (n: number) => string; prio: (n: number) => string };
+  issue: {
+    effort: (n: number) => string;
+    prio: (n: number) => string;
+    crossPlatformHintTitle: string;
+    crossPlatformHintDetection: string;
+    crossPlatformHintPlatforms: string[];
+  };
 
   tracking: {
     markDone: string;

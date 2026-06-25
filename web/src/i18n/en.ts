@@ -377,7 +377,13 @@ export const en: Dict = {
   },
 
   pillar: { measured: "measured", excluded: "excluded" },
-  issue: { effort: (n) => `EFFORT ${n}/3`, prio: (n) => `prio ${n.toFixed(1)}` },
+  issue: {
+    effort: (n) => `EFFORT ${n}/3`,
+    prio: (n) => `prio ${n.toFixed(1)}`,
+    crossPlatformHintTitle: "Recognized platforms",
+    crossPlatformHintDetection: "Detected via outbound links in HTML and sameAs in JSON-LD. Target: ≥4 platforms.",
+    crossPlatformHintPlatforms: ["Twitter / X", "LinkedIn", "Facebook", "Instagram", "YouTube", "GitHub", "TikTok", "Pinterest", "Mastodon"],
+  },
 
   tracking: {
     markDone: "Mark as done",
