@@ -1,6 +1,6 @@
 // Seryvon — report page: load a persisted audit by id (PRISM). AGPL-3.0-or-later.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
@@ -8,6 +8,50 @@ import { AppShell } from "../components/AppShell";
 import { ReportView } from "../components/ReportView";
 import type { AuditReport } from "../api/types";
 import { useI18n } from "../i18n";
+
+function DownloadPdfButton({
+  auditId,
+  domain,
+  label,
+}: {
+  auditId: string;
+  domain: string;
+  label: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const anchorRef = useRef<HTMLAnchorElement>(null);
+
+  async function handleClick() {
+    setBusy(true);
+    try {
+      const resp = await fetch(`/api/audits/${auditId}/report.pdf`, { method: "HEAD" });
+      if (resp.ok && anchorRef.current) {
+        anchorRef.current.click();
+        return;
+      }
+    } catch {
+      // network error — fall through to print
+    } finally {
+      setBusy(false);
+    }
+    window.print();
+  }
+
+  return (
+    <>
+      <a
+        ref={anchorRef}
+        href={`/api/audits/${auditId}/report.pdf`}
+        download={`seryvon-${domain}.pdf`}
+        style={{ display: "none" }}
+        aria-hidden
+      />
+      <button className="btn btn-ghost btn-sm" onClick={handleClick} disabled={busy}>
+        {busy ? "…" : `↓ ${label}`}
+      </button>
+    </>
+  );
+}
 
 export function ReportPage() {
   const { auditId } = useParams<{ auditId: string }>();
@@ -45,13 +89,7 @@ export function ReportPage() {
       {report && (
         <>
           <div className="report-toolbar">
-            <a
-              className="btn btn-ghost btn-sm"
-              href={`/api/audits/${auditId}/report.pdf`}
-              download={`seryvon-${report.domain}.pdf`}
-            >
-              ↓ {t.report.downloadPdf}
-            </a>
+            <DownloadPdfButton auditId={auditId!} domain={report.domain} label={t.report.downloadPdf} />
           </div>
           <ReportView report={report} />
         </>

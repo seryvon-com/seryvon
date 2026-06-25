@@ -1549,3 +1549,56 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Print / Save as PDF ===== */
+@media print {
+  .sidebar,
+  .topbar,
+  .report-toolbar,
+  .filter-chips,
+  .criteria-toolbar,
+  .nav-item,
+  .btn,
+  .btn-ghost {
+    display: none !important;
+  }
+
+  .shell {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  .main-area {
+    height: auto;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .content {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  body {
+    background: #fff;
+    color: #111;
+  }
+
+  .card {
+    border: 1px solid #ddd;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: #fff;
+  }
+
+  .pillars {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Force colors to print */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
