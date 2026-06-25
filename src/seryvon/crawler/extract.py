@@ -89,6 +89,7 @@ _PLATFORM_HOSTS = {
     "tiktok.com": "tiktok",
     "pinterest.com": "pinterest",
     "mastodon": "mastodon",
+    "reddit.com": "reddit",
 }
 
 

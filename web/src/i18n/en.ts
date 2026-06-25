@@ -382,7 +382,7 @@ export const en: Dict = {
     prio: (n) => `prio ${n.toFixed(1)}`,
     crossPlatformHintTitle: "Recognized platforms",
     crossPlatformHintDetection: "Detected via outbound links in HTML and sameAs in JSON-LD. Target: ≥4 platforms.",
-    crossPlatformHintPlatforms: ["Twitter / X", "LinkedIn", "Facebook", "Instagram", "YouTube", "GitHub", "TikTok", "Pinterest", "Mastodon"],
+    crossPlatformHintPlatforms: ["Twitter / X", "LinkedIn", "Facebook", "Instagram", "YouTube", "GitHub", "TikTok", "Pinterest", "Mastodon", "Reddit"],
   },
 
   tracking: {
