@@ -23,6 +23,13 @@ export function ReportView({ report }: { report: AuditReport }) {
   const duration =
     d.kind === "s" ? t.durationSeconds(d.s) : d.kind === "m" ? t.durationMinutes(d.m, d.s) : "—";
 
+  const primarySources = report.criteria.find((c) => c.key === "geo.primary_sources");
+  const rv = primarySources?.raw_value;
+  const pagesCrawled =
+    typeof rv === "object" && rv !== null && "pages" in rv
+      ? (rv as { pages: number }).pages
+      : null;
+
   return (
     <>
       {/* Global score hero */}
@@ -51,6 +58,12 @@ export function ReportView({ report }: { report: AuditReport }) {
             <div className="val">{Math.round(report.coverage * 100)} %</div>
             <div className="cap">{t.report.statCoverage}</div>
           </div>
+          {pagesCrawled != null && (
+            <div>
+              <div className="val">{pagesCrawled}</div>
+              <div className="cap">{t.report.statPages}</div>
+            </div>
+          )}
         </div>
       </div>
 

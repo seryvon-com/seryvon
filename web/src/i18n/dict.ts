@@ -82,6 +82,7 @@ export interface Dict {
     statDuration: string;
     statIssues: string;
     statCoverage: string;
+    statPages: string;
     issuesTitle: string;
     issuesSub: string;
     noIssues: string;

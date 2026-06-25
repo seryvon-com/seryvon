@@ -167,7 +167,9 @@ class GeoPrimarySourcesCriterion(Criterion):
             return CriterionResult.not_measured(
                 self.key, self.pillars, self.weight, t("reason.no_pages")
             )
-        with_sources = sum(1 for p in pages if p.external_link_domains)
+        pages_with = [p.url for p in pages if p.external_link_domains]
+        pages_without = [p.url for p in pages if not p.external_link_domains]
+        with_sources = len(pages_with)
         score = round(with_sources / len(pages) * 100, 2)
         return CriterionResult(
             key=self.key,
@@ -177,7 +179,11 @@ class GeoPrimarySourcesCriterion(Criterion):
             status=status_from_score(score),
             threshold={"min": "≥1 source sortante par page"},
             explanation=t("expl.primary_sources", with_sources=with_sources, total=len(pages)),
-            evidence={"source": "liens sortants"},
+            evidence={
+                "source": "static HTML <a href>",
+                "sample_with_sources": pages_with[:10],
+                "non_conformes": pages_without[:30],
+            },
             weight=self.weight,
         )
 

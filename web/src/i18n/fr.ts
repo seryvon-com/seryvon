@@ -54,6 +54,7 @@ export const fr: Dict = {
     statDuration: "DURÉE",
     statIssues: "PROBLÈMES",
     statCoverage: "COUVERTURE",
+    statPages: "PAGES CRAWLÉES",
     issuesTitle: "Problèmes prioritaires",
     issuesSub: "Priorité calculée : (impact × sévérité) / effort",
     noIssues: "Aucune action prioritaire — tous les critères mesurés sont au vert.",
