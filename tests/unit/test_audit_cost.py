@@ -5,11 +5,7 @@
 
 from __future__ import annotations
 
-import pytest
-
 from seryvon.core.audit_cost import (
-    AuditCostEstimate,
-    ConnectorLine,
     _DATAFORSEO_PER_CALL,
     _SERPAPI_PER_SEARCH,
     _SERPAPI_PROBES,

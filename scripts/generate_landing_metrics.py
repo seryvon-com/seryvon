@@ -93,22 +93,13 @@ def main() -> None:
             str(pytest_summary.get("passed", pytest_summary.get("total", 0))),
         ),
         "testCoverage": env_or(
-            existing_stats,
-            "LANDING_TEST_COVERAGE",
-            "testCoverage",
-            coverage or "0%",
+            existing_stats, "LANDING_TEST_COVERAGE", "testCoverage", coverage or "0%"
         ),
         "mypyStrictErrors": env_or(
-            existing_stats,
-            "LANDING_MYPY_ERRORS",
-            "mypyStrictErrors",
-            "0",
+            existing_stats, "LANDING_MYPY_ERRORS", "mypyStrictErrors", "0"
         ),
         "varianceOnRerun": env_or(
-            existing_stats,
-            "LANDING_VARIANCE",
-            "varianceOnRerun",
-            "<2%",
+            existing_stats, "LANDING_VARIANCE", "varianceOnRerun", "<2%"
         ),
         "currentRelease": env_or(
             existing_stats,
@@ -117,16 +108,10 @@ def main() -> None:
             project_version or existing_stats.get("currentRelease") or "dev",
         ),
         "pillarsUnified": env_or(
-            existing_stats,
-            "LANDING_PILLARS_UNIFIED",
-            "pillarsUnified",
-            "5",
+            existing_stats, "LANDING_PILLARS_UNIFIED", "pillarsUnified", "5"
         ),
         "auditDuration": env_or(
-            existing_stats,
-            "LANDING_AUDIT_DURATION",
-            "auditDuration",
-            "~4min",
+            existing_stats, "LANDING_AUDIT_DURATION", "auditDuration", "~4min"
         ),
         "ssrfGuard": env_or(existing_stats, "LANDING_SSRF_GUARD", "ssrfGuard", "SSRF"),
     }
