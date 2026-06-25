@@ -184,6 +184,7 @@ _REASON_EN: dict[str, str] = {
     "brand_not_measured": "Brand coherence not measured (Wikidata entity absent or disabled).",
     "agent_access_not_evaluated": "Agent bot access not evaluated.",
     "citation_unavailable": "LLM citation tracking unavailable (BYOK API key required).",
+    "no_content_pages": "No content pages found (all pages have fewer than the word-count threshold — site appears to be a lightweight listing/catalog).",
     "sov_no_competitors": "Share of voice unavailable — no competitors declared in citation tracking run.",
     "gsc_not_configured": (
         "Google Search Console not configured"
@@ -220,6 +221,7 @@ _REASON_FR: dict[str, str] = {
     ),
     "agent_access_not_evaluated": "Accès des bots d'agents non évalué.",
     "citation_unavailable": "Citation tracking LLM non disponible (clé API BYOK requise).",
+    "no_content_pages": "Aucune page de contenu trouvée (toutes les pages sont sous le seuil de mots — site de type listing/catalogue léger).",
     "sov_no_competitors": "Part de voix non disponible — aucun concurrent déclaré lors du citation tracking.",
     "gsc_not_configured": (
         "Google Search Console non configuré"
@@ -267,7 +269,7 @@ _EXPL_EN: dict[str, str] = {
     "ssr": "{ssr}/{total} page(s) server-rendered (M2 heuristic).",
     "noise_ratio": "Mean content/noise ratio over {pages} page(s).",
     "entity_density": "Estimated entity density over {pages} page(s) (heuristic).",
-    "primary_sources": "{with_sources}/{total} page(s) have static-HTML outbound links to external sources. JS-rendered links are not visible to crawlers.",
+    "primary_sources": "{with_sources}/{total} content page(s) (≥300 words) have static-HTML outbound links to external sources. {excluded} lightweight page(s) excluded (listing/catalog pages are not expected to cite sources).",
     "comparison_tables_present": "{page_count} page(s) with static HTML comparison table(s).",
     "comparison_tables_js": "{compare_count} comparison page(s) detected but tables are JS-rendered — not indexable by crawlers. Render <table> server-side.",
     "comparison_tables_absent": "No comparison tables found in static HTML.",
@@ -339,7 +341,7 @@ _EXPL_FR: dict[str, str] = {
     "ssr": "{ssr}/{total} page(s) en rendu serveur (heuristique M2).",
     "noise_ratio": "Ratio contenu/bruit moyen sur {pages} page(s).",
     "entity_density": "Densité d'entités estimée sur {pages} page(s) (heuristique).",
-    "primary_sources": "{with_sources}/{total} page(s) ont des liens sortants externes dans le HTML statique. Les liens JS ne sont pas indexables par les crawlers.",
+    "primary_sources": "{with_sources}/{total} page(s) de contenu (≥300 mots) ont des liens sortants externes dans le HTML statique. {excluded} page(s) légères exclues (listing/catalogue : non attendues à citer des sources).",
     "comparison_tables_present": "{page_count} page(s) avec tableaux de comparaison HTML statiques.",
     "comparison_tables_js": "{compare_count} page(s) de comparaison détectées mais les tableaux sont en JS — non indexables par les crawlers. Passer les <table> en SSR.",
     "comparison_tables_absent": "Aucun tableau de comparaison dans le HTML statique.",

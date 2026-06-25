@@ -21,7 +21,7 @@ from typing import ClassVar
 
 from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
-from seryvon.models.enums import status_from_score
+from seryvon.models.enums import Status, status_from_score
 from seryvon.models.signals import SignalBundle
 
 # GEO on-page core thresholds (document 04 §3).
@@ -153,32 +153,79 @@ class GeoEntityDensityCriterion(Criterion):
 
 @register
 class GeoPrimarySourcesCriterion(Criterion):
-    """Primary sources (`geo.primary_sources`): >=1 outbound link per page (aeo tag)."""
+    """Primary sources (`geo.primary_sources`): >=1 outbound link on content pages (aeo tag).
+
+    Only counts pages with enough text to be considered content pages (word_count >=
+    _CONTENT_MIN_WORDS). Lightweight listing/catalog pages are excluded — they are not
+    expected to cite external sources. Threshold: 50 % OK / 20 % WARNING (lower than the
+    global 80/50 because citing sources on every content page is a high bar).
+    """
 
     key = "geo.primary_sources"
     pillars: ClassVar[list[str]] = ["geo", "aeo"]
     weight = 1.2
 
+    # Pages below this word count are treated as structural/listing pages.
+    _CONTENT_MIN_WORDS: ClassVar[int] = 300
+    _OK_RATIO: ClassVar[float] = 0.50
+    _WARN_RATIO: ClassVar[float] = 0.20
+
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
     ) -> CriterionResult:
-        pages = signals.pages
-        if not pages:
+        all_pages = signals.pages
+        if not all_pages:
             return CriterionResult.not_measured(
                 self.key, self.pillars, self.weight, t("reason.no_pages")
             )
-        pages_with = [p.url for p in pages if p.external_link_domains]
-        pages_without = [p.url for p in pages if not p.external_link_domains]
+        th = (thresholds or {}).get(self.key, {})
+        min_words = int(th.get("min_content_words", self._CONTENT_MIN_WORDS))
+        ok_ratio = float(th.get("ok_ratio", self._OK_RATIO))
+        warn_ratio = float(th.get("warn_ratio", self._WARN_RATIO))
+
+        content_pages = [p for p in all_pages if p.word_count >= min_words]
+        excluded = len(all_pages) - len(content_pages)
+
+        if not content_pages:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, t("reason.no_content_pages")
+            )
+
+        pages_with = [p.url for p in content_pages if p.external_link_domains]
+        pages_without = [p.url for p in content_pages if not p.external_link_domains]
         with_sources = len(pages_with)
-        score = round(with_sources / len(pages) * 100, 2)
+        ratio = with_sources / len(content_pages)
+        score = round(ratio * 100, 2)
+
+        if ratio >= ok_ratio:
+            status = Status.OK
+        elif ratio >= warn_ratio:
+            status = Status.WARNING
+        else:
+            status = Status.CRITICAL
+
         return CriterionResult(
             key=self.key,
             pillars=self.pillars,
-            raw_value={"pages": len(pages), "with_sources": with_sources},
+            raw_value={
+                "pages": len(all_pages),
+                "content_pages": len(content_pages),
+                "with_sources": with_sources,
+                "excluded_structural": excluded,
+            },
             score=score,
-            status=status_from_score(score),
-            threshold={"min": "≥1 source sortante par page"},
-            explanation=t("expl.primary_sources", with_sources=with_sources, total=len(pages)),
+            status=status,
+            threshold={
+                "min_content_words": min_words,
+                "ok_ratio": ok_ratio,
+                "warn_ratio": warn_ratio,
+            },
+            explanation=t(
+                "expl.primary_sources",
+                with_sources=with_sources,
+                total=len(content_pages),
+                excluded=excluded,
+            ),
             evidence={
                 "source": "static HTML <a href>",
                 "sample_with_sources": pages_with[:10],

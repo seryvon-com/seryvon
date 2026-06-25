@@ -55,13 +55,35 @@ def test_entity_density() -> None:
 
 
 def test_primary_sources_ratio() -> None:
+    # Pages must meet the content word-count threshold (≥300 words) to be counted.
     bundle = _bundle(
-        _page("https://ex.com/a", external_link_domains=["doi.org"]),
-        _page("https://ex.com/b"),
+        _page("https://ex.com/a", word_count=500, external_link_domains=["doi.org"]),
+        _page("https://ex.com/b", word_count=500),
     )
     result = GeoPrimarySourcesCriterion().evaluate(bundle)
     assert result.score == 50.0
+    assert result.status is Status.OK  # 50 % == ok_ratio threshold → OK (boundary)
     assert result.pillars == ["geo", "aeo"]
+
+
+def test_primary_sources_excludes_lightweight_pages() -> None:
+    # Lightweight pages (< 300 words) are excluded from the denominator.
+    bundle = _bundle(
+        _page("https://ex.com/a", word_count=500, external_link_domains=["doi.org"]),
+        _page("https://ex.com/b", word_count=100),  # lightweight — excluded
+    )
+    result = GeoPrimarySourcesCriterion().evaluate(bundle)
+    # 1 content page, 1 has source → 100 %
+    assert result.score == 100.0
+    assert result.status is Status.OK
+    assert result.raw_value["content_pages"] == 1
+    assert result.raw_value["excluded_structural"] == 1
+
+
+def test_primary_sources_all_lightweight_not_measured() -> None:
+    bundle = _bundle(_page("https://ex.com/a", word_count=50))
+    result = GeoPrimarySourcesCriterion().evaluate(bundle)
+    assert result.status is Status.NOT_MEASURED
 
 
 def test_authors_presence() -> None:
