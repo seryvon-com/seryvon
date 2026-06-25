@@ -44,6 +44,9 @@ export const fr: Dict = {
     queuedWorker: "En attente d'un worker — le worker Celery est-il démarré ?",
     costFree: "Coût estimé : gratuit (aucun connecteur payant configuré)",
     costEstimate: (usd) => `Coût estimé : ~${usd.toFixed(3)} $ par audit (indicatif)`,
+    costBreakdownTitle: "Détail du coût par connecteur",
+    costNotConfigured: "non configuré",
+    costCalls: (calls: number, unit: number) => `${calls} appel${calls > 1 ? "s" : ""} × ${unit.toFixed(3)} $`,
   },
 
   report: {

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
-import type { AuditCostEstimate } from "../api/types";
+import type { AuditCostEstimate, CostLine } from "../api/types";
 import { AppShell } from "../components/AppShell";
 import { useI18n } from "../i18n";
 
@@ -114,9 +114,12 @@ export function HomePage() {
 
         {costEstimate && (
           <div className="cost-estimate-badge">
-            {costEstimate.total_usd === 0
-              ? t.home.costFree
-              : t.home.costEstimate(costEstimate.total_usd)}
+            <span>
+              {costEstimate.total_usd === 0
+                ? t.home.costFree
+                : t.home.costEstimate(costEstimate.total_usd)}
+            </span>
+            <CostInfoButton estimate={costEstimate} t={t} />
           </div>
         )}
 
@@ -151,5 +154,53 @@ export function HomePage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function CostInfoButton({
+  estimate,
+  t,
+}: {
+  estimate: AuditCostEstimate;
+  t: ReturnType<typeof useI18n>["t"];
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span className="cost-info-wrap">
+      <button
+        className="cost-info-btn"
+        aria-label="Cost breakdown"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        type="button"
+      >
+        ⓘ
+      </button>
+      {open && (
+        <div className="cost-tooltip" role="tooltip">
+          <div className="cost-tooltip-title">{t.home.costBreakdownTitle}</div>
+          <table className="cost-tooltip-table">
+            <tbody>
+              {estimate.lines.map((line: CostLine) => (
+                <tr key={line.connector} className={line.active ? "" : "cost-row-inactive"}>
+                  <td className="cost-col-connector">{line.connector.toUpperCase()}</td>
+                  {line.active ? (
+                    <>
+                      <td className="cost-col-calls">{t.home.costCalls(line.calls, line.unit_usd)}</td>
+                      <td className="cost-col-total">${line.total_usd.toFixed(3)}</td>
+                    </>
+                  ) : (
+                    <td className="cost-col-inactive" colSpan={2}>{t.home.costNotConfigured}</td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </span>
   );
 }

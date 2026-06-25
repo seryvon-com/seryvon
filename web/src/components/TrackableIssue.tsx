@@ -16,6 +16,38 @@ interface Props {
   onRemoveProof: (id: string) => void;
 }
 
+function AffectedPages({ pages }: { pages: string[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? pages : pages.slice(0, 5);
+  const remaining = pages.length - 5;
+  return (
+    <div className="issue-affected-pages">
+      {visible.map((p) => (
+        <span key={p} className="issue-page-chip" title={p}>
+          {p}
+        </span>
+      ))}
+      {!showAll && remaining > 0 && (
+        <button
+          className="issue-page-chip issue-page-more"
+          onClick={() => setShowAll(true)}
+          title="Show all pages"
+        >
+          +{remaining}
+        </button>
+      )}
+      {showAll && pages.length > 5 && (
+        <button
+          className="issue-page-chip issue-page-more"
+          onClick={() => setShowAll(false)}
+        >
+          ▲
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ProofThumb({
   proof,
   onRemove,
@@ -187,18 +219,7 @@ export function TrackableIssue({
 
       {/* ── affected pages ── */}
       {issue.affected_pages.length > 0 && (
-        <div className="issue-affected-pages">
-          {issue.affected_pages.slice(0, 5).map((p) => (
-            <span key={p} className="issue-page-chip" title={p}>
-              {p}
-            </span>
-          ))}
-          {issue.affected_pages.length > 5 && (
-            <span className="issue-page-chip issue-page-more">
-              +{issue.affected_pages.length - 5}
-            </span>
-          )}
-        </div>
+        <AffectedPages pages={issue.affected_pages} />
       )}
 
       {/* ── bottom strip (done state + proofs) ── */}

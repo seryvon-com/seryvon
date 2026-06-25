@@ -73,6 +73,9 @@ export interface Dict {
     queuedWorker: string;
     costFree: string;
     costEstimate: (usd: number) => string;
+    costBreakdownTitle: string;
+    costNotConfigured: string;
+    costCalls: (calls: number, unit: number) => string;
   };
 
   report: {
