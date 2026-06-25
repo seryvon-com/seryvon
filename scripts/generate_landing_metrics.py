@@ -65,7 +65,7 @@ def load_coverage_percent(path: Path) -> str | None:
     covered = total.get("percent_covered")
     if covered is None:
         return None
-    rounded = int(round(float(covered)))
+    rounded = round(float(covered))
     return f"{rounded}%"
 
 
@@ -92,17 +92,42 @@ def main() -> None:
             "testsPassing",
             str(pytest_summary.get("passed", pytest_summary.get("total", 0))),
         ),
-        "testCoverage": env_or(existing_stats, "LANDING_TEST_COVERAGE", "testCoverage", coverage or "0%"),
-        "mypyStrictErrors": env_or(existing_stats, "LANDING_MYPY_ERRORS", "mypyStrictErrors", "0"),
-        "varianceOnRerun": env_or(existing_stats, "LANDING_VARIANCE", "varianceOnRerun", "<2%"),
+        "testCoverage": env_or(
+            existing_stats,
+            "LANDING_TEST_COVERAGE",
+            "testCoverage",
+            coverage or "0%",
+        ),
+        "mypyStrictErrors": env_or(
+            existing_stats,
+            "LANDING_MYPY_ERRORS",
+            "mypyStrictErrors",
+            "0",
+        ),
+        "varianceOnRerun": env_or(
+            existing_stats,
+            "LANDING_VARIANCE",
+            "varianceOnRerun",
+            "<2%",
+        ),
         "currentRelease": env_or(
             existing_stats,
             "LANDING_CURRENT_RELEASE",
             "currentRelease",
             project_version or existing_stats.get("currentRelease") or "dev",
         ),
-        "pillarsUnified": env_or(existing_stats, "LANDING_PILLARS_UNIFIED", "pillarsUnified", "5"),
-        "auditDuration": env_or(existing_stats, "LANDING_AUDIT_DURATION", "auditDuration", "~4min"),
+        "pillarsUnified": env_or(
+            existing_stats,
+            "LANDING_PILLARS_UNIFIED",
+            "pillarsUnified",
+            "5",
+        ),
+        "auditDuration": env_or(
+            existing_stats,
+            "LANDING_AUDIT_DURATION",
+            "auditDuration",
+            "~4min",
+        ),
         "ssrfGuard": env_or(existing_stats, "LANDING_SSRF_GUARD", "ssrfGuard", "SSRF"),
     }
 

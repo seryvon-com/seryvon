@@ -4,64 +4,64 @@
     "testCoverage": "87%",
     "mypyStrictErrors": "0",
     "varianceOnRerun": "<2%",
-    "currentRelease": "v1.0-rc",
+    "currentRelease": "0.1.0.dev0",
     "pillarsUnified": "5",
     "auditDuration": "~4min",
     "ssrfGuard": "SSRF"
   },
   "roadmap": {
-    "titleEn": "Five phases complete. Public launch imminent.",
-    "titleFr": "Cinq phases livrees. Publication imminente.",
-    "subEn": "The full open-core engine - all five pillars, React UI, i18n, BYOK, SSRF guard - is written, tested and hardened. One outstanding item before v1.0: API auth middleware for public exposure.",
-    "subFr": "Le moteur open core complet - cinq piliers, UI React, i18n, BYOK, garde SSRF - est ecrit, teste et durci. Un seul point restant avant v1.0: middleware d'auth API pour exposition publique."
+    "titleEn": "Phase 4 is active. Core audit engine shipped across five pillars.",
+    "titleFr": "La phase 4 est active. Le moteur d'audit coeur est livre sur cinq piliers.",
+    "subEn": "The repo source of truth currently states active development in Phase 4. Delivered so far: crawler, SEO scorecard, GSO/AEO/ASO layers, GEO signals, LLM citation tracking, and Measurement Profile C-P1. Next documented items are MinIO artifact storage (C-P2) and comparison M6 (C-P3).",
+    "subFr": "La source de verite du repo indique actuellement une phase 4 active. Sont deja livres : crawler, scorecard SEO, couches GSO/AEO/ASO, signaux GEO, citation tracking LLM et Measurement Profile C-P1. Les prochains items documentes sont le stockage d'artefacts MinIO (C-P2) et la comparaison M6 (C-P3)."
   },
   "milestones": [
     {
-      "ver": "v0.1",
-      "labelEn": "SEO audit, CLI, JSON/HTML export",
-      "labelFr": "Audit SEO, CLI, exports JSON/HTML",
+      "ver": "Phase 0-1",
+      "labelEn": "Async crawler, robots/sitemaps, full SEO scorecard, PageSpeed Insights and OpenPageRank connectors",
+      "labelFr": "Crawler asynchrone, robots/sitemaps, scorecard SEO complet, connecteurs PageSpeed Insights et OpenPageRank",
       "done": true,
       "current": false
     },
     {
-      "ver": "v0.2",
-      "labelEn": "Five pillars on-page - ASO static included, 4 export formats",
-      "labelFr": "Cinq piliers on-page - ASO statique inclus, 4 formats d'export",
+      "ver": "Phase 2",
+      "labelEn": "GSO, AEO, static ASO scorecards, on-page GEO signals, Wikidata, prioritized action plan",
+      "labelFr": "Scorecards GSO, AEO, ASO statique, signaux GEO on-page, Wikidata, plan d'action priorise",
       "done": true,
       "current": false
     },
     {
-      "ver": "v0.3",
-      "labelEn": "LLM citation tracking multi-engine (BYOK)",
-      "labelFr": "Citation tracking LLM multi-moteurs (BYOK)",
+      "ver": "Phase 3",
+      "labelEn": "LLM citation tracking M4 across engines with BYOK and cost estimator",
+      "labelFr": "Citation tracking LLM M4 multi-moteurs avec BYOK et estimateur de cout",
       "done": true,
       "current": false
     },
     {
-      "ver": "v0.4",
-      "labelEn": "Measurement profile + comparison M6",
-      "labelFr": "Profil de mesure + comparaison M6",
-      "done": true,
-      "current": false
-    },
-    {
-      "ver": "v1.0-rc",
-      "labelEn": "React UI, EN/FR, full BYOK, SSRF guard - 401 tests, 87% coverage",
-      "labelFr": "UI React, EN/FR, BYOK complet, garde SSRF - 401 tests, 87 % couverture",
+      "ver": "Phase 4 C-P1",
+      "labelEn": "Measurement profile hash and coverage labels",
+      "labelFr": "Hash de profil de mesure et labels de couverture",
       "done": true,
       "current": true
     },
     {
-      "ver": "v1.0",
-      "labelEn": "Public OSS release - API auth + git history cleanup",
-      "labelFr": "Publication OSS publique - auth API + nettoyage historique git",
+      "ver": "Phase 4 C-P2",
+      "labelEn": "MinIO artifact storage",
+      "labelFr": "Stockage d'artefacts MinIO",
       "done": false,
       "current": false
     },
     {
-      "ver": "Cloud",
-      "labelEn": "Operated offering - monitoring, history, multi-user, white-label",
-      "labelFr": "Offre operee - monitoring, historisation, multi-user, marque blanche",
+      "ver": "Phase 4 C-P3",
+      "labelEn": "Scorecard comparison M6",
+      "labelFr": "Comparaison de scorecards M6",
+      "done": false,
+      "current": false
+    },
+    {
+      "ver": "Later",
+      "labelEn": "Operated SaaS layers beyond open core",
+      "labelFr": "Couches SaaS operees au-dela de l'open core",
       "done": false,
       "current": false
     }
