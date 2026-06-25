@@ -1200,7 +1200,7 @@
 }
 .cost-tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
   right: 0;
   background: var(--surface-2, #1a1f2e);
   border: 1px solid var(--border, #2a3040);
