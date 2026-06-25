@@ -1199,9 +1199,7 @@
   outline: none;
 }
 .cost-tooltip {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  position: fixed;
   background: var(--surface-2, #1a1f2e);
   border: 1px solid var(--border, #2a3040);
   border-radius: 8px;

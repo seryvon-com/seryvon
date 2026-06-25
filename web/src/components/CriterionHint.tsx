@@ -1,6 +1,7 @@
 // Seryvon — per-criterion info tooltips. AGPL-3.0-or-later.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "../i18n";
 
 // Mirrors _PLATFORM_HOSTS in src/seryvon/crawler/extract.py
@@ -29,25 +30,50 @@ function InfoButton({
   children: React.ReactNode;
   minWidth?: number;
 }) {
-  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+
+  function handleOpen() {
+    if (btnRef.current) setRect(btnRef.current.getBoundingClientRect());
+  }
+  function handleClose() {
+    setRect(null);
+  }
+
+  const tooltip =
+    rect &&
+    createPortal(
+      <div
+        className="cost-tooltip"
+        role="tooltip"
+        style={{
+          position: "fixed",
+          top: rect.bottom + 8,
+          left: Math.max(8, Math.min(window.innerWidth - minWidth - 8, rect.left + rect.width / 2 - minWidth / 2)),
+          minWidth,
+          zIndex: 9999,
+        }}
+      >
+        {children}
+      </div>,
+      document.body,
+    );
+
   return (
-    <span className="cost-info-wrap">
+    <span className="cost-info-wrap" style={{ position: "static" }}>
       <button
+        ref={btnRef}
         className="cost-info-btn"
         aria-label={label}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
+        onMouseEnter={handleOpen}
+        onMouseLeave={handleClose}
+        onFocus={handleOpen}
+        onBlur={handleClose}
         type="button"
       >
         ⓘ
       </button>
-      {open && (
-        <div className="cost-tooltip" role="tooltip" style={{ minWidth }}>
-          {children}
-        </div>
-      )}
+      {tooltip}
     </span>
   );
 }
