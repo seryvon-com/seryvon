@@ -380,9 +380,18 @@ export const fr: Dict = {
   issue: {
     effort: (n) => `EFFORT ${n}/3`,
     prio: (n) => `prio ${n.toFixed(1)}`,
-    crossPlatformHintTitle: "Plateformes reconnues",
-    crossPlatformHintDetection: "Détectées via les liens sortants HTML et sameAs JSON-LD. Objectif : ≥4 plateformes.",
-    crossPlatformHintPlatforms: ["Twitter / X", "LinkedIn", "Facebook", "Instagram", "YouTube", "GitHub", "TikTok", "Pinterest", "Mastodon", "Reddit"],
+  },
+  criterionHints: {
+    crossPlatformTitle: "Plateformes reconnues",
+    crossPlatformDetection: "Détectées via les liens sortants HTML et sameAs JSON-LD. Objectif : ≥4 plateformes.",
+    crossPlatformDetectedLabel: "détectée",
+    crossPlatformMissingLabel: "manquante",
+    comparisonTablesTitle: "Comment les tableaux de comparaison sont détectés",
+    comparisonTablesBody: "Seryvon cherche des éléments HTML <table> sur les pages dont le chemin d'URL contient /compare/. Les tableaux rendus en JS ne sont pas visibles par les crawlers statiques — utilisez du HTML serveur pour vos pages de comparaison.",
+    primarySourcesTitle: "Comment les sources primaires sont comptées",
+    primarySourcesBody: "Seules les pages de contenu (≥300 mots) sont prises en compte. Sur la page d'accueil, ≥50 % des liens sortants doivent pointer vers des domaines externes distincts. Sur les autres pages, le seuil est de ≥20 %. Seuls les liens HTML statiques sont comptabilisés — les liens injectés en JS sont invisibles aux crawlers.",
+    mcpReadinessTitle: "Qu'est-ce que la readiness WebMCP ?",
+    mcpReadinessBody: "WebMCP permet aux agents IA autonomes de découvrir et d'invoquer les capacités de votre site. Ajoutez un manifeste /.well-known/mcp.json listant vos endpoints. Spec : modelcontextprotocol.io. Vérifiez aussi la présence de potentialAction dans votre JSON-LD et d'une spec OpenAPI/Swagger.",
   },
 
   tracking: {

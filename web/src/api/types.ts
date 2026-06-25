@@ -82,7 +82,7 @@ export interface Issue {
   priority_bucket: string; // P1 / P2 / P3 / P4
   recommendation: string;
   explanation: string;
-  raw_value: string;
+  raw_value: unknown;
   affected_pages: string[];
 }
 

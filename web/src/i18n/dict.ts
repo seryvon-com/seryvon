@@ -259,9 +259,18 @@ export interface Dict {
   issue: {
     effort: (n: number) => string;
     prio: (n: number) => string;
-    crossPlatformHintTitle: string;
-    crossPlatformHintDetection: string;
-    crossPlatformHintPlatforms: string[];
+  };
+  criterionHints: {
+    crossPlatformTitle: string;
+    crossPlatformDetection: string;
+    crossPlatformDetectedLabel: string;
+    crossPlatformMissingLabel: string;
+    comparisonTablesTitle: string;
+    comparisonTablesBody: string;
+    primarySourcesTitle: string;
+    primarySourcesBody: string;
+    mcpReadinessTitle: string;
+    mcpReadinessBody: string;
   };
 
   tracking: {

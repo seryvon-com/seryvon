@@ -1,40 +1,7 @@
 // Seryvon — trackable issue card (done toggle, date, proof attachments). AGPL-3.0-or-later.
 
 import { useRef, useState } from "react";
-
-function CrossPlatformHint({ t }: { t: ReturnType<typeof import("../i18n").useI18n>["t"] }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <span className="cost-info-wrap">
-      <button
-        className="cost-info-btn"
-        aria-label="Platform details"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        type="button"
-      >
-        ⓘ
-      </button>
-      {open && (
-        <div className="cost-tooltip" role="tooltip" style={{ minWidth: 260 }}>
-          <div className="cost-tooltip-title">{t.issue.crossPlatformHintTitle}</div>
-          <div style={{ fontSize: "0.74rem", color: "var(--c-text-muted)", marginBottom: 8, lineHeight: 1.4 }}>
-            {t.issue.crossPlatformHintDetection}
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
-            {t.issue.crossPlatformHintPlatforms.map((p) => (
-              <span key={p} style={{ fontSize: "0.74rem", color: "var(--c-text-primary, #e6edf3)", background: "var(--c-border, #30363d)", borderRadius: 4, padding: "1px 6px" }}>
-                {p}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </span>
-  );
-}
+import { CriterionHint } from "./CriterionHint";
 import type { Issue } from "../api/types";
 import { useI18n } from "../i18n";
 import type { IssueTracking, ProofItem } from "../hooks/useIssueTracking";
@@ -226,9 +193,7 @@ export function TrackableIssue({
           )}
           <div className="key" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             {issue.criterion_key}
-            {issue.criterion_key === "geo.cross_platform" && (
-              <CrossPlatformHint t={t} />
-            )}
+            <CriterionHint criterionKey={issue.criterion_key} rawValue={issue.raw_value} />
           </div>
         </div>
 

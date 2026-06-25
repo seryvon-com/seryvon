@@ -380,9 +380,18 @@ export const en: Dict = {
   issue: {
     effort: (n) => `EFFORT ${n}/3`,
     prio: (n) => `prio ${n.toFixed(1)}`,
-    crossPlatformHintTitle: "Recognized platforms",
-    crossPlatformHintDetection: "Detected via outbound links in HTML and sameAs in JSON-LD. Target: ≥4 platforms.",
-    crossPlatformHintPlatforms: ["Twitter / X", "LinkedIn", "Facebook", "Instagram", "YouTube", "GitHub", "TikTok", "Pinterest", "Mastodon", "Reddit"],
+  },
+  criterionHints: {
+    crossPlatformTitle: "Recognized platforms",
+    crossPlatformDetection: "Detected via outbound links in HTML and sameAs in JSON-LD. Target: ≥4 platforms.",
+    crossPlatformDetectedLabel: "detected",
+    crossPlatformMissingLabel: "missing",
+    comparisonTablesTitle: "How comparison tables are detected",
+    comparisonTablesBody: "Seryvon looks for HTML <table> elements on pages whose URL path contains /compare/. JS-rendered tables are not visible to static crawlers — use server-side HTML for comparison pages.",
+    primarySourcesTitle: "How primary sources are counted",
+    primarySourcesBody: "Only content pages (≥300 words) are considered. On the homepage, ≥50% of outbound links must point to distinct external domains. On other pages the threshold is ≥20%. Only static HTML links are counted — JS-injected links are invisible to crawlers.",
+    mcpReadinessTitle: "What is WebMCP readiness?",
+    mcpReadinessBody: "WebMCP lets autonomous AI agents discover and invoke your site's capabilities. Add a /.well-known/mcp.json manifest listing your endpoints. Spec: modelcontextprotocol.io. Also check for potentialAction in your JSON-LD and an OpenAPI/Swagger spec.",
   },
 
   tracking: {

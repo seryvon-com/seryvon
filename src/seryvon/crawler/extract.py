@@ -90,6 +90,9 @@ _PLATFORM_HOSTS = {
     "pinterest.com": "pinterest",
     "mastodon": "mastodon",
     "reddit.com": "reddit",
+    "bsky.app": "bluesky",
+    "threads.net": "threads",
+    "crunchbase.com": "crunchbase",
 }
 
 
