@@ -15,6 +15,7 @@ audit (`Location: /audits/{id}` header), `GET /audits/{id}` reloads a report,
 
 from __future__ import annotations
 
+import hmac
 import logging
 import uuid
 from collections.abc import Iterator
@@ -69,7 +70,8 @@ async def api_key_middleware(request: Request, call_next: Any) -> Any:
     required = get_settings().api_key
     if required and request.url.path != "/health":
         provided = request.headers.get("X-API-Key", "")
-        if provided != required:
+        # Constant-time comparison to avoid leaking the key via response timing.
+        if not hmac.compare_digest(provided, required):
             from fastapi.responses import JSONResponse
 
             return JSONResponse(
@@ -184,22 +186,19 @@ def _connector_key_out(connector: str, session: Session) -> KeyOut:
     field = repository.CONNECTOR_FIELD[connector]
     env_val: str = getattr(settings, field, "")
     sk = settings.secret_key
-    row = repository.get_key_encrypted(session, connector)
+    row = repository.get_key_row(session, connector)
     if row is not None and sk:
         try:
-            plain = decrypt_value(sk, row)
+            plain = decrypt_value(sk, row.encrypted_value)
             masked: str | None = mask_value(plain)
         except EncryptionError:
             masked = "***"
-        db_row_obj = next(
-            (r for r in repository.list_keys(session) if r.connector == connector), None
-        )
         return KeyOut(
             connector=connector,
             masked_value=masked,
             source="db",
-            created_at=db_row_obj.created_at if db_row_obj else None,
-            updated_at=db_row_obj.updated_at if db_row_obj else None,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
         )
     if env_val:
         return KeyOut(

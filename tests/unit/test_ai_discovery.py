@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 
 from seryvon.connectors.ai_discovery import (
     probe_ai_discovery,
@@ -14,6 +15,10 @@ from seryvon.connectors.ai_discovery import (
     valid_service,
     valid_summary,
 )
+from seryvon.crawler.safety import UnsafeUrlError
+
+#: Offline resolver: every host maps to a public IP (no real DNS in tests).
+PUBLIC = lambda _host: ["93.184.216.34"]  # noqa: E731
 
 
 # --------------------------------------------------------------------------- #
@@ -60,16 +65,38 @@ def _full_handler(request: httpx.Request) -> httpx.Response:
 
 async def test_probe_ai_discovery_all_valid() -> None:
     client = httpx.AsyncClient(transport=httpx.MockTransport(_full_handler))
-    result = await probe_ai_discovery("https://ex.com", client=client)
+    result = await probe_ai_discovery("https://ex.com", client=client, resolver=PUBLIC)
     await client.aclose()
     assert result == {"ai_txt": True, "summary": True, "faq": True, "service": True}
 
 
 async def test_probe_ai_discovery_all_absent() -> None:
     client = httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(404)))
-    result = await probe_ai_discovery("https://ex.com", client=client)
+    result = await probe_ai_discovery("https://ex.com", client=client, resolver=PUBLIC)
     await client.aclose()
     assert result == {"ai_txt": False, "summary": False, "faq": False, "service": False}
+
+
+async def test_probe_ai_discovery_blocks_ssrf_redirect() -> None:
+    """A redirect toward a private IP must be rejected, not followed (SSRF guard)."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(302, headers={"location": "http://127.0.0.1:6379/"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), follow_redirects=False)
+    # The internal SSRF guard validates each redirect target before connecting; an
+    # unsafe hop raises UnsafeUrlError, which _get swallows → endpoint reported absent.
+    result = await probe_ai_discovery("https://ex.com", client=client, resolver=PUBLIC)
+    await client.aclose()
+    assert result == {"ai_txt": False, "summary": False, "faq": False, "service": False}
+
+
+async def test_validate_url_rejects_private_redirect_target() -> None:
+    """Sanity: the loopback redirect target above is indeed classified unsafe."""
+    from seryvon.crawler.safety import validate_url
+
+    with pytest.raises(UnsafeUrlError):
+        validate_url("http://127.0.0.1:6379/", resolver=PUBLIC)
 
 
 # --------------------------------------------------------------------------- #
@@ -80,7 +107,7 @@ async def test_probe_nlweb_conformant() -> None:
         return httpx.Response(200, json={"@context": "https://schema.org", "results": []})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    assert await probe_nlweb("https://ex.com", client=client) == "conformant"
+    assert await probe_nlweb("https://ex.com", client=client, resolver=PUBLIC) == "conformant"
     await client.aclose()
 
 
@@ -88,11 +115,11 @@ async def test_probe_nlweb_present_non_conformant() -> None:
     client = httpx.AsyncClient(
         transport=httpx.MockTransport(lambda r: httpx.Response(200, text="ok"))
     )
-    assert await probe_nlweb("https://ex.com", client=client) == "present"
+    assert await probe_nlweb("https://ex.com", client=client, resolver=PUBLIC) == "present"
     await client.aclose()
 
 
 async def test_probe_nlweb_absent() -> None:
     client = httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(404)))
-    assert await probe_nlweb("https://ex.com", client=client) == "absent"
+    assert await probe_nlweb("https://ex.com", client=client, resolver=PUBLIC) == "absent"
     await client.aclose()

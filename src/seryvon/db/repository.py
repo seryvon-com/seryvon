@@ -292,9 +292,14 @@ def upsert_key(session: Session, connector: str, encrypted_value: bytes) -> m.Ap
     return row
 
 
+def get_key_row(session: Session, connector: str) -> m.ApiKeyRow | None:
+    """Return the full stored key row for a connector (token + timestamps), or None."""
+    return session.scalar(select(m.ApiKeyRow).where(m.ApiKeyRow.connector == connector))
+
+
 def get_key_encrypted(session: Session, connector: str) -> bytes | None:
     """Return the raw Fernet token for a connector, or None if not stored."""
-    row = session.scalar(select(m.ApiKeyRow).where(m.ApiKeyRow.connector == connector))
+    row = get_key_row(session, connector)
     return row.encrypted_value if row is not None else None
 
 

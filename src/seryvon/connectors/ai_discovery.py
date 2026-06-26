@@ -25,6 +25,8 @@ from typing import Any
 
 import httpx
 
+from seryvon.crawler.safety import Resolver, _default_resolver, safe_get
+
 log = logging.getLogger(__name__)
 
 AI_DISCOVERY_ENDPOINTS = 4  # ai.txt + summary + faq + service
@@ -75,9 +77,15 @@ def valid_faq(data: Any) -> bool:
 # --------------------------------------------------------------------------- #
 # I/O (injectable client)                                                      #
 # --------------------------------------------------------------------------- #
-async def _get(client: httpx.AsyncClient, url: str) -> httpx.Response | None:
+async def _get(
+    client: httpx.AsyncClient, url: str, *, resolver: Resolver = _default_resolver
+) -> httpx.Response | None:
+    # Probes hit the *audited* (untrusted) origin: route every hop through the
+    # SSRF guard (safe_get re-validates each redirect target before connecting).
+    # The client MUST be created with follow_redirects=False (see callers).
     try:
-        return await client.get(url)
+        response, _ = await safe_get(client, url, resolver=resolver)
+        return response
     except httpx.HTTPError:
         return None
 
@@ -96,20 +104,27 @@ async def probe_ai_discovery(
     *,
     timeout: float = 15.0,
     client: httpx.AsyncClient | None = None,
+    resolver: Resolver = _default_resolver,
 ) -> dict[str, bool]:
     """Probe the 4 AI discovery endpoints. Returns {key: valid}."""
     own_client = client is None
     if client is None:
-        client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+        client = httpx.AsyncClient(timeout=timeout, follow_redirects=False)
     t0 = time.monotonic()
     log.info("ai_discovery start origin=%s", origin)
     try:
-        ai_txt = await _get(client, f"{origin}/.well-known/ai.txt")
+        ai_txt = await _get(client, f"{origin}/.well-known/ai.txt", resolver=resolver)
         result = {
             "ai_txt": bool(ai_txt and ai_txt.status_code == 200 and ai_txt.content.strip()),
-            "summary": valid_summary(_json_200(await _get(client, f"{origin}/ai/summary.json"))),
-            "faq": valid_faq(_json_200(await _get(client, f"{origin}/ai/faq.json"))),
-            "service": valid_service(_json_200(await _get(client, f"{origin}/ai/service.json"))),
+            "summary": valid_summary(
+                _json_200(await _get(client, f"{origin}/ai/summary.json", resolver=resolver))
+            ),
+            "faq": valid_faq(
+                _json_200(await _get(client, f"{origin}/ai/faq.json", resolver=resolver))
+            ),
+            "service": valid_service(
+                _json_200(await _get(client, f"{origin}/ai/service.json", resolver=resolver))
+            ),
         }
         log.info(
             "ai_discovery done origin=%s found=%s elapsed_ms=%d",
@@ -128,15 +143,16 @@ async def probe_nlweb(
     *,
     timeout: float = 15.0,
     client: httpx.AsyncClient | None = None,
+    resolver: Resolver = _default_resolver,
 ) -> str:
     """Probe the NLWeb endpoint (`/ask`). Returns 'conformant' / 'present' / 'absent'."""
     own_client = client is None
     if client is None:
-        client = httpx.AsyncClient(timeout=timeout, follow_redirects=True)
+        client = httpx.AsyncClient(timeout=timeout, follow_redirects=False)
     t0 = time.monotonic()
     log.info("nlweb start origin=%s", origin)
     try:
-        response = await _get(client, f"{origin}{_NLWEB_PATH}")
+        response = await _get(client, f"{origin}{_NLWEB_PATH}", resolver=resolver)
     finally:
         if own_client:
             await client.aclose()
