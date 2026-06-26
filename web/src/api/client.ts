@@ -14,6 +14,7 @@ import type {
   CitationTaskStatus,
   ComparisonMode,
   ComparisonResult,
+  DomainSummary,
   KeyEntry,
   PromptSet,
 } from "./types";
@@ -75,6 +76,9 @@ export const api = {
   /** Audit history for a domain, most recent first. */
   listAudits: (domain: string) =>
     request<AuditSummary[]>(`/audits?domain=${encodeURIComponent(domain)}`),
+
+  /** Every audited domain with a pointer to its latest audit (most recent first). */
+  listDomains: () => request<DomainSummary[]>("/domains"),
 
   /** Compare two persisted scorecards (M6). Defaults to descriptive mode (always allowed). */
   compareAudits: (leftRunId: string, rightRunId: string, mode: ComparisonMode = "descriptive") =>

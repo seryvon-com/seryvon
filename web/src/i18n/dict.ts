@@ -76,6 +76,10 @@ export interface Dict {
     costBreakdownTitle: string;
     costNotConfigured: string;
     costCalls: (calls: number, unit: number) => string;
+    recentTitle: string;
+    recentSubtitle: string;
+    recentAuditCount: (n: number) => string;
+    recentEmpty: string;
   };
 
   report: {

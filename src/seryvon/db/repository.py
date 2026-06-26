@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from seryvon.db import models as m
 from seryvon.models.artifact import ArtifactRef, ArtifactType, Compression
@@ -45,6 +45,17 @@ class AuditSummary:
     score_global: float | None
     started_at: datetime
     criteria_measured: int = 0
+
+
+@dataclass(slots=True)
+class DomainSummary:
+    """One audited domain with a pointer to its most recent audit."""
+
+    domain: str
+    audit_count: int
+    latest_audit_id: uuid.UUID
+    latest_score: float | None
+    latest_started_at: datetime
 
 
 def _get_or_create_domain(session: Session, host: str) -> m.Domain:
@@ -345,4 +356,49 @@ def list_audits(session: Session, host: str) -> list[AuditSummary]:
             criteria_measured=int(cnt),
         )
         for a, cnt in rows
+    ]
+
+
+def list_domains(session: Session) -> list[DomainSummary]:
+    """List every audited domain with a pointer to its most recent audit.
+
+    Ordered by latest audit date (most recent first), so the UI can offer
+    already-audited domains without first re-running an audit. The latest audit
+    is selected with `row_number()` (tie-broken by id) so domains with audits
+    sharing an identical `started_at` are never duplicated.
+    """
+    count_sq = (
+        select(
+            m.Audit.domain_id,
+            func.count().label("audit_count"),
+        )
+        .group_by(m.Audit.domain_id)
+        .subquery()
+    )
+    rank = (
+        func.row_number()
+        .over(
+            partition_by=m.Audit.domain_id,
+            order_by=(m.Audit.started_at.desc(), m.Audit.id.desc()),
+        )
+        .label("rn")
+    )
+    latest_sq = select(m.Audit, rank).subquery()
+    latest = aliased(m.Audit, latest_sq)
+    rows = session.execute(
+        select(m.Domain.host, latest, count_sq.c.audit_count)
+        .join(latest, latest.domain_id == m.Domain.id)
+        .join(count_sq, count_sq.c.domain_id == m.Domain.id)
+        .where(latest_sq.c.rn == 1)
+        .order_by(latest.started_at.desc())
+    )
+    return [
+        DomainSummary(
+            domain=host,
+            audit_count=int(audit_count),
+            latest_audit_id=audit.id,
+            latest_score=audit.score_global,
+            latest_started_at=audit.started_at,
+        )
+        for host, audit, audit_count in rows
     ]

@@ -5,12 +5,12 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
-import type { AuditCostEstimate, CostLine } from "../api/types";
+import type { AuditCostEstimate, CostLine, DomainSummary } from "../api/types";
 import { AppShell } from "../components/AppShell";
 import { useI18n } from "../i18n";
 
 export function HomePage() {
-  const { t, locale } = useI18n();
+  const { t, locale, formatDate } = useI18n();
   const [url, setUrl] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +18,7 @@ export function HomePage() {
   const [auditLogs, setAuditLogs] = useState<string[]>([]);
   const [taskStatus, setTaskStatus] = useState<string>("pending");
   const [costEstimate, setCostEstimate] = useState<AuditCostEstimate | null>(null);
+  const [domains, setDomains] = useState<DomainSummary[] | null>(null);
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollStartRef = useRef<number>(0);
@@ -35,6 +36,7 @@ export function HomePage() {
 
   useEffect(() => {
     api.getAuditCostEstimate().then(setCostEstimate).catch(() => {});
+    api.listDomains().then(setDomains).catch(() => setDomains([]));
   }, []);
 
   useEffect(() => {
@@ -154,6 +156,33 @@ export function HomePage() {
           </div>
         )}
       </div>
+
+      {domains && domains.length > 0 && (
+        <div className="card recent-domains-card">
+          <div className="section-head">
+            <h3>{t.home.recentTitle}</h3>
+            <span className="section-sub">{t.home.recentSubtitle}</span>
+          </div>
+          <div className="recent-domains-list">
+            {domains.map((d) => (
+              <button
+                key={d.domain}
+                type="button"
+                className="recent-domain-item"
+                onClick={() => navigate(`/audits/${d.latest_audit_id}`)}
+              >
+                <span className="recent-domain-name">{d.domain}</span>
+                <span className="recent-domain-meta">
+                  {t.home.recentAuditCount(d.audit_count)} · {formatDate(d.latest_started_at)}
+                </span>
+                <span className="recent-domain-score">
+                  {d.latest_score == null ? "—" : Math.round(d.latest_score)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

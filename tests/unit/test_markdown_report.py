@@ -13,6 +13,32 @@ from seryvon.models.report import AsoReadiness, AuditReport, Issue, PillarScore
 from seryvon.reporting.markdown_report import report_to_markdown
 
 
+def _minimal_report() -> AuditReport:
+    """A report without readiness block and without issues — covers the two empty paths."""
+    return AuditReport(
+        domain="bare.test",
+        tool_version="0.1.0.dev0",
+        schema_version=6,
+        started_at=datetime(2026, 6, 26, 9, 0, tzinfo=UTC),
+        finished_at=datetime(2026, 6, 26, 9, 1, tzinfo=UTC),
+        score_global=0.0,
+        pillars={"seo": PillarScore(pillar="seo", score=0.0, measured=0, excluded=0)},
+        criteria=[],
+        issues=[],
+        aso_readiness=None,
+    )
+
+
+def test_markdown_no_readiness_block_when_absent() -> None:
+    md = report_to_markdown(_minimal_report())
+    assert "Readiness agentique" not in md
+
+
+def test_markdown_empty_issues_shows_clean_state_message() -> None:
+    md = report_to_markdown(_minimal_report())
+    assert "Aucun problème prioritaire détecté." in md
+
+
 def _report() -> AuditReport:
     return AuditReport(
         domain="example.com",

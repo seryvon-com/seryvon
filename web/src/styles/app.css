@@ -1248,6 +1248,54 @@
   font-style: italic;
   color: var(--text-muted, #6e7781) !important;
 }
+.recent-domains-card {
+  max-width: 680px;
+  margin-top: 20px;
+}
+.recent-domains-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+.recent-domain-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-row);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.14s, background 0.14s;
+}
+.recent-domain-item:hover {
+  border-color: var(--c-border-hover);
+  background: var(--c-surface-2);
+}
+.recent-domain-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.recent-domain-meta {
+  font-size: 11.5px;
+  color: var(--c-text-faint);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.recent-domain-score {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--c-text);
+  min-width: 32px;
+  text-align: right;
+}
+
 .audit-progress {
   margin-top: 20px;
 }

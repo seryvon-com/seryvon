@@ -76,3 +76,11 @@ def test_html_escapes_untrusted_content() -> None:
 def test_html_is_deterministic() -> None:
     report = _report()
     assert report_to_html(report) == report_to_html(report)
+
+
+def test_html_warning_band_for_mid_score() -> None:
+    """A global score in [50, 80) lands in the warning band — covers the middle CSS branch."""
+    report = _report()
+    report.score_global = 65.0
+    html = report_to_html(report)
+    assert 'class="global score-warning"' in html

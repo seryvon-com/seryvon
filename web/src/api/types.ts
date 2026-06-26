@@ -198,6 +198,14 @@ export interface AuditSummary {
   criteria_measured: number;
 }
 
+export interface DomainSummary {
+  domain: string;
+  audit_count: number;
+  latest_audit_id: string;
+  latest_score: number | null;
+  latest_started_at: string;
+}
+
 export interface AuditTask {
   task_id: string;
   status_url: string;

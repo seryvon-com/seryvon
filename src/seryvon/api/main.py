@@ -106,6 +106,18 @@ class AuditSummaryOut(BaseModel):
     criteria_measured: int = 0
 
 
+class DomainSummaryOut(BaseModel):
+    """An audited domain with a pointer to its most recent audit."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    domain: str
+    audit_count: int
+    latest_audit_id: uuid.UUID
+    latest_score: float | None
+    latest_started_at: datetime
+
+
 class CompareRequest(BaseModel):
     """Request body to compare two persisted scorecards (M6, SIC doc 06 §5)."""
 
@@ -535,6 +547,15 @@ def delete_key(connector: str, session: Session = Depends(get_session)) -> None:
     found = repository.delete_key(session, connector)
     if not found:
         raise HTTPException(status_code=404, detail=f"No stored key for: {connector}")
+
+
+@app.get("/domains", response_model=list[DomainSummaryOut])
+def list_domains(session: Session = Depends(get_session)) -> list[repository.DomainSummary]:
+    """List every audited domain with a pointer to its latest audit (most recent first).
+
+    Lets the UI offer already-audited domains without first re-running an audit.
+    """
+    return repository.list_domains(session)
 
 
 @app.get("/audits", response_model=list[AuditSummaryOut])

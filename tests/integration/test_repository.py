@@ -146,3 +146,18 @@ def test_list_audits_orders_recent_first(session: Session) -> None:
     assert len(summaries) == 2
     assert {s.score_global for s in summaries} == {50.0, 80.0}
     assert all(s.domain == "example.com" for s in summaries)
+
+
+def test_list_domains_one_per_domain_with_latest(session: Session) -> None:
+    repository.persist_report(_report(domain="a.com", score=40.0), session)
+    repository.persist_report(_report(domain="a.com", score=90.0), session)
+    repository.persist_report(_report(domain="b.com", score=70.0), session)
+    session.commit()
+
+    domains = repository.list_domains(session)
+    by_host = {d.domain: d for d in domains}
+    assert set(by_host) == {"a.com", "b.com"}
+    assert by_host["a.com"].audit_count == 2
+    assert by_host["b.com"].audit_count == 1
+    # latest_audit_id must resolve to a real, loadable report.
+    assert repository.load_report(session, by_host["a.com"].latest_audit_id) is not None

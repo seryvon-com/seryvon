@@ -47,6 +47,10 @@ export const fr: Dict = {
     costBreakdownTitle: "Détail du coût par connecteur",
     costNotConfigured: "non configuré",
     costCalls: (calls: number, unit: number) => `${calls} appel${calls > 1 ? "s" : ""} × ${unit.toFixed(3)} $`,
+    recentTitle: "Déjà audités",
+    recentSubtitle: "Ouvrez le dernier rapport d'un domaine — sans relancer d'audit",
+    recentAuditCount: (n) => `${n} audit${n > 1 ? "s" : ""}`,
+    recentEmpty: "Aucun audit pour l'instant — lancez le premier ci-dessus.",
   },
 
   report: {
