@@ -119,6 +119,7 @@ async def _collect_external(
         )
         external.core_web_vitals = psi.core_web_vitals
         external.lighthouse_performance = psi.lighthouse_performance
+        external.psi_error_reason = psi.error_reason
     # DataForSEO takes priority: provides both domain rank and referring domains.
     # OPR is kept as legacy fallback (deprecated — acquired by Keywords Everywhere).
     if settings.dataforseo_api_key and domain:
@@ -321,10 +322,11 @@ async def run_audit(
     _progress(f"Connectors done — active: {', '.join(active_connectors)}")
     # Warn when a key is configured but the connector returned no data (silent failure).
     if settings.psi_api_key and external.lighthouse_performance is None:
-        _progress(
-            "⚠ PSI key is set but Lighthouse returned no data"
-            " — check key validity or network access to googleapis.com"
+        reason = external.psi_error_reason or (
+            "Lighthouse returned no data — check key validity or network access"
+            " to googleapis.com"
         )
+        _progress(f"⚠ PSI: {reason}")
     if external.dataforseo_active and external.open_page_rank is None:
         _progress(
             f"⚠ DataForSEO called for '{discovery.domain}' but returned no rank data"

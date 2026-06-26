@@ -210,6 +210,9 @@ class ExternalSignals(BaseModel):
 
     core_web_vitals: dict[str, float] | None = None
     lighthouse_performance: float | None = None
+    # Diagnostic message when PSI returned no usable data (presentation only —
+    # never read by scoring rules; keeps determinism).
+    psi_error_reason: str | None = None
     open_page_rank: float | None = None
     referring_domains: int | None = None
     # True when DataForSEO was called (key configured); False when key not set.

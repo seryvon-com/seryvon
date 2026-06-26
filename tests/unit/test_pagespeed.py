@@ -86,24 +86,66 @@ async def test_fetch_sends_expected_params() -> None:
     assert captured["key"] == "secret"
 
 
-async def test_fetch_http_error_returns_empty() -> None:
+async def test_fetch_http_error_returns_no_data_with_reason() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, json={})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     result = await fetch_pagespeed("https://ex.com/", api_key="k", client=client)
     await client.aclose()
-    assert result == PageSpeedResult()
+    assert result.core_web_vitals is None
+    assert result.lighthouse_performance is None
+    assert result.error_reason is not None and "HTTP 500" in result.error_reason
 
 
-async def test_fetch_invalid_json_returns_empty() -> None:
+async def test_fetch_invalid_json_returns_no_data_with_reason() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=b"not json")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     result = await fetch_pagespeed("https://ex.com/", api_key="k", client=client)
     await client.aclose()
-    assert result == PageSpeedResult()
+    assert result.lighthouse_performance is None
+    assert result.error_reason is not None
+
+
+async def test_fetch_quota_zero_gives_actionable_reason() -> None:
+    """RESOURCE_EXHAUSTED with quota_limit_value 0 => 'enable the API' message."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            429,
+            json={
+                "error": {
+                    "status": "RESOURCE_EXHAUSTED",
+                    "message": "Quota exceeded",
+                    "details": [
+                        {
+                            "reason": "RATE_LIMIT_EXCEEDED",
+                            "metadata": {"quota_limit_value": "0"},
+                        }
+                    ],
+                }
+            },
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    result = await fetch_pagespeed("https://ex.com/", api_key="k", client=client)
+    await client.aclose()
+    assert result.lighthouse_performance is None
+    assert result.error_reason is not None
+    assert "quota is 0" in result.error_reason
+    assert "Google Cloud Console" in result.error_reason
+
+
+async def test_fetch_rejected_key_reason() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"error": {"message": "API key not valid"}})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    result = await fetch_pagespeed("https://ex.com/", api_key="bad", client=client)
+    await client.aclose()
+    assert result.error_reason is not None and "API key" in result.error_reason
 
 
 # --------------------------------------------------------------------------- #

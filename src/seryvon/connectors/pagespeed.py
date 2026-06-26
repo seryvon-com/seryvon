@@ -36,10 +36,50 @@ _CLS_SCALE = 100.0
 
 @dataclass(slots=True)
 class PageSpeedResult:
-    """Extracted PSI signals; `None` => metric unavailable (-> not_measured)."""
+    """Extracted PSI signals; `None` => metric unavailable (-> not_measured).
+
+    `error_reason` carries a human-readable diagnostic when the call failed or
+    returned no usable data (presentation only — never read by scoring).
+    """
 
     core_web_vitals: dict[str, float] | None = None
     lighthouse_performance: float | None = None
+    error_reason: str | None = None
+
+
+def _classify_http_error(exc: httpx.HTTPStatusError) -> str:
+    """Turn a PSI HTTP error into a precise, actionable reason."""
+    body_excerpt = ""
+    try:
+        payload = exc.response.json()
+        error = payload.get("error", {}) if isinstance(payload, dict) else {}
+        message = error.get("message", "")
+        details = error.get("details", [])
+        reasons = {
+            d.get("reason")
+            for d in details
+            if isinstance(d, dict) and d.get("reason")
+        }
+        quota_zero = any(
+            isinstance(d, dict)
+            and str(d.get("metadata", {}).get("quota_limit_value")) == "0"
+            for d in details
+        )
+        if "RATE_LIMIT_EXCEEDED" in reasons or quota_zero:
+            if quota_zero:
+                return (
+                    "PageSpeed Insights API quota is 0 — enable the API in Google "
+                    "Cloud Console (APIs & Services → Library → PageSpeed Insights API) "
+                    "and check that the daily quota is not set to 0."
+                )
+            return "PageSpeed Insights API rate limit exceeded — retry later or raise the quota."
+        body_excerpt = f" — {message}" if message else ""
+    except (ValueError, KeyError, AttributeError):
+        body_excerpt = ""
+    status = exc.response.status_code
+    if status in (401, 403):
+        return f"PageSpeed Insights rejected the API key (HTTP {status}){body_excerpt}."
+    return f"PageSpeed Insights request failed (HTTP {status}){body_excerpt}."
 
 
 def _percentile(metrics: dict[str, Any], key: str) -> float | None:
@@ -101,6 +141,17 @@ async def fetch_pagespeed(
         response = await client.get(PSI_ENDPOINT, params=params)
         response.raise_for_status()
         payload = response.json()
+    except httpx.HTTPStatusError as exc:
+        reason = _classify_http_error(exc)
+        log.warning(
+            "pagespeed http error url=%s elapsed_ms=%d status=%d reason=%s body=%s",
+            url,
+            int((time.monotonic() - t0) * 1000),
+            exc.response.status_code,
+            reason,
+            exc.response.text[:500],
+        )
+        return PageSpeedResult(error_reason=reason)
     except (httpx.HTTPError, ValueError) as exc:
         log.warning(
             "pagespeed error url=%s elapsed_ms=%d error=%s",
@@ -108,9 +159,20 @@ async def fetch_pagespeed(
             int((time.monotonic() - t0) * 1000),
             exc,
         )
-        return PageSpeedResult()
+        return PageSpeedResult(error_reason=f"PageSpeed Insights unreachable: {exc}")
     finally:
         if own_client:
             await client.aclose()
     log.info("pagespeed done url=%s elapsed_ms=%d", url, int((time.monotonic() - t0) * 1000))
-    return parse_pagespeed(payload)
+    result = parse_pagespeed(payload)
+    # A 200 with no Lighthouse score usually means the lab run was throttled or
+    # the page failed to load — surface the runtime error if PSI provided one.
+    if result.lighthouse_performance is None:
+        runtime = payload.get("lighthouseResult", {}).get("runtimeError", {})
+        message = runtime.get("message") if isinstance(runtime, dict) else None
+        result.error_reason = (
+            f"PageSpeed returned no Lighthouse score: {message}"
+            if message
+            else "PageSpeed returned no Lighthouse score (lab run unavailable or quota throttled)."
+        )
+    return result
