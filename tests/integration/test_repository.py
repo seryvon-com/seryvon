@@ -99,6 +99,8 @@ def _report(domain: str = "example.com", score: float = 64.8) -> AuditReport:
                 priority_score=4.0,
                 priority_bucket="P1",
                 recommendation="Rédiger une meta description.",
+                # dict raw_value must survive the JSONB roundtrip (regression: was Text).
+                raw_value={"pages": 3, "missing": 2},
             )
         ],
         aso_readiness=AsoReadiness(
