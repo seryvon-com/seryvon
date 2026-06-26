@@ -84,3 +84,11 @@ def test_html_warning_band_for_mid_score() -> None:
     report.score_global = 65.0
     html = report_to_html(report)
     assert 'class="global score-warning"' in html
+
+
+def test_html_ok_band_for_high_score() -> None:
+    """A global score >= 80 lands in the ok band — covers the OK CSS branch."""
+    report = _report()
+    report.score_global = 92.0
+    html = report_to_html(report)
+    assert 'class="global score-ok"' in html
