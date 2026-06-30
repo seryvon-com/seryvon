@@ -36,8 +36,13 @@ CMD ["uvicorn", "seryvon.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 # ---------------------------------------------------------------------------
 FROM base AS worker
 
+# Install Playwright system deps (requires root / apt-get), then the Python
+# package.  The browser binary itself must be installed as the runtime user
+# so Playwright finds it under /home/seryvon/.cache/ms-playwright/.
 USER root
 RUN pip install "playwright>=1.44" \
-    && playwright install chromium --with-deps \
+    && playwright install-deps chromium \
     && rm -rf /var/lib/apt/lists/*
+
 USER seryvon
+RUN playwright install chromium

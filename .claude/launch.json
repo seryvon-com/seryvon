@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "API Backend (FastAPI + Uvicorn)",
+      "runtimeExecutable": "uvicorn",
+      "runtimeArgs": [
+        "seryvon.api.main:app",
+        "--reload",
+        "--host",
+        "0.0.0.0"
+      ],
+      "port": 8001,
+      "autoPort": true,
+      "cwd": "/Volumes/DEV/seryvon"
+    },
+    {
+      "name": "Frontend Web (React + Vite)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173,
+      "cwd": "/Volumes/DEV/seryvon/web"
+    }
+  ]
+}

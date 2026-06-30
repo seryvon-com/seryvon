@@ -20,11 +20,14 @@ indicates CSR; otherwise the page is classified as SSR.
 
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from selectolax.parser import HTMLParser
+
+log = logging.getLogger(__name__)
 
 #: CSR classification threshold: rendered words >= raw words × this factor.
 CSR_RATIO_THRESHOLD = 1.5
@@ -97,12 +100,16 @@ def make_renderer(*, user_agent: str, timeout: float) -> PlaywrightRenderer | No
                     await page.goto(
                         url,
                         timeout=timeout * 1000,
-                        wait_until="networkidle",
+                        wait_until="load",
                     )
+                    # Allow JS components (footer, nav) a moment to hydrate after
+                    # the load event before reading the DOM.
+                    await page.wait_for_timeout(1500)
                     html = await page.content()
                 finally:
                     await browser.close()
-        except Exception:
+        except Exception as exc:
+            log.warning("playwright render failed url=%s err=%r", url, exc)
             return None
         elapsed = int((time.monotonic() - t0) * 1000)
         return RenderedPage(

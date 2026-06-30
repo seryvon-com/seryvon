@@ -173,20 +173,20 @@ async def _run_crawl(
                         rendered.word_count,
                         rendered.render_time_ms,
                     )
-                    signals.render_mode = classify_render_mode(result.html, rendered.html)
-                    signals.render_source = "playwright"
-                    if signals.render_mode == "csr":
-                        # Re-extract signals from rendered DOM: JS-rendered content
-                        # gives accurate GEO metrics (noise_ratio, entities, etc.).
-                        rendered_signals = extract_page_signals(
-                            result.final_url,
-                            rendered.html,
-                            status_code=result.status_code,
-                            redirects=result.redirects,
-                        )
-                        rendered_signals.render_mode = "csr"
-                        rendered_signals.render_source = "playwright"
-                        signals = rendered_signals
+                    render_mode = classify_render_mode(result.html, rendered.html)
+                    # Always use rendered DOM for the home page: captures JS-rendered
+                    # elements (footer social links, dynamic nav) regardless of whether
+                    # the page is classified SSR or CSR.  A site can serve SSR content
+                    # yet hydrate its footer via JavaScript — static HTML misses those.
+                    rendered_signals = extract_page_signals(
+                        result.final_url,
+                        rendered.html,
+                        status_code=result.status_code,
+                        redirects=result.redirects,
+                    )
+                    rendered_signals.render_mode = render_mode
+                    rendered_signals.render_source = "playwright"
+                    signals = rendered_signals
                 else:
                     signals.render_mode = detect_render_mode(result.html)
             else:

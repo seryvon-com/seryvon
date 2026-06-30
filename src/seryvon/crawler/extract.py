@@ -93,6 +93,9 @@ _PLATFORM_HOSTS = {
     "bsky.app": "bluesky",
     "threads.net": "threads",
     "crunchbase.com": "crunchbase",
+    "medium.com": "medium",
+    "dev.to": "devto",
+    "patreon.com": "patreon",
 }
 
 
@@ -214,22 +217,36 @@ def _webmcp_signals(tree: HTMLParser, html: str) -> WebMcpSignals:
     )
 
 
-def _agent_usable_forms(tree: HTMLParser) -> int:
-    """Count agent-usable forms (action/method + labelled inputs)."""
-    count = 0
+def _agent_usable_forms(tree: HTMLParser) -> tuple[int, dict[str, int]]:
+    """Count agent-usable forms and return disqualification breakdown.
+
+    Returns (qualifying_count, detail) where detail = {found, no_action,
+    no_fields, no_label} — used to build actionable raw_value.
+    """
+    qualifying = 0
+    no_action = 0
+    no_fields = 0
+    no_label = 0
+
     for form in tree.css("form"):
         if not (form.attributes.get("action") or form.attributes.get("method")):
+            no_action += 1
             continue
         fields = form.css("input, select, textarea")
         if not fields:
+            no_fields += 1
             continue
         labelled = bool(form.css("label")) or any(
             (field.attributes.get("aria-label") or field.attributes.get("placeholder"))
             for field in fields
         )
         if labelled:
-            count += 1
-    return count
+            qualifying += 1
+        else:
+            no_label += 1
+
+    found = qualifying + no_action + no_fields + no_label
+    return qualifying, {"found": found, "no_action": no_action, "no_fields": no_fields, "no_label": no_label}
 
 
 def _openapi_links(tree: HTMLParser) -> list[str]:
@@ -244,11 +261,13 @@ def _openapi_links(tree: HTMLParser) -> list[str]:
 
 def _aso_signals(tree: HTMLParser, html: str, jsonld: _JsonLdAnalysis) -> AsoSignals:
     """Assemble the static ASO signals (M11, adapted from audit_webmcp.py — MIT)."""
+    forms_count, forms_detail = _agent_usable_forms(tree)
     return AsoSignals(
         webmcp=_webmcp_signals(tree, html),
         potential_actions=jsonld.potential_actions,
         action_schema_types=jsonld.action_schema_types,
-        agent_usable_forms=_agent_usable_forms(tree),
+        agent_usable_forms=forms_count,
+        agent_usable_forms_detail=forms_detail,
         openapi_links=_openapi_links(tree),
     )
 
