@@ -66,10 +66,11 @@ def run_audit_task(self: Any, url: str, locale: str = "en") -> dict[str, Any]:
             timeout=float(_AUDIT_TIMEOUT_SECONDS),
         )
 
-    report = asyncio.run(_run())
+    report, pages = asyncio.run(_run())
 
     with session_scope() as session:
         audit_id = repository.persist_report(report, session)
+        repository.persist_pages(audit_id, pages, session)
 
     log.info("audit_task done url=%s audit_id=%s", url, audit_id)
     return {"audit_id": str(audit_id), "logs": logs}

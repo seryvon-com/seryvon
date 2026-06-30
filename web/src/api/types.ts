@@ -190,6 +190,17 @@ export interface GscResult {
   date_range_days: number;
 }
 
+export interface PageRow {
+  url: string;
+  status_code: number | null;
+  render_mode: string | null;
+  word_count: number | null;
+  images_total: number | null;
+  images_missing_alt: number | null;
+  agent_usable_forms: number | null;
+  title: string | null;
+}
+
 export interface AuditSummary {
   audit_id: string;
   domain: string;

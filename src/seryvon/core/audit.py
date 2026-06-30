@@ -188,8 +188,8 @@ async def run_audit(
     artifact_store: ArtifactStore | None = None,
     settings: Settings | None = None,
     on_progress: Callable[[str], None] | None = None,
-) -> AuditReport:
-    """Run an audit on the given URL and return the report.
+) -> tuple[AuditReport, list[PageSignals]]:
+    """Run an audit on the given URL and return (report, pages).
 
     Steps: discovery (robots/sitemaps/frontier) -> multi-page crawl -> signal
     extraction -> rule execution -> per-pillar aggregation -> global score ->
@@ -199,6 +199,9 @@ async def run_audit(
     When `artifact_store` is provided (opt-in, Observe layer C-P2), the raw HTML
     of each crawled page is stored and referenced in `report.artifacts`. This is a
     collection-side side effect: it never feeds scoring (determinism preserved).
+
+    The second element of the tuple (pages) is not included in the report model
+    itself — callers that persist the audit should pass it to persist_pages().
     """
     settings = settings or get_settings()
     config = config or AuditConfig.default()
@@ -372,7 +375,7 @@ async def run_audit(
     log.info("audit done url=%s score=%.1f", url, overall)
     config_digest = _config_digest(config)
     measurement_profile = _build_measurement_profile(config, active_connectors)
-    return AuditReport(
+    report = AuditReport(
         domain=bundle.domain,
         tool_version=__version__,
         schema_version=SIGNAL_SCHEMA_VERSION,
@@ -389,3 +392,4 @@ async def run_audit(
         artifacts=artifacts,
         prompt_set=prompt_set,
     )
+    return report, pages

@@ -130,7 +130,7 @@ def run(
     audit_config = AuditConfig.from_yaml(config) if config else AuditConfig.default()
 
     try:
-        report = asyncio.run(run_audit(url, audit_config))
+        report, pages = asyncio.run(run_audit(url, audit_config))
     except Exception as exc:
         console.print(f"[red]Échec de l'audit :[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -140,6 +140,7 @@ def run(
     if persist:
         with session_scope() as session:
             audit_id = repository.persist_report(report, session)
+            repository.persist_pages(audit_id, pages, session)
         if not quiet:
             console.print(f"[green]Audit persisté :[/green] {audit_id}")
 
@@ -260,7 +261,7 @@ def aso(
     audit_config = AuditConfig.from_yaml(config) if config else AuditConfig.default()
 
     try:
-        report = asyncio.run(run_audit(url, audit_config))
+        report, _pages = asyncio.run(run_audit(url, audit_config))
     except Exception as exc:
         console.print(f"[red]Échec de l'audit :[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -598,14 +599,14 @@ def compare(
 
     console.print(f"[bold]Audit 1 :[/bold] {url}")
     try:
-        left_report = asyncio.run(run_audit(url, audit_config))
+        left_report, _lpages = asyncio.run(run_audit(url, audit_config))
     except Exception as exc:
         console.print(f"[red]Échec de l'audit 1 :[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
     console.print(f"[bold]Audit 2 :[/bold] {competitor}")
     try:
-        right_report = asyncio.run(run_audit(competitor, audit_config))
+        right_report, _rpages = asyncio.run(run_audit(competitor, audit_config))
     except Exception as exc:
         console.print(f"[red]Échec de l'audit 2 :[/red] {exc}")
         raise typer.Exit(code=1) from exc

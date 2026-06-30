@@ -163,6 +163,40 @@ def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
     return audit.id
 
 
+def persist_pages(
+    audit_id: uuid.UUID,
+    pages: list,  # list[PageSignals] — avoid circular import
+    session: Session,
+) -> None:
+    """Persist crawled pages and their key signals for a given audit."""
+    for p in pages:
+        page_row = m.Page(
+            audit_id=audit_id,
+            url=p.url,
+            status_code=p.status_code,
+            render_mode=p.render_mode,
+        )
+        session.add(page_row)
+        session.flush()
+        internal = {
+            "title": p.title,
+            "word_count": p.word_count,
+            "images_total": p.images_total,
+            "images_with_alt": p.images_with_alt,
+            "aso": {
+                "agent_usable_forms": p.aso.agent_usable_forms,
+                "agent_usable_forms_detail": p.aso.agent_usable_forms_detail,
+            },
+        }
+        sig_row = m.PageSignalRow(
+            page_id=page_row.id,
+            signal_schema_version=1,
+            internal=internal,
+            external={},
+        )
+        session.add(sig_row)
+
+
 def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
     """Rebuild an `AuditReport` from the database (None if not found)."""
     audit = session.get(m.Audit, audit_id)
