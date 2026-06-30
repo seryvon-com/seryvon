@@ -685,5 +685,93 @@ def _print_comparison(left_domain: str, right_domain: str, result: Any) -> None:
         console.print(table2)
 
 
+@app.command(name="recalc-scores")
+def recalc_scores(
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Affiche les changements sans écrire en base."),
+    ] = False,
+) -> None:
+    """Recalcule les scores pilier et global de tous les audits historiques.
+
+    Utile après un changement de formule de scoring (ex. ajout du facteur
+    de couverture). Lit les criterion_result stockés en base et réécrit
+    pillar_score + audit.score_global.
+    """
+    from sqlalchemy import select
+
+    from seryvon.db import models as m
+    from seryvon.models.criterion import CriterionResult
+    from seryvon.models.enums import Status
+    from seryvon.scoring.engine import score_global, score_pillar
+    from seryvon import PILLARS
+
+    updated = 0
+    skipped = 0
+
+    with session_scope() as session:
+        audit_ids: list[Any] = session.scalars(select(m.Audit.id)).all()
+        console.print(f"[bold]{len(audit_ids)} audit(s) trouvé(s)[/bold]")
+
+        for audit_id in audit_ids:
+            rows = session.scalars(
+                select(m.CriterionResultRow).where(m.CriterionResultRow.audit_id == audit_id)
+            ).all()
+            if not rows:
+                skipped += 1
+                continue
+
+            # Rebuild lightweight CriterionResult objects from DB rows
+            criteria = [
+                CriterionResult(
+                    key=r.criterion_key,
+                    pillars=r.pillars,
+                    score=r.score,
+                    status=Status(r.status),
+                    weight=r.weight,
+                )
+                for r in rows
+            ]
+
+            new_pillar_scores = {p: score_pillar(p, criteria) for p in PILLARS}
+            new_global = score_global(new_pillar_scores, AuditConfig.default())
+
+            if dry_run:
+                audit_row = session.get(m.Audit, audit_id)
+                domain = audit_row.domain.host if audit_row and audit_row.domain else "?"
+                console.print(f"  [dim]{audit_id}[/dim] {domain}")
+                for p, ps in new_pillar_scores.items():
+                    console.print(f"    {p}: score={ps.score:.1f} coverage={ps.coverage:.0%}")
+                console.print(f"    global: {new_global:.1f}")
+            else:
+                # Update pillar_score rows
+                ps_rows = session.scalars(
+                    select(m.PillarScoreRow).where(m.PillarScoreRow.audit_id == audit_id)
+                ).all()
+                ps_by_pillar = {r.pillar: r for r in ps_rows}
+                for p, ps in new_pillar_scores.items():
+                    row = ps_by_pillar.get(p)
+                    if row:
+                        row.score = ps.score
+                        row.coverage = ps.coverage
+                        row.coverage_label = str(ps.coverage_label)
+                        row.measured = ps.measured
+                        row.excluded = ps.excluded
+                        row.not_applicable = ps.not_applicable
+
+                # Update audit global score
+                audit_row = session.get(m.Audit, audit_id)
+                if audit_row:
+                    audit_row.score_global = new_global
+
+            updated += 1
+
+        if not dry_run:
+            session.commit()
+
+    verb = "à recalculer" if dry_run else "mis à jour"
+    console.print(f"[green]✓[/green] {updated} audit(s) {verb}, {skipped} ignoré(s) (sans critères).")
+
+
 if __name__ == "__main__":
     app()

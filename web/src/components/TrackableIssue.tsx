@@ -17,7 +17,32 @@ interface Props {
   onRemoveProof: (id: string) => void;
 }
 
-function AffectedPages({ pages }: { pages: string[] }) {
+function downloadCsv(criterionKey: string, recommendation: string, pages: string[]) {
+  const rows = [
+    ["criterion", "recommendation", "url"],
+    ...pages.map((url) => [criterionKey, recommendation, url]),
+  ];
+  const csv = rows
+    .map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = `${criterionKey.replace(".", "_")}_pages.csv`;
+  a.click();
+  URL.revokeObjectURL(href);
+}
+
+function AffectedPages({
+  pages,
+  criterionKey,
+  recommendation,
+}: {
+  pages: string[];
+  criterionKey: string;
+  recommendation: string;
+}) {
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? pages : pages.slice(0, 5);
   const remaining = pages.length - 5;
@@ -45,6 +70,17 @@ function AffectedPages({ pages }: { pages: string[] }) {
           ▲
         </button>
       )}
+      <button
+        className="issue-csv-btn"
+        onClick={() => downloadCsv(criterionKey, recommendation, pages)}
+        title={`Export ${pages.length} URL(s) as CSV`}
+        aria-label="Export as CSV"
+      >
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5.5 1v6M3 5l2.5 2.5L8 5M1.5 9.5h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        CSV
+      </button>
     </div>
   );
 }
@@ -223,7 +259,11 @@ export function TrackableIssue({
 
       {/* ── affected pages ── */}
       {issue.affected_pages.length > 0 && (
-        <AffectedPages pages={issue.affected_pages} />
+        <AffectedPages
+          pages={issue.affected_pages}
+          criterionKey={issue.criterion_key}
+          recommendation={issue.recommendation || issue.criterion_key}
+        />
       )}
 
       {/* ── bottom strip (done state + proofs) ── */}

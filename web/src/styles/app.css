@@ -416,6 +416,29 @@
 .pillar-card .meta .sep {
   color: var(--c-border-hover);
 }
+.pillar-coverage-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pillar-coverage-label {
+  font-size: 11px;
+  color: var(--c-text-faint);
+}
+.pillar-coverage-label.partial {
+  color: var(--c-text-muted);
+  font-weight: 500;
+}
+.pillar-coverage-pct {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--c-surface-2, #1a2030);
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  padding: 0px 5px;
+  color: var(--c-text-muted);
+}
 
 /* ===== ASO readiness band ===== */
 .aso-band {
@@ -558,6 +581,25 @@
 .issue-page-more {
   color: var(--c-text-faint);
   border-style: dashed;
+}
+.issue-csv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--c-text-faint);
+  cursor: pointer;
+  margin-left: auto;
+  transition: color 0.15s, border-color 0.15s;
+}
+.issue-csv-btn:hover {
+  color: var(--c-accent, #4f9cf9);
+  border-color: var(--c-accent, #4f9cf9);
 }
 .issue .grow {
   flex: 1;
@@ -1244,6 +1286,58 @@
 .cost-row-inactive td {
   opacity: 0.38;
 }
+/* ── Hint panel (click-to-open, selectable text) ── */
+.hint-panel {
+  position: fixed;
+  background: var(--surface-2, #1a1f2e);
+  border: 1px solid var(--border, #2a3040);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  user-select: text;
+  cursor: text;
+}
+.hint-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px;
+  border-bottom: 1px solid var(--border, #2a3040);
+}
+.hint-panel-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary, #8b949e);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.hint-panel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #6e7781);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.hint-panel-close:hover {
+  color: var(--text-primary, #e6edf3);
+}
+.hint-panel-body {
+  padding: 10px 12px 12px;
+  font-size: 0.78rem;
+  color: var(--text-primary, #e6edf3);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* Active state for the ⓘ button when panel is open */
+.cost-info-btn.active {
+  opacity: 1;
+  color: var(--c-accent, #4f9cf9);
+}
+
 .cost-col-inactive {
   font-style: italic;
   color: var(--text-muted, #6e7781) !important;

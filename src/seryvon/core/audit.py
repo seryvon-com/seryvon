@@ -14,6 +14,7 @@ Celery comes later; this asynchronous orchestrator remains the test reference.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
@@ -39,7 +40,7 @@ from seryvon.connectors import (
 from seryvon.core.config import AuditConfig, Settings, get_settings
 from seryvon.crawler import crawl_site, discover
 from seryvon.crawler.discovery import AGENT_BOTS, blocked_agent_bots
-from seryvon.crawler.playwright_render import PlaywrightRenderer, make_renderer
+from seryvon.crawler.playwright_render import renderer_session
 from seryvon.i18n import set_locale
 from seryvon.models.artifact import ArtifactRef, ArtifactType
 from seryvon.models.report import AuditReport, MeasurementProfile
@@ -247,29 +248,29 @@ async def run_audit(
             )
             artifacts.append(ref)
 
-    playwright_renderer: PlaywrightRenderer | None = None
-    if settings.playwright_enabled:
-        playwright_renderer = make_renderer(
-            user_agent=user_agent, timeout=settings.playwright_timeout
-        )
-
     _progress(f"Crawling up to {config.crawl.max_pages} pages…")
     t_crawl = time.monotonic()
 
     def _crawl_progress(depth: int, wave_size: int, total_done: int) -> None:
         _progress(f"  Depth {depth} — {wave_size} page(s) fetched · {total_done} total")
 
-    pages = await crawl_site(
-        discovery,
-        user_agent=user_agent,
-        max_pages=config.crawl.max_pages,
-        max_depth=config.crawl.max_depth,
-        respect_robots=config.crawl.respect_robots,
-        timeout=settings.request_timeout,
-        html_sink=html_sink,
-        playwright_renderer=playwright_renderer,
-        on_progress=_crawl_progress,
+    _renderer_ctx = (
+        renderer_session(user_agent=user_agent, timeout=settings.playwright_timeout)
+        if settings.playwright_enabled
+        else contextlib.nullcontext(None)
     )
+    async with _renderer_ctx as playwright_renderer:
+        pages = await crawl_site(
+            discovery,
+            user_agent=user_agent,
+            max_pages=config.crawl.max_pages,
+            max_depth=config.crawl.max_depth,
+            respect_robots=config.crawl.respect_robots,
+            timeout=settings.request_timeout,
+            html_sink=html_sink,
+            playwright_renderer=playwright_renderer,
+            on_progress=_crawl_progress,
+        )
     log.info(
         "audit crawl done pages=%d elapsed_ms=%d",
         len(pages),
