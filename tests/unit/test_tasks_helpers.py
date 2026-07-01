@@ -153,12 +153,13 @@ class TestRunAuditTask:
             patch("seryvon.tasks.audit.resolve_settings", return_value=Settings()),
             patch(
                 "seryvon.tasks.audit.run_audit",
-                new=AsyncMock(return_value=fake_report),
+                new=AsyncMock(return_value=(fake_report, [])),
             ),
             patch(
                 "seryvon.tasks.audit.repository.persist_report",
                 return_value=fake_audit_id,
             ),
+            patch("seryvon.tasks.audit.repository.persist_pages"),
             patch.object(run_audit_task, "update_state"),
         ):
             result = run_audit_task.__wrapped__("https://example.com", locale="en")
@@ -177,7 +178,7 @@ class TestRunAuditTask:
             if on_prog:
                 captured_on_progress.append(on_prog)
                 on_prog("crawling depth=1")
-            return _make_fake_report()
+            return (_make_fake_report(), [])
 
         with (
             patch("seryvon.tasks.audit.session_scope", _fake_session_scope),
@@ -187,6 +188,7 @@ class TestRunAuditTask:
                 "seryvon.tasks.audit.repository.persist_report",
                 return_value=uuid.uuid4(),
             ),
+            patch("seryvon.tasks.audit.repository.persist_pages"),
             patch.object(run_audit_task, "update_state") as mock_update,
         ):
             run_audit_task.__wrapped__("https://example.com")
@@ -203,7 +205,7 @@ class TestRunAuditTask:
 
         async def _capture(url: str, config: Any, **kwargs: Any) -> Any:
             received_config.append(config)
-            return _make_fake_report()
+            return (_make_fake_report(), [])
 
         with (
             patch("seryvon.tasks.audit.session_scope", _fake_session_scope),
@@ -213,6 +215,7 @@ class TestRunAuditTask:
                 "seryvon.tasks.audit.repository.persist_report",
                 return_value=uuid.uuid4(),
             ),
+            patch("seryvon.tasks.audit.repository.persist_pages"),
             patch.object(run_audit_task, "update_state"),
         ):
             run_audit_task.__wrapped__("https://example.com", locale="fr")

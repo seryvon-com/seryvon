@@ -29,7 +29,7 @@ from seryvon.tasks.app import celery_app
 
 log = logging.getLogger(__name__)
 
-_AUDIT_TIMEOUT_SECONDS = 300
+_AUDIT_TIMEOUT_SECONDS = 480
 
 
 @celery_app.task(  # type: ignore[untyped-decorator]

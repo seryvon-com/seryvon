@@ -79,7 +79,7 @@ async def renderer_session(
     *,
     user_agent: str,
     timeout: float,
-    max_concurrent: int = 3,
+    max_concurrent: int = 6,
 ) -> AsyncIterator[PlaywrightRenderer | None]:
     """Async context manager that keeps one Chromium browser alive for the crawl.
 
@@ -114,7 +114,14 @@ async def renderer_session(
                                 timeout=timeout * 1000,
                                 wait_until="load",
                             )
-                            await page.wait_for_timeout(1500)
+                            # Footers (social links) and contact forms are often
+                            # below the fold and lazy-hydrated via IntersectionObserver;
+                            # scroll to the bottom to trigger their render before capture.
+                            with contextlib.suppress(Exception):
+                                await page.evaluate(
+                                    "window.scrollTo(0, document.body.scrollHeight)"
+                                )
+                            await page.wait_for_timeout(2000)
                             html = await page.content()
                         finally:
                             await context.close()

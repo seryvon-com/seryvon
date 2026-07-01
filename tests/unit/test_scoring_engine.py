@@ -37,7 +37,7 @@ def test_coverage_excludes_not_applicable_from_base() -> None:
     assert ps.coverage == 0.5
     assert ps.measured == 1
     assert ps.not_applicable == 1
-    assert ps.score == 100.0  # only the measured criterion 'a' contributes
+    assert ps.score == 50.0  # raw=100 * coverage=0.5 (coverage penalty applied)
     assert score_coverage(results) == 0.5
 
 
@@ -126,8 +126,8 @@ def test_score_pillar_renormalises_not_measured() -> None:
         ),
     ]
     ps = score_pillar("seo", results)
-    # Le not_measured est exclu : seul 'a' compte -> 100
-    assert ps.score == 100.0
+    # raw=100, coverage=2/7≈0.2857 -> score=100*0.2857≈28.57 (coverage penalty applied)
+    assert ps.score == 28.57
     assert ps.measured == 1
     assert ps.excluded == 1
 
