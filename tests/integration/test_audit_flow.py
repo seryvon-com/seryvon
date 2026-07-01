@@ -43,7 +43,7 @@ def patched_crawl(monkeypatch: pytest.MonkeyPatch, sample_html: str) -> None:
 
 
 async def test_full_audit_produces_report(patched_crawl: None) -> None:
-    report = await run_audit("https://example.com")
+    report, _pages = await run_audit("https://example.com")
     assert report.domain == "example.com"
     assert report.tool_version
     assert "seo" in report.pillars
@@ -53,8 +53,8 @@ async def test_full_audit_produces_report(patched_crawl: None) -> None:
 
 async def test_audit_is_deterministic(patched_crawl: None) -> None:
     """Two audits of the same site -> same scores (zero variance)."""
-    a = await run_audit("https://example.com")
-    b = await run_audit("https://example.com")
+    a, _ = await run_audit("https://example.com")
+    b, _ = await run_audit("https://example.com")
     assert a.score_global == b.score_global
     assert a.config_digest == b.config_digest
     assert {p: s.score for p, s in a.pillars.items()} == {p: s.score for p, s in b.pillars.items()}
@@ -80,7 +80,7 @@ async def test_audit_stores_artifacts_when_store_provided(
     monkeypatch.setattr(audit_module, "crawl_site", fake_crawl)
 
     store = InMemoryArtifactStore()
-    report = await run_audit("https://example.com", artifact_store=store)
+    report, _pages = await run_audit("https://example.com", artifact_store=store)
 
     assert len(report.artifacts) == 1
     ref = report.artifacts[0]
@@ -90,7 +90,7 @@ async def test_audit_stores_artifacts_when_store_provided(
 
 
 async def test_audit_without_store_captures_no_artifacts(patched_crawl: None) -> None:
-    report = await run_audit("https://example.com")
+    report, _pages = await run_audit("https://example.com")
     assert report.artifacts == []
 
 
@@ -106,7 +106,7 @@ async def test_audit_unreachable_site_is_graceful(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(audit_module, "discover", fake_discover)
     monkeypatch.setattr(audit_module, "crawl_site", empty_crawl)
 
-    report = await run_audit("https://unreachable.example")
+    report, _pages = await run_audit("https://unreachable.example")
     assert report.domain == "example.com"
     # No signal: meta.title absent -> SEO scored 0, but the report exists.
     assert report.pillars["seo"].score == 0.0

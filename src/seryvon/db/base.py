@@ -9,10 +9,12 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from contextlib import contextmanager
+from typing import Any
 
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from seryvon.core.config import get_settings
@@ -22,9 +24,28 @@ class Base(DeclarativeBase):
     """Declarative base shared by all ORM models."""
 
 
+def _register_jsonb_dumpers(dbapi_conn: Any, conn_rec: Any) -> None:
+    """Register dict → JSONB dumper for psycopg3.
+
+    psycopg3 has no built-in dict→JSONB adapter; without this, any JSONB
+    column receiving a plain Python dict raises ProgrammingError.
+    Lists are intentionally excluded: they map to ARRAY(Text) columns.
+    """
+    from psycopg.types.json import JsonbDumper
+
+    dbapi_conn.adapters.register_dumper(dict, JsonbDumper)
+
+
 def get_engine() -> Engine:
     """Create the SQLAlchemy engine from the config."""
-    return create_engine(get_settings().database_url, future=True)
+    engine = create_engine(
+        get_settings().database_url,
+        future=True,
+        json_serializer=json.dumps,
+        json_deserializer=json.loads,
+    )
+    event.listen(engine, "connect", _register_jsonb_dumpers)
+    return engine
 
 
 SessionLocal = sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)

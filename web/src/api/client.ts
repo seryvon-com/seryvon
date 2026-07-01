@@ -16,6 +16,7 @@ import type {
   ComparisonResult,
   DomainSummary,
   KeyEntry,
+  PageRow,
   PromptSet,
 } from "./types";
 
@@ -100,6 +101,9 @@ export const api = {
 
   /** Prompt set generated deterministically from the audit crawl (M4b). */
   getPromptSet: (auditId: string) => request<PromptSet>(`/audits/${auditId}/prompt-set`),
+
+  /** All pages crawled during an audit with per-page signals. */
+  getAuditPages: (auditId: string) => request<PageRow[]>(`/audits/${auditId}/pages`),
 
   /** List BYOK key statuses for all connectors (masked values only). */
   listKeys: () => request<KeyEntry[]>("/keys"),

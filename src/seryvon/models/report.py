@@ -36,7 +36,7 @@ class MeasurementProfile(BaseModel):
     thresholds: dict[str, dict[str, Any]]
     criteria_overrides: dict[str, dict[str, Any]]
     active_connectors: list[str]  # connectors that produced data (not not_measured)
-    digest: str  # SHA-256[:16] of canonical JSON of all other fields
+    digest: str | None = None  # SHA-256[:16] of canonical JSON of all other fields
 
 
 class PillarScore(BaseModel):

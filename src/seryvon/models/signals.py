@@ -20,7 +20,8 @@ a property covered by an explicit test (document 03, §9).
 8 = aggregated LLM citation metrics in `external` (M4, Phase 3);
 9 = GSC rank-tracking signals in `external` (M10);
 10 = Playwright render_source field (Phase 6);
-11 = SERP / AI Overview metrics in `external` (M9)).
+11 = SERP / AI Overview metrics in `external` (M9);
+12 = `agent_usable_forms_detail` breakdown in `AsoSignals`).
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 11
+SIGNAL_SCHEMA_VERSION = 12
 
 
 class WebMcpSignals(BaseModel):
@@ -48,6 +49,7 @@ class AsoSignals(BaseModel):
     potential_actions: list[str] = Field(default_factory=list)
     action_schema_types: list[str] = Field(default_factory=list)
     agent_usable_forms: int = 0
+    agent_usable_forms_detail: dict[str, int] = Field(default_factory=dict)
     openapi_links: list[str] = Field(default_factory=list)
 
 

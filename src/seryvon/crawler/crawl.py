@@ -33,7 +33,7 @@ from selectolax.parser import HTMLParser
 from seryvon.crawler.discovery import DiscoveryResult, same_host
 from seryvon.crawler.extract import extract_links, extract_page_signals
 from seryvon.crawler.fetch import FetchResult, fetch_page
-from seryvon.crawler.playwright_render import PlaywrightRenderer, classify_render_mode
+from seryvon.crawler.playwright_render import PlaywrightRenderer, RenderedPage, classify_render_mode
 from seryvon.models.signals import PageSignals
 
 log = logging.getLogger(__name__)
@@ -145,6 +145,25 @@ async def _run_crawl(
         fetched = await _fetch_wave(wave, fetch, semaphore, delay, sleep)
         log.info("crawl wave done depth=%d fetched=%d", depth, len(fetched))
 
+        # Render all fetched pages with Playwright concurrently when available.
+        rendered_map: dict[str, RenderedPage] = {}
+        if playwright_renderer is not None:
+            urls_to_render = [url for url in wave if url in fetched]
+            log.info("playwright render wave depth=%d pages=%d", depth, len(urls_to_render))
+            render_results = await asyncio.gather(
+                *(playwright_renderer(fetched[url].final_url) for url in urls_to_render),
+                return_exceptions=True,
+            )
+            for url, rendered in zip(urls_to_render, render_results):
+                if isinstance(rendered, RenderedPage):
+                    rendered_map[fetched[url].final_url] = rendered
+                    log.info(
+                        "playwright render done url=%s words=%d render_ms=%d",
+                        fetched[url].final_url,
+                        rendered.word_count,
+                        rendered.render_time_ms,
+                    )
+
         next_frontier: set[str] = set()
         for url in wave:
             seen.add(url)
@@ -154,42 +173,24 @@ async def _run_crawl(
             seen.add(result.final_url)
             if result.final_url in results:
                 continue
-            signals = extract_page_signals(
-                result.final_url,
-                result.html,
-                status_code=result.status_code,
-                redirects=result.redirects,
-            )
-            # Playwright rendering: home page only (performance trade-off).
-            # Compares raw HTTP HTML with rendered DOM to detect CSR reliably.
-            is_home = result.final_url.rstrip("/") == discovery.home_url.rstrip("/")
-            if playwright_renderer is not None and is_home:
-                log.info("playwright render start url=%s", result.final_url)
-                rendered = await playwright_renderer(result.final_url)
-                if rendered is not None:
-                    log.info(
-                        "playwright render done url=%s words=%d render_ms=%d",
-                        result.final_url,
-                        rendered.word_count,
-                        rendered.render_time_ms,
-                    )
-                    signals.render_mode = classify_render_mode(result.html, rendered.html)
-                    signals.render_source = "playwright"
-                    if signals.render_mode == "csr":
-                        # Re-extract signals from rendered DOM: JS-rendered content
-                        # gives accurate GEO metrics (noise_ratio, entities, etc.).
-                        rendered_signals = extract_page_signals(
-                            result.final_url,
-                            rendered.html,
-                            status_code=result.status_code,
-                            redirects=result.redirects,
-                        )
-                        rendered_signals.render_mode = "csr"
-                        rendered_signals.render_source = "playwright"
-                        signals = rendered_signals
-                else:
-                    signals.render_mode = detect_render_mode(result.html)
+            rendered = rendered_map.get(result.final_url)
+            if rendered is not None:
+                render_mode = classify_render_mode(result.html, rendered.html)
+                signals = extract_page_signals(
+                    result.final_url,
+                    rendered.html,
+                    status_code=result.status_code,
+                    redirects=result.redirects,
+                )
+                signals.render_mode = render_mode
+                signals.render_source = "playwright"
             else:
+                signals = extract_page_signals(
+                    result.final_url,
+                    result.html,
+                    status_code=result.status_code,
+                    redirects=result.redirects,
+                )
                 signals.render_mode = detect_render_mode(result.html)
             results[result.final_url] = signals
             if html_sink is not None:

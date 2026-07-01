@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
 import { AppShell } from "../components/AppShell";
+import { CrawledPages } from "../components/CrawledPages";
 import { ReportView } from "../components/ReportView";
 import type { AuditReport } from "../api/types";
 import { useI18n } from "../i18n";
@@ -92,6 +93,7 @@ export function ReportPage() {
             <DownloadPdfButton auditId={auditId!} domain={report.domain} label={t.report.downloadPdf} />
           </div>
           <ReportView report={report} />
+          <CrawledPages auditId={auditId!} />
         </>
       )}
     </AppShell>

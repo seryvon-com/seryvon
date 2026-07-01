@@ -328,6 +328,68 @@ def get_prompt_set(audit_id: uuid.UUID, session: Session = Depends(get_session))
     return report.prompt_set
 
 
+class PageRow(BaseModel):
+    """One crawled page returned by GET /audits/{id}/pages."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    url: str
+    status_code: int | None
+    render_mode: str | None
+    word_count: int | None
+    images_total: int | None
+    images_missing_alt: int | None
+    agent_usable_forms: int | None
+    title: str | None
+
+
+@app.get("/audits/{audit_id}/pages", response_model=list[PageRow])
+def get_audit_pages(
+    audit_id: uuid.UUID,
+    session: Session = Depends(get_session),
+) -> list[PageRow]:
+    """Return all crawled pages for an audit with key per-page signals."""
+    from seryvon.db import models as m
+    from sqlalchemy import select
+
+    rows = session.execute(
+        select(m.Page, m.PageSignalRow)
+        .outerjoin(m.PageSignalRow, m.PageSignalRow.page_id == m.Page.id)
+        .where(m.Page.audit_id == audit_id)
+        .order_by(m.Page.url)
+    ).all()
+
+    if not rows:
+        audit_exists = session.get(m.Audit, audit_id)
+        if audit_exists is None:
+            raise HTTPException(status_code=404, detail="Audit not found")
+
+    result: list[PageRow] = []
+    for page, sig in rows:
+        internal: dict[str, Any] = sig.internal if sig else {}
+        aso = internal.get("aso", {})
+        images_total = internal.get("images_total")
+        images_with_alt = internal.get("images_with_alt")
+        images_missing_alt = (
+            (images_total - images_with_alt)
+            if images_total is not None and images_with_alt is not None
+            else None
+        )
+        result.append(
+            PageRow(
+                url=page.url,
+                status_code=page.status_code,
+                render_mode=page.render_mode,
+                word_count=internal.get("word_count"),
+                images_total=images_total,
+                images_missing_alt=images_missing_alt,
+                agent_usable_forms=aso.get("agent_usable_forms"),
+                title=internal.get("title"),
+            )
+        )
+    return result
+
+
 @app.get("/keys", response_model=list[KeyOut])
 def list_keys(session: Session = Depends(get_session)) -> list[KeyOut]:
     """Return BYOK key status for all connectors (plaintext never exposed)."""

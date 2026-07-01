@@ -125,6 +125,7 @@ def test_run_persist_calls_repository(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(cli_main, "session_scope", _fake_scope)
     monkeypatch.setattr(repository, "persist_report", fake_persist)
+    monkeypatch.setattr(repository, "persist_pages", lambda audit_id, pages, session: None)
     result = runner.invoke(app, ["run", "https://example.com", "--persist", "-q"])
     assert result.exit_code == 0
     assert saved.get("called") is True

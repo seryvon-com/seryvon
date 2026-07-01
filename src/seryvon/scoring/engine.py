@@ -99,9 +99,13 @@ def score_pillar(pillar: str, results: list[CriterionResult]) -> PillarScore:
         )
 
     weighted = sum(r.score * r.weight for r in measured)
+    # Multiply by coverage so that unmeasured criteria penalize the score:
+    # a pillar measured at 60% coverage cannot exceed 60/100 even if all
+    # measured criteria score perfectly.
+    raw = weighted / total_weight
     return PillarScore(
         pillar=pillar,
-        score=round(weighted / total_weight, 2),
+        score=round(raw * coverage, 2),
         measured=len(measured),
         excluded=excluded,
         not_applicable=not_applicable,
