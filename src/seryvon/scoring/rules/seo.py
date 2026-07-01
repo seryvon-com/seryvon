@@ -98,7 +98,9 @@ class PageCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold=dict(self.threshold if threshold is None else threshold),
-            explanation=t("expl.page_conformance", passing=passing, total=len(pages), score=score),
+            explanation=t(
+                "expl.page_conformance", failing=len(failing), total=len(pages), score=score
+            ),
             evidence={**_EVIDENCE_HTML, "non_conformes": failing[:_MAX_EVIDENCE]},
             weight=self.weight,
         )
@@ -451,7 +453,7 @@ class ImgAltCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% d'images avec alt"},
-            explanation=t("expl.img_alt", with_alt=with_alt, total=total),
+            explanation=t("expl.img_alt", without_alt=total - with_alt, total=total),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )
@@ -485,7 +487,9 @@ class CrawlIndexableCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% indexables (200, pas de noindex)"},
-            explanation=t("expl.indexable", indexable=indexable, total=len(pages)),
+            explanation=t(
+                "expl.indexable", non_indexable=len(pages) - indexable, total=len(pages)
+            ),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )
@@ -549,7 +553,7 @@ class CrawlHttpsCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% HTTPS"},
-            explanation=t("expl.https", https=https, total=len(pages)),
+            explanation=t("expl.https", non_https=len(pages) - https, total=len(pages)),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )

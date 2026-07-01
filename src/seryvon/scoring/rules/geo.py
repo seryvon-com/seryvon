@@ -16,13 +16,22 @@ determinism). LLM citation (Phase 3, M4): `geo.citation_rate`, `mention_rate`,
 
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date, datetime
 from typing import ClassVar
+from urllib.parse import urlsplit
 
 from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
 from seryvon.models.enums import Status, status_from_score
-from seryvon.models.signals import SignalBundle
+from seryvon.models.signals import PageSignals, SignalBundle
+
+#: Max number of route families surfaced in `geo.ssr` raw_value (avoid huge payloads
+#: on sites with many top-level sections; the largest CSR groups matter most).
+_SSR_MAX_FAMILIES = 12
+#: Max number of individual CSR pages surfaced as "top offenders" (worst content
+#: parity first — least of the post-JS content already present in raw HTML).
+_SSR_MAX_OFFENDERS = 10
 
 # GEO on-page core thresholds (document 04 §3).
 _NOISE_RATIO_TARGET = 0.20
@@ -37,6 +46,116 @@ def _mean(values: list[float]) -> float:
     return round(sum(values) / len(values), 2) if values else 0.0
 
 
+def _route_family(url: str) -> str:
+    """Group a URL under a top-level route section for the `geo.ssr` breakdown.
+
+    Skips a leading 2-letter locale segment (e.g. `/en/models/x` -> "models")
+    so per-locale variants of the same section aren't split into separate rows.
+    """
+    segments = [s for s in urlsplit(url).path.split("/") if s]
+    if segments and len(segments[0]) == 2 and segments[0].isalpha() and len(segments) > 1:
+        segments = segments[1:]
+    return segments[0] if segments else "root"
+
+
+def _ssr_breakdown_by_route(pages: list[PageSignals]) -> list[dict[str, int | str]]:
+    """Per-route-family ssr/csr counts, sorted by CSR count (biggest gaps first)."""
+    counts: dict[str, dict[str, int]] = defaultdict(lambda: {"ssr": 0, "csr": 0})
+    for p in pages:
+        if p.render_mode not in ("ssr", "csr"):
+            continue
+        counts[_route_family(p.url)][p.render_mode] += 1
+    families = sorted(
+        counts.items(), key=lambda item: (-item[1]["csr"], -(item[1]["ssr"] + item[1]["csr"]))
+    )
+    return [
+        {"path": family, "pages": c["ssr"] + c["csr"], "ssr": c["ssr"], "csr": c["csr"]}
+        for family, c in families[:_SSR_MAX_FAMILIES]
+    ]
+
+
+def _page_parity(page: PageSignals) -> float:
+    """Fraction of the post-JS content already present in the raw HTML (0-1).
+
+    Playwright pages carry both word counts -> continuous parity `raw / rendered`
+    (capped at 1.0). Heuristic-fallback pages have no counts -> binary from
+    `render_mode` (ssr = full parity, csr = none). This is the per-page signal
+    averaged into the `geo.ssr` score: a page already largely present in raw HTML
+    scores high even when JS later adds secondary blocks (nav, related listings).
+    """
+    raw, rendered = page.raw_word_count, page.rendered_word_count
+    if raw is not None and rendered is not None:
+        return 1.0 if rendered <= 0 else min(1.0, raw / rendered)
+    return 1.0 if page.render_mode == "ssr" else 0.0
+
+
+def _page_delta(page: PageSignals) -> int | None:
+    """Words added by JS (rendered - raw), or None for heuristic-fallback pages."""
+    if page.raw_word_count is None or page.rendered_word_count is None:
+        return None
+    return page.rendered_word_count - page.raw_word_count
+
+
+def _ssr_csr_pages_ranked(pages: list[PageSignals]) -> list[PageSignals]:
+    """CSR pages, worst content-parity first (thin static shells before rich pages).
+
+    Ordering reflects urgency: a page with almost no static content ranks above a
+    page already rich in raw HTML that merely gains secondary blocks via JS, even
+    if the latter has a larger absolute word delta. Heuristic-fallback CSR pages
+    (no counts) sort last, by URL, since their parity is unknown.
+    """
+    csr = [p for p in pages if p.render_mode == "csr"]
+    ranked = sorted(
+        (p for p in csr if _page_delta(p) is not None),
+        key=lambda p: (_page_parity(p), -(_page_delta(p) or 0)),
+    )
+    unknown = sorted((p for p in csr if _page_delta(p) is None), key=lambda p: p.url)
+    return ranked + unknown
+
+
+def _page_offender_row(page: PageSignals) -> dict[str, int | str | None]:
+    return {
+        "url": page.url,
+        "raw_words": page.raw_word_count,
+        "rendered_words": page.rendered_word_count,
+        "delta": _page_delta(page),
+        "parity_pct": round(_page_parity(page) * 100),
+    }
+
+
+def _ssr_top_offenders(pages: list[PageSignals]) -> list[dict[str, int | str | None]]:
+    """Worst-parity CSR pages for the `geo.ssr` hint panel (Playwright pages only)."""
+    ranked = [p for p in _ssr_csr_pages_ranked(pages) if _page_delta(p) is not None]
+    return [_page_offender_row(p) for p in ranked[:_SSR_MAX_OFFENDERS]]
+
+
+def _ssr_affected_pages(pages: list[PageSignals]) -> list[str]:
+    """All CSR page URLs, worst content-parity first — feeds the action-plan card's
+    affected-pages list (chips + CSV export) via `evidence['non_conformes']`.
+    """
+    return [p.url for p in _ssr_csr_pages_ranked(pages)]
+
+
+def _ssr_word_deltas(pages: list[PageSignals]) -> dict[str, dict[str, int]]:
+    """Per-URL parity detail for every CSR page (uncapped, unlike `top_offenders`).
+
+    Lets the frontend CSV export attach raw/rendered word counts, delta and parity
+    to each affected page, not just the top 10 shown in the hint panel.
+    """
+    result: dict[str, dict[str, int]] = {}
+    for p in _ssr_csr_pages_ranked(pages):
+        delta = _page_delta(p)
+        if delta is None or p.raw_word_count is None or p.rendered_word_count is None:
+            continue
+        result[p.url] = {
+            "raw_words": p.raw_word_count,
+            "rendered_words": p.rendered_word_count,
+            "delta": delta,
+            "parity_pct": round(_page_parity(p) * 100),
+        }
+    return result
+
+
 def _parse_date(value: str) -> date | None:
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
@@ -46,7 +165,14 @@ def _parse_date(value: str) -> date | None:
 
 @register
 class GeoSsrCriterion(Criterion):
-    """Server-side vs client-side rendering (`geo.ssr`): share of server-rendered pages."""
+    """Content parity before JS (`geo.ssr`): how much page content a JS-free crawler sees.
+
+    Per-page parity is `raw_words / rendered_words` (capped at 1.0); the score is
+    the mean across pages. A page already rich in raw HTML scores high even when JS
+    adds secondary blocks — only pages whose substance is JS-injected drag it down.
+    The binary `render_mode` (ssr/csr) still labels each page and drives the
+    diagnostic breakdown, but no longer decides the score on its own.
+    """
 
     key = "geo.ssr"
     pillars: ClassVar[list[str]] = ["geo", "aeo", "aso"]
@@ -55,26 +181,49 @@ class GeoSsrCriterion(Criterion):
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
     ) -> CriterionResult:
-        modes = [p.render_mode for p in signals.pages if p.render_mode]
-        if not modes:
+        pages_with_mode = [p for p in signals.pages if p.render_mode]
+        if not pages_with_mode:
             return CriterionResult.not_measured(
                 self.key, self.pillars, self.weight, t("reason.render_mode_unavailable")
             )
-        ssr = sum(1 for mode in modes if mode == "ssr")
-        score = round(ssr / len(modes) * 100, 2)
-        # Reflect the detection method used for the home page (most informative page).
-        home = signals.home
-        detection = home.render_source if home and home.render_mode else "heuristic"
-        source = "Playwright (DOM diff)" if detection == "playwright" else "heuristic (D2)"
+        parities = [_page_parity(p) for p in pages_with_mode]
+        mean_parity = sum(parities) / len(parities)
+        score = round(mean_parity * 100, 2)
+        ssr = sum(1 for p in pages_with_mode if p.render_mode == "ssr")
+        csr = len(pages_with_mode) - ssr
+        # Per-page detection method breakdown — a mix of Playwright DOM-diff and
+        # heuristic (D2) fallback is common: individual renders can fail (timeout,
+        # blocked page) and silently fall back per page (crawler/crawl.py).
+        via_playwright = sum(1 for p in pages_with_mode if p.render_source == "playwright")
+        via_heuristic = len(pages_with_mode) - via_playwright
+        source = (
+            "Playwright (DOM diff)"
+            if via_heuristic == 0
+            else "heuristic (D2)"
+            if via_playwright == 0
+            else f"mixed: {via_playwright} Playwright / {via_heuristic} heuristic"
+        )
         return CriterionResult(
             key=self.key,
             pillars=self.pillars,
-            raw_value={"pages": len(modes), "ssr": ssr, "detection": detection},
+            raw_value={
+                "pages": len(pages_with_mode),
+                "mean_parity": round(mean_parity, 4),
+                "ssr": ssr,
+                "csr": csr,
+                "detected_via_playwright": via_playwright,
+                "detected_via_heuristic": via_heuristic,
+                "by_route": _ssr_breakdown_by_route(pages_with_mode),
+                "top_offenders": _ssr_top_offenders(pages_with_mode),
+                "word_deltas": _ssr_word_deltas(pages_with_mode),
+            },
             score=score,
             status=status_from_score(score),
-            threshold={"target": "100% SSR"},
-            explanation=t("expl.ssr", ssr=ssr, total=len(modes)),
-            evidence={"source": source},
+            threshold={"target": "100% content parity before JS"},
+            explanation=t(
+                "expl.ssr", parity=round(score), csr=csr, total=len(pages_with_mode)
+            ),
+            evidence={"source": source, "non_conformes": _ssr_affected_pages(pages_with_mode)},
             weight=self.weight,
         )
 
@@ -222,7 +371,7 @@ class GeoPrimarySourcesCriterion(Criterion):
             },
             explanation=t(
                 "expl.primary_sources",
-                with_sources=with_sources,
+                without_sources=len(pages_without),
                 total=len(content_pages),
                 excluded=excluded,
             ),

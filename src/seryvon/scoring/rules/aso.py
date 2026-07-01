@@ -172,11 +172,19 @@ class AsoAccessibleFormsCriterion(Criterion):
         total = sum(p.aso.agent_usable_forms for p in signals.pages)
         score = 100.0 if total >= 1 else 0.0
 
-        total_found = sum(d.get("found", 0) for p in signals.pages if (d := p.aso.agent_usable_forms_detail))
+        total_found = sum(
+            d.get("found", 0) for p in signals.pages if (d := p.aso.agent_usable_forms_detail)
+        )
         disqualified = {
-            "no_action": sum(p.aso.agent_usable_forms_detail.get("no_action", 0) for p in signals.pages),
-            "no_fields": sum(p.aso.agent_usable_forms_detail.get("no_fields", 0) for p in signals.pages),
-            "no_label": sum(p.aso.agent_usable_forms_detail.get("no_label", 0) for p in signals.pages),
+            "no_action": sum(
+                p.aso.agent_usable_forms_detail.get("no_action", 0) for p in signals.pages
+            ),
+            "no_fields": sum(
+                p.aso.agent_usable_forms_detail.get("no_fields", 0) for p in signals.pages
+            ),
+            "no_label": sum(
+                p.aso.agent_usable_forms_detail.get("no_label", 0) for p in signals.pages
+            ),
         }
         pages_with_forms = [
             p.url

@@ -252,7 +252,9 @@ class AeoAnswerDirectnessCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"min_lead_words": _LEAD_MIN_WORDS},
-            explanation=t("expl.answer_directness", direct=direct, total=len(pages)),
+            explanation=t(
+                "expl.answer_directness", non_direct=len(pages) - direct, total=len(pages)
+            ),
             evidence={"source": "HTML parsing"},
             weight=self.weight,
         )
