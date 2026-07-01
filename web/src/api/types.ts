@@ -91,6 +91,9 @@ export interface AsoReadiness {
   agent_ready: boolean;
   has_webmcp: boolean;
   has_action_schema: boolean;
+  has_agent_forms: boolean;
+  has_openapi: boolean;
+  action_signals: number;
   ai_discovery_endpoints: number;
   has_nlweb: boolean;
   brand_coherence_score: number | null;
@@ -199,6 +202,8 @@ export interface PageRow {
   images_missing_alt: number | null;
   agent_usable_forms: number | null;
   title: string | null;
+  raw_word_count: number | null;
+  rendered_word_count: number | null;
 }
 
 export interface AuditSummary {

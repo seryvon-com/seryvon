@@ -80,6 +80,7 @@ export interface Dict {
     recentSubtitle: string;
     recentAuditCount: (n: number) => string;
     recentEmpty: string;
+    rerunAudit: (domain: string) => string;
   };
 
   report: {
@@ -142,6 +143,13 @@ export interface Dict {
     blockedBots: string;
     none: string;
     unavailable: string;
+    agentReadyForms: string;
+    agentReadyOpenapi: string;
+    agentReadyExplainer: (signals: number) => string;
+    agentReadyWebmcpMissing: string;
+    agentReadyActionSchemaMissing: string;
+    agentReadyFormsMissing: string;
+    agentReadyOpenapiMissing: string;
   };
 
   history: {
@@ -316,6 +324,13 @@ export interface Dict {
     aeoLlmCitationTitle: string; aeoLlmCitationBody: string;
     // GEO
     geoSsrTitle: string; geoSsrBody: string;
+    geoSsrByRouteTitle: string;
+    geoSsrTopOffendersTitle: string;
+    geoSsrWordsLabel: string;
+    geoSsrParityLabel: string;
+    geoSsrTierThin: string;
+    geoSsrTierPartial: string;
+    geoSsrTierNear: string;
     geoNoiseRatioTitle: string; geoNoiseRatioBody: string;
     geoEntityDensityTitle: string; geoEntityDensityBody: string;
     geoAuthorsTitle: string; geoAuthorsBody: string;
@@ -330,6 +345,10 @@ export interface Dict {
     asoAccessibleFormsTitle: string; asoAccessibleFormsBody: string;
     asoBrandCoherenceTitle: string; asoBrandCoherenceBody: string;
     asoAgentAccessTitle: string; asoAgentAccessBody: string;
+    asoAgentReadyTitle: string; asoAgentReadyBody: string;
+    asoActionSchemaTitle: string; asoActionSchemaBody: string;
+    asoAiDiscoveryTitle: string; asoAiDiscoveryBody: string;
+    asoNlwebTitle: string; asoNlwebBody: string;
     // Performance
     perfLcpTitle: string; perfLcpBody: string;
     perfClsTitle: string; perfClsBody: string;

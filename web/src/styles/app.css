@@ -1389,6 +1389,26 @@
   min-width: 32px;
   text-align: right;
 }
+.recent-domain-rerun {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--c-text-faint);
+  padding: 4px;
+  margin-left: 4px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  transition: color 0.14s, background 0.14s;
+}
+.recent-domain-rerun:hover:not(:disabled) {
+  color: var(--c-accent);
+  background: var(--c-surface-2);
+}
+.recent-domain-rerun:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 .audit-progress {
   margin-top: 20px;

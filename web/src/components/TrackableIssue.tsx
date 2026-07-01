@@ -1,7 +1,7 @@
 // Seryvon — trackable issue card (done toggle, date, proof attachments). AGPL-3.0-or-later.
 
 import { useRef, useState } from "react";
-import { CriterionHint } from "./CriterionHint";
+import { CriterionHint, SSR_TIER_COLOR, ssrTier } from "./CriterionHint";
 import type { Issue } from "../api/types";
 import { useI18n } from "../i18n";
 import type { IssueTracking, ProofItem } from "../hooks/useIssueTracking";
@@ -17,10 +17,44 @@ interface Props {
   onRemoveProof: (id: string) => void;
 }
 
-function downloadCsv(criterionKey: string, recommendation: string, pages: string[]) {
+interface WordDelta {
+  raw_words: number;
+  rendered_words: number;
+  delta: number;
+  parity_pct: number;
+}
+
+/** Extra per-page CSV columns derived from a criterion's raw_value, keyed by URL.
+ * Currently only geo.ssr exposes this (raw_value.word_deltas); other criteria
+ * fall back to the plain criterion/recommendation/url export.
+ */
+function extraCsvColumns(criterionKey: string, rawValue: unknown): { headers: string[]; row: (url: string) => string[] } | null {
+  if (criterionKey !== "geo.ssr") return null;
+  const wordDeltas =
+    rawValue !== null && typeof rawValue === "object" && "word_deltas" in (rawValue as object)
+      ? ((rawValue as { word_deltas: Record<string, WordDelta> }).word_deltas ?? {})
+      : {};
+  return {
+    headers: ["raw_words", "rendered_words", "delta", "parity_pct"],
+    row: (url) => {
+      const d = wordDeltas[url];
+      return d
+        ? [String(d.raw_words), String(d.rendered_words), String(d.delta), String(d.parity_pct)]
+        : ["", "", "", ""];
+    },
+  };
+}
+
+function downloadCsv(
+  criterionKey: string,
+  recommendation: string,
+  pages: string[],
+  extra: { headers: string[]; row: (url: string) => string[] } | null,
+) {
+  const headers = ["criterion", "recommendation", "url", ...(extra?.headers ?? [])];
   const rows = [
-    ["criterion", "recommendation", "url"],
-    ...pages.map((url) => [criterionKey, recommendation, url]),
+    headers,
+    ...pages.map((url) => [criterionKey, recommendation, url, ...(extra ? extra.row(url) : [])]),
   ];
   const csv = rows
     .map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))
@@ -38,21 +72,39 @@ function AffectedPages({
   pages,
   criterionKey,
   recommendation,
+  rawValue,
 }: {
   pages: string[];
   criterionKey: string;
   recommendation: string;
+  rawValue: unknown;
 }) {
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? pages : pages.slice(0, 5);
   const remaining = pages.length - 5;
+  const wordDeltas =
+    criterionKey === "geo.ssr" &&
+    rawValue !== null &&
+    typeof rawValue === "object" &&
+    "word_deltas" in (rawValue as object)
+      ? ((rawValue as { word_deltas: Record<string, WordDelta> }).word_deltas ?? {})
+      : null;
   return (
     <div className="issue-affected-pages">
-      {visible.map((p) => (
-        <span key={p} className="issue-page-chip" title={p}>
-          {p}
-        </span>
-      ))}
+      {visible.map((p) => {
+        const d = wordDeltas?.[p];
+        const tierColor = d ? SSR_TIER_COLOR[ssrTier(d.parity_pct)] : undefined;
+        return (
+          <span
+            key={p}
+            className="issue-page-chip"
+            title={d ? `${p} — ${d.parity_pct}% parity` : p}
+            style={tierColor ? { borderLeft: `2px solid ${tierColor}` } : undefined}
+          >
+            {p}
+          </span>
+        );
+      })}
       {!showAll && remaining > 0 && (
         <button
           className="issue-page-chip issue-page-more"
@@ -72,7 +124,7 @@ function AffectedPages({
       )}
       <button
         className="issue-csv-btn"
-        onClick={() => downloadCsv(criterionKey, recommendation, pages)}
+        onClick={() => downloadCsv(criterionKey, recommendation, pages, extraCsvColumns(criterionKey, rawValue))}
         title={`Export ${pages.length} URL(s) as CSV`}
         aria-label="Export as CSV"
       >
@@ -263,6 +315,7 @@ export function TrackableIssue({
           pages={issue.affected_pages}
           criterionKey={issue.criterion_key}
           recommendation={issue.recommendation || issue.criterion_key}
+          rawValue={issue.raw_value}
         />
       )}
 

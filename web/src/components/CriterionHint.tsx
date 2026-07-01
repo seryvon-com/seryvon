@@ -4,6 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "../i18n";
 
+//: Vertical placement for a floating panel anchored to a trigger element.
+//: Flips above the trigger when there isn't enough room below, and always caps
+//: `maxHeight` so long content scrolls instead of being clipped by the viewport
+//: with no way to reach the rest (see CriterionHint / HintPanel usage).
+function placeVertically(rect: DOMRect, gap = 8, minRoom = 160): { top?: number; bottom?: number; maxHeight: number } {
+  const roomBelow = window.innerHeight - rect.bottom - gap;
+  if (roomBelow >= minRoom || roomBelow >= rect.top - gap) {
+    return { top: rect.bottom + gap, maxHeight: Math.max(120, roomBelow - gap) };
+  }
+  return { bottom: window.innerHeight - rect.top + gap, maxHeight: Math.max(120, rect.top - gap * 2) };
+}
+
 // Mirrors _PLATFORM_HOSTS in src/seryvon/crawler/extract.py
 const RECOGNIZED_PLATFORMS: { key: string; label: string }[] = [
   { key: "twitter",    label: "Twitter / X" },
@@ -21,8 +33,8 @@ const RECOGNIZED_PLATFORMS: { key: string; label: string }[] = [
   { key: "crunchbase", label: "Crunchbase" },
 ];
 
-/** Hover tooltip — for visual/compact hints (e.g. platform grid). */
-function InfoButton({
+/** Hover tooltip — for visual/compact hints (e.g. platform grid). Exported for reuse in table headers etc. */
+export function InfoButton({
   label,
   children,
   minWidth = 260,
@@ -49,9 +61,10 @@ function InfoButton({
         role="tooltip"
         style={{
           position: "fixed",
-          top: rect.bottom + 8,
+          ...placeVertically(rect),
           left: Math.max(8, Math.min(window.innerWidth - minWidth - 8, rect.left + rect.width / 2 - minWidth / 2)),
           minWidth,
+          overflowY: "auto",
           zIndex: 9999,
         }}
       >
@@ -84,14 +97,14 @@ function HintPanel({ title, body }: { title: string; body: string }) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxHeight: number } | null>(null);
 
   function toggle() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
       const panelWidth = Math.min(420, window.innerWidth - 24);
       const left = Math.max(8, Math.min(window.innerWidth - panelWidth - 8, r.left + r.width / 2 - panelWidth / 2));
-      setPos({ top: r.bottom + 8, left, width: panelWidth });
+      setPos({ ...placeVertically(r), left, width: panelWidth });
     }
     setOpen((o) => !o);
   }
@@ -127,7 +140,15 @@ function HintPanel({ title, body }: { title: string; body: string }) {
         className="hint-panel"
         role="dialog"
         aria-label={title}
-        style={{ top: pos.top, left: pos.left, width: pos.width }}
+        style={{
+          top: pos.top,
+          bottom: pos.bottom,
+          left: pos.left,
+          width: pos.width,
+          maxHeight: pos.maxHeight,
+          display: "flex",
+          flexDirection: "column",
+        }}
       >
         <div className="hint-panel-header">
           <span className="hint-panel-title">{title}</span>
@@ -140,7 +161,7 @@ function HintPanel({ title, body }: { title: string; body: string }) {
             ×
           </button>
         </div>
-        <div className="hint-panel-body">{body}</div>
+        <div className="hint-panel-body" style={{ overflowY: "auto" }}>{body}</div>
       </div>,
       document.body,
     );
@@ -204,6 +225,134 @@ function CrossPlatformHint({ rawValue }: { rawValue: unknown }) {
   );
 }
 
+interface SsrRouteRow {
+  path: string;
+  pages: number;
+  ssr: number;
+  csr: number;
+}
+
+interface SsrOffenderRow {
+  url: string;
+  raw_words: number;
+  rendered_words: number;
+  delta: number;
+  parity_pct: number;
+}
+
+interface SsrWordDelta {
+  raw_words: number;
+  rendered_words: number;
+  delta: number;
+  parity_pct: number;
+}
+
+/** Severity tier from a page's content-parity percentage — pure display grouping,
+ * the geo.ssr score itself already uses continuous parity (not tiered). Splits
+ * the flat "worst offenders" list into scannable buckets so a reader can jump to
+ * "critical" pages (near-empty raw HTML) without wading through partial cases.
+ */
+export type SsrTier = "thin" | "partial" | "near";
+
+export function ssrTier(parityPct: number): SsrTier {
+  if (parityPct < 30) return "thin";
+  if (parityPct < 70) return "partial";
+  return "near";
+}
+
+export const SSR_TIER_COLOR: Record<SsrTier, string> = {
+  thin: "var(--c-error, #e5484d)",
+  partial: "var(--c-warn, #e8a94d)",
+  near: "var(--c-ok, #3ecf8e)",
+};
+
+function SsrBreakdownHint({ rawValue }: { rawValue: unknown }) {
+  const { t } = useI18n();
+  const h = t.criterionHints;
+  const v = rawValue !== null && typeof rawValue === "object" ? (rawValue as Record<string, unknown>) : {};
+  const byRoute = Array.isArray(v.by_route) ? (v.by_route as SsrRouteRow[]) : [];
+  const offenders = Array.isArray(v.top_offenders) ? (v.top_offenders as SsrOffenderRow[]) : [];
+  const wordDeltas =
+    v.word_deltas !== null && typeof v.word_deltas === "object"
+      ? (v.word_deltas as Record<string, SsrWordDelta>)
+      : {};
+  const tierCounts = { thin: 0, partial: 0, near: 0 };
+  for (const d of Object.values(wordDeltas)) tierCounts[ssrTier(d.parity_pct)]++;
+
+  if (byRoute.length === 0 && offenders.length === 0) {
+    return <HintPanel title={h.geoSsrTitle} body={h.geoSsrBody} />;
+  }
+
+  return (
+    <InfoButton label={h.geoSsrTitle} minWidth={340}>
+      <div className="cost-tooltip-title">{h.geoSsrTitle}</div>
+      <div style={{ fontSize: "0.74rem", color: "var(--c-text-muted)", marginBottom: 8, lineHeight: 1.4, whiteSpace: "normal" }}>
+        {h.geoSsrBody}
+      </div>
+
+      {byRoute.length > 0 && (
+        <>
+          <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--c-text-muted)", margin: "8px 0 4px" }}>
+            {h.geoSsrByRouteTitle}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 8 }}>
+            {byRoute.slice(0, 8).map((r) => (
+              <div key={r.path} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem" }}>
+                <span style={{ color: "var(--c-text-primary, inherit)" }}>{r.path}</span>
+                <span style={{ fontFamily: "var(--font-mono)" }}>
+                  <span style={{ color: r.csr > 0 ? "var(--c-warn, #e8a94d)" : "var(--c-ok)" }}>{r.csr} JS</span>
+                  {" / "}
+                  <span style={{ color: "var(--c-text-faint)" }}>{r.ssr} OK</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {offenders.length > 0 && (
+        <>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "8px 0 4px" }}>
+            <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--c-text-muted)" }}>
+              {h.geoSsrTopOffendersTitle}
+            </span>
+            <span style={{ display: "flex", gap: 6, fontSize: "0.66rem", fontFamily: "var(--font-mono)" }}>
+              <span style={{ color: SSR_TIER_COLOR.thin }}>{tierCounts.thin} {h.geoSsrTierThin}</span>
+              <span style={{ color: SSR_TIER_COLOR.partial }}>{tierCounts.partial} {h.geoSsrTierPartial}</span>
+              <span style={{ color: SSR_TIER_COLOR.near }}>{tierCounts.near} {h.geoSsrTierNear}</span>
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {offenders.slice(0, 5).map((o) => (
+              <div key={o.url} style={{ fontSize: "0.7rem", display: "flex", gap: 6 }}>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    flexShrink: 0,
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: SSR_TIER_COLOR[ssrTier(o.parity_pct)],
+                    marginTop: 5,
+                  }}
+                />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: "var(--c-text-primary, inherit)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={o.url}>
+                    {o.url}
+                  </div>
+                  <div style={{ color: "var(--c-text-faint)", fontFamily: "var(--font-mono)" }}>
+                    {o.parity_pct}% {h.geoSsrParityLabel} · +{o.delta} {h.geoSsrWordsLabel} ({o.raw_words} → {o.rendered_words})
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </InfoButton>
+  );
+}
+
 export function CriterionHint({
   criterionKey,
   rawValue,
@@ -241,7 +390,7 @@ export function CriterionHint({
     case "geo.primary_sources":
       return <HintPanel title={h.primarySourcesTitle} body={h.primarySourcesBody} />;
     case "geo.ssr":
-      return <HintPanel title={h.geoSsrTitle} body={h.geoSsrBody} />;
+      return <SsrBreakdownHint rawValue={rawValue} />;
     case "geo.noise_ratio":
       return <HintPanel title={h.geoNoiseRatioTitle} body={h.geoNoiseRatioBody} />;
     case "geo.entity_density":
@@ -272,6 +421,14 @@ export function CriterionHint({
       return <HintPanel title={h.asoBrandCoherenceTitle} body={h.asoBrandCoherenceBody} />;
     case "aso.agent_access":
       return <HintPanel title={h.asoAgentAccessTitle} body={h.asoAgentAccessBody} />;
+    case "aso.agent_ready":
+      return <HintPanel title={h.asoAgentReadyTitle} body={h.asoAgentReadyBody} />;
+    case "aso.action_schema":
+      return <HintPanel title={h.asoActionSchemaTitle} body={h.asoActionSchemaBody} />;
+    case "aso.ai_discovery":
+      return <HintPanel title={h.asoAiDiscoveryTitle} body={h.asoAiDiscoveryBody} />;
+    case "aso.nlweb":
+      return <HintPanel title={h.asoNlwebTitle} body={h.asoNlwebBody} />;
 
     // GSO
     case "gso.faqpage":

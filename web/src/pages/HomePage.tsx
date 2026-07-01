@@ -69,15 +69,15 @@ export function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId, navigate, t.home.errorBackend]);
 
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!url.trim() || running) return;
+  async function runAudit(rawUrl: string) {
+    if (!rawUrl.trim() || running) return;
+    setUrl(rawUrl);
     setRunning(true);
     setError(null);
     setAuditLogs([]);
     setTaskStatus("pending");
     try {
-      let normalizedUrl = url.trim();
+      let normalizedUrl = rawUrl.trim();
       if (!normalizedUrl.match(/^https?:\/\//)) {
         normalizedUrl = `https://${normalizedUrl}`;
       }
@@ -91,6 +91,11 @@ export function HomePage() {
       );
       setRunning(false);
     }
+  }
+
+  function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    void runAudit(url);
   }
 
   return (
@@ -165,11 +170,15 @@ export function HomePage() {
           </div>
           <div className="recent-domains-list">
             {domains.map((d) => (
-              <button
+              <div
                 key={d.domain}
-                type="button"
+                role="button"
+                tabIndex={0}
                 className="recent-domain-item"
                 onClick={() => navigate(`/audits/${d.latest_audit_id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") navigate(`/audits/${d.latest_audit_id}`);
+                }}
               >
                 <span className="recent-domain-name">{d.domain}</span>
                 <span className="recent-domain-meta">
@@ -178,7 +187,22 @@ export function HomePage() {
                 <span className="recent-domain-score">
                   {d.latest_score == null ? "—" : Math.round(d.latest_score)}
                 </span>
-              </button>
+                <button
+                  type="button"
+                  className="recent-domain-rerun"
+                  disabled={running}
+                  title={t.home.rerunAudit(d.domain)}
+                  aria-label={t.home.rerunAudit(d.domain)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void runAudit(d.domain);
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3.5H10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
             ))}
           </div>
         </div>

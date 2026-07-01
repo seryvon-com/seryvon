@@ -28,7 +28,7 @@ export const fr: Dict = {
     overviewTitle: "Vue d'ensemble",
     overviewSubtitle: "Scorecard déterministe sur les cinq piliers",
     lastAudit: (when) => `Dernier audit · ${when}`,
-    runAudit: "Lancer un audit",
+    runAudit: "Analyses",
   },
 
   home: {
@@ -51,6 +51,7 @@ export const fr: Dict = {
     recentSubtitle: "Ouvrez le dernier rapport d'un domaine — sans relancer d'audit",
     recentAuditCount: (n) => `${n} audit${n > 1 ? "s" : ""}`,
     recentEmpty: "Aucun audit pour l'instant — lancez le premier ci-dessus.",
+    rerunAudit: (domain) => `Relancer un audit pour ${domain}`,
   },
 
   report: {
@@ -114,6 +115,14 @@ export const fr: Dict = {
     blockedBots: "Bots d'agents bloqués",
     none: "Aucun",
     unavailable: "La readiness ASO n'a pas été calculée pour cet audit.",
+    agentReadyForms: "Formulaires exploitables par agent",
+    agentReadyOpenapi: "Liens OpenAPI",
+    agentReadyExplainer: (signals: number) =>
+      `Ready = WebMCP, ou au moins 2 des 3 signaux d'action ci-dessous. ${signals} sur 2 détectés (hors WebMCP).`,
+    agentReadyWebmcpMissing: "absent",
+    agentReadyActionSchemaMissing: "aucun trouvé",
+    agentReadyFormsMissing: "0",
+    agentReadyOpenapiMissing: "0",
   },
 
   history: {
@@ -193,7 +202,7 @@ export const fr: Dict = {
     "aeo.comparison_tables": "Tableaux comparatifs",
     "aeo.answer_directness": "Réponse directe",
     "aeo.kg_presence": "Présence knowledge graph",
-    "geo.ssr": "Rendu côté serveur",
+    "geo.ssr": "Contenu avant exécution JS",
     "geo.noise_ratio": "Ratio de bruit",
     "geo.entity_density": "Densité d'entités",
     "geo.primary_sources": "Sources primaires",
@@ -474,8 +483,15 @@ export const fr: Dict = {
     aeoLlmCitationBody: "1. Rédigez des paragraphes de réponse directe en tête de chaque page de contenu. 2. Étayez les affirmations avec des sources primaires liées en HTML statique. 3. Renforcez votre entité Wikidata. 4. Construisez une autorité thématique avec des clusters de contenu complets et interconnectés. 5. Faites-vous citer par des sources externes faisant autorité. Suivez votre taux de citation avec le Citation Tracking de Seryvon (clé API BYOK requise).",
 
     // GEO
-    geoSsrTitle: "Comment activer le rendu côté serveur",
-    geoSsrBody: "Déplacez le contenu récupéré en JS (articles, données produits, liens sociaux) vers le SSR. En Next.js utilisez generateStaticParams ou les Server Components ; en Nuxt.js utilisez useAsyncData ; en SvelteKit utilisez load(). Vérifiez le SSR avec Afficher la source dans le navigateur — tout le contenu clé doit apparaître dans le HTML brut. Crawlers et LLM ne lisent que le HTML statique.",
+    geoSsrTitle: "Comment rendre le contenu lisible avant l'exécution JS",
+    geoSsrBody: "Seryvon compare le HTML brut reçu par un crawler avec le DOM après exécution du JavaScript (Playwright). Le contenu qui n'apparaît qu'après le JS n'est pas lu de façon fiable par les crawlers ou les LLM. Solution : rendu côté serveur (Server Components / generateStaticParams en Next.js, useAsyncData en Nuxt, load() en SvelteKit), ou prerendering statique au build. Les deux comptent — ce qui importe, c'est que le contenu existe dans le HTML avant hydratation. Vérifiez avec Afficher la source : le contenu clé doit déjà être dans le HTML brut. Un site en SSR au niveau framework peut quand même échouer route par route si certaines pages retombent sur un shell client-only — vérifiez route par route, pas seulement le choix du framework.",
+    geoSsrByRouteTitle: "Par section de route (rendu JS / déjà statique)",
+    geoSsrTopOffendersTitle: "Pires cas (plus faible parité de contenu avant JS)",
+    geoSsrWordsLabel: "mots",
+    geoSsrParityLabel: "parité",
+    geoSsrTierThin: "critique (<30%)",
+    geoSsrTierPartial: "partiel (30-70%)",
+    geoSsrTierNear: "quasi-complet (≥70%)",
     geoNoiseRatioTitle: "Comment réduire le bruit de contenu",
     geoNoiseRatioBody: "Augmentez la part de contenu utile vs. boilerplate. Raccourcissez les menus de navigation et pieds de page. Déplacez les éléments UI répétitifs vers le CSS. Supprimez les bannières cookies excessives et les scripts de suivi du HTML. Ajoutez du texte substantiel aux pages légères. Visez un ratio contenu/HTML ≥20%. Les LLM filtrent le boilerplate lors de l'extraction du contenu.",
     geoEntityDensityTitle: "Comment améliorer la densité d'entités",
@@ -504,6 +520,14 @@ export const fr: Dict = {
     asoBrandCoherenceBody: "Seryvon compare le og:site_name et la meta description de votre site avec le label et la description de votre entité Wikidata via le chevauchement de tokens. Pour améliorer : 1. Définissez og:site_name avec votre nom de marque exact. 2. Assurez-vous que le label de votre entité Wikidata correspond exactement. 3. Alignez les termes descriptifs clés entre votre meta description et la description Wikidata.",
     asoAgentAccessTitle: "Comment autoriser les bots agents",
     asoAgentAccessBody: "Dans robots.txt, autorisez explicitement les bots agents IA connus :\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: ClaudeBot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nVérifiez aussi que vous n'avez pas accidentellement bloqué tous les bots avec User-agent: * + Disallow: /. Bloquer les bots agents empêche les systèmes IA d'indexer votre contenu.",
+    asoAgentReadyTitle: "Comment le niveau de préparation agentique est calculé",
+    asoAgentReadyBody: "Seryvon combine la présence de WebMCP avec le nombre de signaux d'action (potentialAction JSON-LD, formulaires exploitables par un agent, liens OpenAPI/Swagger). Advanced = WebMCP + ≥2 signaux d'action. Ready = WebMCP seul, ou ≥2 signaux d'action. Basic = ≥1 signal d'action. None = aucun signal détecté. Améliorez l'une des lignes ci-dessous pour monter de niveau.",
+    asoActionSchemaTitle: "Comment ajouter un schéma d'action",
+    asoActionSchemaBody: "Ajoutez un potentialAction JSON-LD (schema.org) décrivant une opération qu'un agent peut déclencher — par ex. SearchAction, OrderAction, ReserveAction — avec un modèle d'URL cible. Cela permet aux agents IA de comprendre et d'invoquer les capacités de votre site de façon programmatique, pas seulement d'en lire le contenu.",
+    asoAiDiscoveryTitle: "Comment exposer des endpoints de découverte IA",
+    asoAiDiscoveryBody: "Seryvon sonde 4 endpoints : /.well-known/ai.txt (description libre des capacités), /ai/summary.json (nom + description), /ai/faq.json (paires question/réponse) et /ai/service.json (nom + liste de capacités). Les publier permet aux agents IA de découvrir ce que fait votre site avant de le crawler en profondeur.",
+    asoNlwebTitle: "Comment supporter NLWeb",
+    asoNlwebBody: "NLWeb (nlweb.ai) est une convention émergente permettant aux agents d'interroger un site en langage naturel via un endpoint standard /ask. Seryvon sonde /ask et vérifie la forme de la réponse. L'implémenter permet aux agents conversationnels d'interroger directement le contenu de votre site plutôt que de scraper les pages.",
 
     // Performance
     perfLcpTitle: "Comment optimiser le LCP (Largest Contentful Paint)",

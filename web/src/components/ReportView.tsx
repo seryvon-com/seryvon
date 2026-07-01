@@ -5,7 +5,6 @@ import { PILLARS } from "../api/types";
 import { useI18n } from "../i18n";
 import { durationParts } from "../lib/format";
 import { AsoBand } from "./AsoBand";
-import { IssueList } from "./IssueList";
 import { PillarCard } from "./PillarCard";
 import { ScoreGauge } from "./ScoreGauge";
 import { Spectrum } from "./Spectrum";
@@ -80,17 +79,8 @@ export function ReportView({ report }: { report: AuditReport }) {
         <AsoBand readiness={report.aso_readiness} score={aso ? aso.score : null} />
       )}
 
-      {/* Lower row: issues + spectrum */}
-      <div className="lower">
-        <div className="card">
-          <div className="section-head">
-            <h3>{t.report.issuesTitle}</h3>
-          </div>
-          <div className="section-sub">{t.report.issuesSub}</div>
-          <IssueList issues={report.issues.slice(0, 6)} />
-        </div>
-        <Spectrum report={report} />
-      </div>
+      {/* Visibility spectrum */}
+      <Spectrum report={report} />
     </>
   );
 }
