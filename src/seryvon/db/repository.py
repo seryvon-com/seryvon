@@ -34,6 +34,7 @@ from seryvon.models.report import (
     MeasurementProfile,
     PillarScore,
 )
+from seryvon.models.signals import PageSignals
 
 
 @dataclass(slots=True)
@@ -153,6 +154,9 @@ def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
             agent_ready=r.agent_ready,
             has_webmcp=r.has_webmcp,
             has_action_schema=r.has_action_schema,
+            has_agent_forms=r.has_agent_forms,
+            has_openapi=r.has_openapi,
+            action_signals=r.action_signals,
             ai_discovery_endpoints=r.ai_discovery_endpoints,
             has_nlweb=r.has_nlweb,
             brand_coherence_score=r.brand_coherence_score,
@@ -165,7 +169,7 @@ def persist_report(report: AuditReport, session: Session) -> uuid.UUID:
 
 def persist_pages(
     audit_id: uuid.UUID,
-    pages: list,  # list[PageSignals] — avoid circular import
+    pages: list[PageSignals],
     session: Session,
 ) -> None:
     """Persist crawled pages and their key signals for a given audit."""
@@ -183,6 +187,8 @@ def persist_pages(
             "word_count": p.word_count,
             "images_total": p.images_total,
             "images_with_alt": p.images_with_alt,
+            "raw_word_count": p.raw_word_count,
+            "rendered_word_count": p.rendered_word_count,
             "aso": {
                 "agent_usable_forms": p.aso.agent_usable_forms,
                 "agent_usable_forms_detail": p.aso.agent_usable_forms_detail,
@@ -253,6 +259,9 @@ def load_report(session: Session, audit_id: uuid.UUID) -> AuditReport | None:
             agent_ready=ar.agent_ready,
             has_webmcp=ar.has_webmcp,
             has_action_schema=ar.has_action_schema,
+            has_agent_forms=ar.has_agent_forms,
+            has_openapi=ar.has_openapi,
+            action_signals=ar.action_signals,
             ai_discovery_endpoints=ar.ai_discovery_endpoints,
             has_nlweb=ar.has_nlweb,
             brand_coherence_score=float(brand) if brand is not None else None,

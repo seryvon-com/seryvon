@@ -341,6 +341,8 @@ class PageRow(BaseModel):
     images_missing_alt: int | None
     agent_usable_forms: int | None
     title: str | None
+    raw_word_count: int | None
+    rendered_word_count: int | None
 
 
 @app.get("/audits/{audit_id}/pages", response_model=list[PageRow])
@@ -349,8 +351,9 @@ def get_audit_pages(
     session: Session = Depends(get_session),
 ) -> list[PageRow]:
     """Return all crawled pages for an audit with key per-page signals."""
-    from seryvon.db import models as m
     from sqlalchemy import select
+
+    from seryvon.db import models as m
 
     rows = session.execute(
         select(m.Page, m.PageSignalRow)
@@ -385,6 +388,8 @@ def get_audit_pages(
                 images_missing_alt=images_missing_alt,
                 agent_usable_forms=aso.get("agent_usable_forms"),
                 title=internal.get("title"),
+                raw_word_count=internal.get("raw_word_count"),
+                rendered_word_count=internal.get("rendered_word_count"),
             )
         )
     return result
