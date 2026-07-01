@@ -74,6 +74,9 @@ class AsoReadiness(BaseModel):
     agent_ready: bool = False
     has_webmcp: bool = False
     has_action_schema: bool = False
+    has_agent_forms: bool = False
+    has_openapi: bool = False
+    action_signals: int = 0
     ai_discovery_endpoints: int = 0
     has_nlweb: bool = False
     brand_coherence_score: float | None = None
