@@ -701,17 +701,17 @@ def recalc_scores(
     """
     from sqlalchemy import select
 
+    from seryvon import PILLARS
     from seryvon.db import models as m
     from seryvon.models.criterion import CriterionResult
     from seryvon.models.enums import Status
     from seryvon.scoring.engine import score_global, score_pillar
-    from seryvon import PILLARS
 
     updated = 0
     skipped = 0
 
     with session_scope() as session:
-        audit_ids: list[Any] = session.scalars(select(m.Audit.id)).all()
+        audit_ids = session.scalars(select(m.Audit.id)).all()
         console.print(f"[bold]{len(audit_ids)} audit(s) trouvé(s)[/bold]")
 
         for audit_id in audit_ids:
@@ -771,7 +771,9 @@ def recalc_scores(
             session.commit()
 
     verb = "à recalculer" if dry_run else "mis à jour"
-    console.print(f"[green]✓[/green] {updated} audit(s) {verb}, {skipped} ignoré(s) (sans critères).")
+    console.print(
+        f"[green]✓[/green] {updated} audit(s) {verb}, {skipped} ignoré(s) (sans critères)."
+    )
 
 
 if __name__ == "__main__":
