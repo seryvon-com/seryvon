@@ -33,7 +33,12 @@ from selectolax.parser import HTMLParser
 from seryvon.crawler.discovery import DiscoveryResult, same_host
 from seryvon.crawler.extract import extract_links, extract_page_signals
 from seryvon.crawler.fetch import FetchResult, fetch_page
-from seryvon.crawler.playwright_render import PlaywrightRenderer, RenderedPage, classify_render_mode
+from seryvon.crawler.playwright_render import (
+    PlaywrightRenderer,
+    RenderedPage,
+    classify_render_mode,
+    word_count,
+)
 from seryvon.models.signals import PageSignals
 
 log = logging.getLogger(__name__)
@@ -154,15 +159,34 @@ async def _run_crawl(
                 *(playwright_renderer(fetched[url].final_url) for url in urls_to_render),
                 return_exceptions=True,
             )
-            for url, rendered in zip(urls_to_render, render_results):
+            wave_ok = 0
+            wave_failed = 0
+            for url, rendered in zip(urls_to_render, render_results, strict=True):
                 if isinstance(rendered, RenderedPage):
                     rendered_map[fetched[url].final_url] = rendered
+                    wave_ok += 1
                     log.info(
                         "playwright render done url=%s words=%d render_ms=%d",
                         fetched[url].final_url,
                         rendered.word_count,
                         rendered.render_time_ms,
                     )
+                else:
+                    wave_failed += 1
+                    reason = (
+                        repr(rendered) if isinstance(rendered, BaseException) else "returned None"
+                    )
+                    log.warning(
+                        "playwright render fallback url=%s reason=%s",
+                        fetched[url].final_url,
+                        reason,
+                    )
+            log.info(
+                "playwright render wave summary depth=%d ok=%d fallback_to_heuristic=%d",
+                depth,
+                wave_ok,
+                wave_failed,
+            )
 
         next_frontier: set[str] = set()
         for url in wave:
@@ -184,6 +208,8 @@ async def _run_crawl(
                 )
                 signals.render_mode = render_mode
                 signals.render_source = "playwright"
+                signals.raw_word_count = word_count(result.html)
+                signals.rendered_word_count = rendered.word_count
             else:
                 signals = extract_page_signals(
                     result.final_url,
@@ -205,8 +231,21 @@ async def _run_crawl(
         current = sorted(next_frontier)
         depth += 1
 
-    log.info("crawl end domain=%s pages=%d", host, len(results))
-    return [results[url] for url in sorted(results)]
+    ordered = [results[url] for url in sorted(results)]
+    playwright_count = sum(1 for p in ordered if p.render_source == "playwright")
+    heuristic_count = len(ordered) - playwright_count
+    ssr_count = sum(1 for p in ordered if p.render_mode == "ssr")
+    csr_count = sum(1 for p in ordered if p.render_mode == "csr")
+    log.info(
+        "crawl end domain=%s pages=%d via_playwright=%d via_heuristic=%d ssr=%d csr=%d",
+        host,
+        len(ordered),
+        playwright_count,
+        heuristic_count,
+        ssr_count,
+        csr_count,
+    )
+    return ordered
 
 
 async def crawl_site(

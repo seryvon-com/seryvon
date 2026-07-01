@@ -21,7 +21,8 @@ a property covered by an explicit test (document 03, §9).
 9 = GSC rank-tracking signals in `external` (M10);
 10 = Playwright render_source field (Phase 6);
 11 = SERP / AI Overview metrics in `external` (M9);
-12 = `agent_usable_forms_detail` breakdown in `AsoSignals`).
+12 = `agent_usable_forms_detail` breakdown in `AsoSignals`;
+13 = `raw_word_count`/`rendered_word_count` for the geo.ssr severity breakdown).
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 12
+SIGNAL_SCHEMA_VERSION = 13
 
 
 class WebMcpSignals(BaseModel):
@@ -65,6 +66,8 @@ class PageSignals(BaseModel):
     status_code: int | None = None
     render_mode: str | None = None  # "ssr" | "csr"
     render_source: str = "heuristic"  # "heuristic" (D2) | "playwright" (Playwright DOM diff)
+    raw_word_count: int | None = None  # words in the raw HTTP HTML (Playwright detection only)
+    rendered_word_count: int | None = None  # words in the DOM after JS execution
     redirects: int = 0  # number of redirect hops before the final URL
 
     title: str | None = None

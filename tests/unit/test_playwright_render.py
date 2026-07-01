@@ -97,11 +97,11 @@ def _make_mock_renderer(rendered_html: str | None) -> object:
     async def _renderer(_url: str) -> RenderedPage | None:
         if rendered_html is None:
             return None
-        from seryvon.crawler.playwright_render import _word_count
+        from seryvon.crawler.playwright_render import word_count
 
         return RenderedPage(
             html=rendered_html,
-            word_count=_word_count(rendered_html),
+            word_count=word_count(rendered_html),
             render_time_ms=42,
         )
 
@@ -155,6 +155,8 @@ async def test_crawl_uses_playwright_for_home_page() -> None:
     assert len(pages) == 1
     assert pages[0].render_source == "playwright"
     assert pages[0].render_mode == "csr"
+    assert pages[0].raw_word_count == 3
+    assert pages[0].rendered_word_count == 500
 
 
 @pytest.mark.asyncio

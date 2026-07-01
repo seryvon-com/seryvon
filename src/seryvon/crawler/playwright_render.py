@@ -50,7 +50,7 @@ class RenderedPage:
 PlaywrightRenderer = Callable[[str], Awaitable[RenderedPage | None]]
 
 
-def _word_count(html: str) -> int:
+def word_count(html: str) -> int:
     tree = HTMLParser(html)
     body = tree.body
     if body is None:
@@ -65,8 +65,8 @@ def classify_render_mode(raw_html: str, rendered_html: str) -> str:
     than the raw HTML (suggesting the page relies on JavaScript to populate it),
     `"ssr"` otherwise.
     """
-    raw_words = _word_count(raw_html)
-    rendered_words = _word_count(rendered_html)
+    raw_words = word_count(raw_html)
+    rendered_words = word_count(rendered_html)
     surplus = rendered_words - raw_words
     ratio = rendered_words / max(raw_words, 1)
     if ratio >= CSR_RATIO_THRESHOLD and surplus >= CSR_MIN_SURPLUS:
@@ -131,7 +131,7 @@ async def renderer_session(
                     elapsed = int((time.monotonic() - t0) * 1000)
                     return RenderedPage(
                         html=html,
-                        word_count=_word_count(html),
+                        word_count=word_count(html),
                         render_time_ms=elapsed,
                     )
 
@@ -170,6 +170,6 @@ def make_renderer(*, user_agent: str, timeout: float) -> PlaywrightRenderer | No
             log.warning("playwright render failed url=%s err=%r", url, exc)
             return None
         elapsed = int((time.monotonic() - t0) * 1000)
-        return RenderedPage(html=html, word_count=_word_count(html), render_time_ms=elapsed)
+        return RenderedPage(html=html, word_count=word_count(html), render_time_ms=elapsed)
 
     return _render

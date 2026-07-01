@@ -246,7 +246,12 @@ def _agent_usable_forms(tree: HTMLParser) -> tuple[int, dict[str, int]]:
             no_label += 1
 
     found = qualifying + no_action + no_fields + no_label
-    return qualifying, {"found": found, "no_action": no_action, "no_fields": no_fields, "no_label": no_label}
+    return qualifying, {
+        "found": found,
+        "no_action": no_action,
+        "no_fields": no_fields,
+        "no_label": no_label,
+    }
 
 
 def _openapi_links(tree: HTMLParser) -> list[str]:
