@@ -44,13 +44,25 @@ def test_only_warning_and_critical_generate_issues() -> None:
 
 
 def test_priority_formula_and_bucket() -> None:
-    # meta.title critical: impact 2 (1.5×1), severity 2, effort 1 -> 4.0 -> P1.
+    # meta.title critical: impact 2 (1.5×1), severity 2, effort 1 -> 4.0 -> high.
     issue = build_issues([_result("meta.title", Status.CRITICAL, weight=1.5)])[0]
     assert issue.severity is Severity.CRITICAL
     assert issue.impact == 2
     assert issue.effort == 1
     assert issue.priority_score == 4.0
-    assert issue.priority_bucket == "P1"
+    assert issue.priority_bucket == "high"
+
+
+def test_bucket_bands() -> None:
+    # ROI proxy -> 3 bands: high >= 3.0, medium >= 1.0, low < 1.0.
+    high = build_issues([_result("meta.title", Status.CRITICAL, weight=1.5)])[0]  # 4.0
+    medium = build_issues([_result("geo.ssr", Status.CRITICAL, weight=1.8)])[0]  # 3×2/3 = 2.0
+    low = build_issues([_result("content.text_ratio", Status.WARNING, weight=0.6)])[0]  # 0.5
+    assert (high.priority_bucket, medium.priority_bucket, low.priority_bucket) == (
+        "high",
+        "medium",
+        "low",
+    )
 
 
 def test_impact_ignores_pillar_count() -> None:
@@ -82,7 +94,7 @@ def test_issues_sorted_by_priority_desc() -> None:
         _result("meta.title", Status.CRITICAL, weight=1.5),  # 4.0 -> P1
     ]
     issues = build_issues(results)
-    assert [i.priority_bucket for i in issues] == ["P1", "P4"]
+    assert [i.priority_bucket for i in issues] == ["high", "low"]
 
 
 def test_recommendation_and_affected_pages() -> None:

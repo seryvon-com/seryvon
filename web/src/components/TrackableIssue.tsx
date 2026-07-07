@@ -79,11 +79,13 @@ function AffectedPages({
   recommendation: string;
   rawValue: unknown;
 }) {
+  const { t } = useI18n();
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? pages : pages.slice(0, 5);
   const remaining = pages.length - 5;
+  const isArchitectural = criterionKey === "geo.ssr";
   const wordDeltas =
-    criterionKey === "geo.ssr" &&
+    isArchitectural &&
     rawValue !== null &&
     typeof rawValue === "object" &&
     "word_deltas" in (rawValue as object)
@@ -91,6 +93,9 @@ function AffectedPages({
       : null;
   return (
     <div className="issue-affected-pages">
+      {isArchitectural && (
+        <div className="issue-scope-note">{t.issue.scopeArchitectural}</div>
+      )}
       {visible.map((p) => {
         const d = wordDeltas?.[p];
         const tierColor = d ? SSR_TIER_COLOR[ssrTier(d.parity_pct)] : undefined;
@@ -272,7 +277,7 @@ export function TrackableIssue({
           )}
         </button>
 
-        <span className="bucket">{issue.priority_bucket}</span>
+        <span className={`bucket ${issue.priority_bucket}`}>{t.issue.bucket(issue.priority_bucket)}</span>
 
         <div className="grow">
           <div className="label">{issue.recommendation || issue.criterion_key}</div>

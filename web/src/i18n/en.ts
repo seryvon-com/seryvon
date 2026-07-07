@@ -393,6 +393,9 @@ export const en: Dict = {
   issue: {
     effort: (n) => `EFFORT ${n}/3`,
     prio: (n) => `prio ${n.toFixed(1)}`,
+    bucket: (b) => ({ high: "High", medium: "Medium", low: "Low" })[b] ?? b,
+    scopeArchitectural:
+      "These pages share one root cause — a single rendering-layer fix covers them all. Listed as scope, not per-page tasks.",
   },
   criterionHints: {
     crossPlatformTitle: "Recognized platforms",

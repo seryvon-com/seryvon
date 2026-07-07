@@ -170,11 +170,22 @@ class AsoAccessibleFormsCriterion(Criterion):
                 self.key, self.pillars, self.weight, t("reason.no_pages")
             )
         total = sum(p.aso.agent_usable_forms for p in signals.pages)
-        score = 100.0 if total >= 1 else 0.0
-
         total_found = sum(
             d.get("found", 0) for p in signals.pages if (d := p.aso.agent_usable_forms_detail)
         )
+        # Score the *proportion* of agent-usable forms, not mere presence: a site
+        # with 1 usable form out of 12 is a real accessibility gap. `not_measured`
+        # when the site has no form at all (nothing to assess). Legacy signals
+        # without the per-page breakdown fall back to binary presence.
+        if total_found == 0:
+            if total == 0:
+                return CriterionResult.not_measured(
+                    self.key, self.pillars, self.weight, t("reason.no_forms")
+                )
+            score = 100.0
+        else:
+            score = round(total / total_found * 100, 2)
+
         disqualified = {
             "no_action": sum(
                 p.aso.agent_usable_forms_detail.get("no_action", 0) for p in signals.pages
@@ -203,8 +214,8 @@ class AsoAccessibleFormsCriterion(Criterion):
             },
             score=score,
             status=status_from_score(score),
-            threshold={"min": 1},
-            explanation=t("expl.accessible_forms", total=total),
+            threshold={"target": "100% des formulaires labellisés"},
+            explanation=t("expl.accessible_forms", total=total, found=total_found),
             evidence=_HTML_SOURCE,
             weight=self.weight,
         )

@@ -189,7 +189,7 @@ class IssueRow(Base):
     impact: Mapped[int] = mapped_column(Integer, nullable=False)
     effort: Mapped[int] = mapped_column(Integer, nullable=False)
     priority_score: Mapped[float] = mapped_column(Float, nullable=False)
-    priority_bucket: Mapped[str] = mapped_column(String(4), nullable=False)
+    priority_bucket: Mapped[str] = mapped_column(String(16), nullable=False)
     recommendation: Mapped[str] = mapped_column(Text, default="")
     explanation: Mapped[str] = mapped_column(Text, default="")
     # JSON-serializable value that triggered the issue (often a dict — mirrors

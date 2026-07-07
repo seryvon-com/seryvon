@@ -87,11 +87,18 @@ def test_action_schema_unions_across_pages() -> None:
 # aso.accessible_forms / aso.openapi                                           #
 # --------------------------------------------------------------------------- #
 def test_accessible_forms() -> None:
-    assert (
-        AsoAccessibleFormsCriterion().evaluate(_bundle(_aso_page(agent_usable_forms=1))).score
-        == 100
-    )
-    assert AsoAccessibleFormsCriterion().evaluate(_bundle(_aso_page())).score == 0
+    crit = AsoAccessibleFormsCriterion()
+    # All found forms are usable -> 100.
+    full = _aso_page(agent_usable_forms=2, agent_usable_forms_detail={"found": 2})
+    assert crit.evaluate(_bundle(full)).score == 100
+    # 1 usable out of 4 found -> 25 (proportional, no longer binary).
+    partial = _aso_page(agent_usable_forms=1, agent_usable_forms_detail={"found": 4})
+    assert crit.evaluate(_bundle(partial)).score == 25
+    # No form at all -> not_measured (nothing to assess), not a 0/critical.
+    assert crit.evaluate(_bundle(_aso_page())).status is Status.NOT_MEASURED
+    # Legacy signals (usable count but no per-page breakdown) fall back to presence.
+    legacy = _aso_page(agent_usable_forms=1)
+    assert crit.evaluate(_bundle(legacy)).score == 100
 
 
 def test_openapi() -> None:

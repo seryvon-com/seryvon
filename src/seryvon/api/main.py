@@ -339,6 +339,8 @@ class PageRow(BaseModel):
     word_count: int | None
     images_total: int | None
     images_missing_alt: int | None
+    svg_total: int | None
+    svg_missing_name: int | None
     agent_usable_forms: int | None
     title: str | None
     raw_word_count: int | None
@@ -378,6 +380,13 @@ def get_audit_pages(
             if images_total is not None and images_with_alt is not None
             else None
         )
+        svg_total = internal.get("svg_total")
+        svg_accessible = internal.get("svg_accessible")
+        svg_missing_name = (
+            (svg_total - svg_accessible)
+            if svg_total is not None and svg_accessible is not None
+            else None
+        )
         result.append(
             PageRow(
                 url=page.url,
@@ -386,6 +395,8 @@ def get_audit_pages(
                 word_count=internal.get("word_count"),
                 images_total=images_total,
                 images_missing_alt=images_missing_alt,
+                svg_total=svg_total,
+                svg_missing_name=svg_missing_name,
                 agent_usable_forms=aso.get("agent_usable_forms"),
                 title=internal.get("title"),
                 raw_word_count=internal.get("raw_word_count"),

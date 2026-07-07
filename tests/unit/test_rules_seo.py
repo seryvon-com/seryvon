@@ -23,6 +23,7 @@ from seryvon.scoring.rules.seo import (
     CrawlSitemapCriterion,
     HreflangCriterion,
     ImgAltCriterion,
+    ImgSvgAltCriterion,
     LinksInternalCriterion,
     LinksOrphansCriterion,
     MetaCanonicalCriterion,
@@ -257,6 +258,43 @@ def test_img_alt_ratio() -> None:
 def test_img_alt_not_measured_without_images() -> None:
     result = ImgAltCriterion().evaluate(_pages(_page()))
     assert result.status is Status.NOT_MEASURED
+
+
+def test_img_alt_volume_floor_caps_status_at_warning() -> None:
+    # 900/1000 alt = 90% (would be `ok`), but 100 missing >= floor -> `warning`
+    # so the backlog surfaces in the action plan. Score stays continuous.
+    bundle = _pages(_page("https://ex.com/a", images_total=1000, images_with_alt=900))
+    result = ImgAltCriterion().evaluate(bundle)
+    assert result.score == 90.0
+    assert result.status is Status.WARNING
+    assert result.raw_value["without_alt"] == 100
+
+
+def test_img_alt_small_backlog_stays_ok() -> None:
+    # 98/100 alt = 98%, only 2 missing (< floor) -> stays `ok`, no false alarm.
+    bundle = _pages(_page("https://ex.com/a", images_total=100, images_with_alt=98))
+    assert ImgAltCriterion().evaluate(bundle).status is Status.OK
+
+
+def test_svg_alt_not_measured_without_svg() -> None:
+    result = ImgSvgAltCriterion().evaluate(_pages(_page()))
+    assert result.status is Status.NOT_MEASURED
+
+
+def test_svg_alt_ratio() -> None:
+    # SVG-heavy site: near-empty <img> count but plenty of content svgs.
+    bundle = _pages(
+        _page("https://ex.com/a", svg_total=10, svg_accessible=4),
+    )
+    result = ImgSvgAltCriterion().evaluate(bundle)
+    assert result.score == 40.0
+    assert result.status is Status.CRITICAL
+    assert result.raw_value["without_name"] == 6
+
+
+def test_svg_alt_all_named_scores_100() -> None:
+    bundle = _pages(_page("https://ex.com/a", svg_total=3, svg_accessible=3))
+    assert ImgSvgAltCriterion().evaluate(bundle).score == 100.0
 
 
 # --------------------------------------------------------------------------- #

@@ -534,12 +534,26 @@
   border-radius: 11px;
 }
 .issue .bucket {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 6px;
   background: #1a1f29;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.issue .bucket.high {
+  background: color-mix(in srgb, var(--c-critical) 15%, transparent);
+  color: var(--c-critical);
+}
+.issue .bucket.medium {
+  background: color-mix(in srgb, var(--c-warning) 15%, transparent);
+  color: var(--c-warning);
+}
+.issue .bucket.low {
+  background: rgba(120, 140, 170, 0.12);
   color: var(--c-text-muted);
 }
 .issue .label {
@@ -564,6 +578,14 @@
   flex-wrap: wrap;
   gap: 4px;
   padding: 6px 0 2px 36px;
+}
+.issue-scope-note {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--c-text-muted);
+  font-style: italic;
+  line-height: 1.4;
+  margin-bottom: 2px;
 }
 .issue-page-chip {
   font-family: var(--font-mono);
@@ -1789,6 +1811,10 @@
   border-radius: 20px;
   padding: 2px 8px;
   font-weight: 600;
+}
+
+.crawled-pages-export {
+  margin-left: auto;
 }
 
 .crawled-pages-stats {

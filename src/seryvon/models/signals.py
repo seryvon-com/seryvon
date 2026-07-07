@@ -22,7 +22,8 @@ a property covered by an explicit test (document 03, §9).
 10 = Playwright render_source field (Phase 6);
 11 = SERP / AI Overview metrics in `external` (M9);
 12 = `agent_usable_forms_detail` breakdown in `AsoSignals`;
-13 = `raw_word_count`/`rendered_word_count` for the geo.ssr severity breakdown).
+13 = `raw_word_count`/`rendered_word_count` for the geo.ssr severity breakdown;
+14 = `svg_total`/`svg_accessible` for the img.svg_alt criterion.
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 13
+SIGNAL_SCHEMA_VERSION = 14
 
 
 class WebMcpSignals(BaseModel):
@@ -95,6 +96,12 @@ class PageSignals(BaseModel):
     internal_link_targets: list[str] = Field(default_factory=list)
     images_total: int = 0
     images_with_alt: int = 0
+    # Non-decorative inline <svg> (excludes aria-hidden="true", role="presentation"/"none",
+    # and display:none sprite sheets) and how many carry an accessible name
+    # (<title>, aria-label, or aria-labelledby). SVG-heavy sites use little to no
+    # <img>, so img.alt alone under-covers their real accessibility surface.
+    svg_total: int = 0
+    svg_accessible: int = 0
 
     # M3.2 on-page signals (GSO/AEO) — feed the GSO and AEO pillars.
     tables_count: int = 0  # <table> tables (itemlist / comparison)

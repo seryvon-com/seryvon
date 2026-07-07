@@ -79,7 +79,7 @@ export interface Issue {
   impact: number;
   effort: number;
   priority_score: number;
-  priority_bucket: string; // P1 / P2 / P3 / P4
+  priority_bucket: string; // high / medium / low (legacy audits may still carry P1–P4)
   recommendation: string;
   explanation: string;
   raw_value: unknown;
@@ -200,6 +200,8 @@ export interface PageRow {
   word_count: number | null;
   images_total: number | null;
   images_missing_alt: number | null;
+  svg_total: number | null;
+  svg_missing_name: number | null;
   agent_usable_forms: number | null;
   title: string | null;
   raw_word_count: number | null;

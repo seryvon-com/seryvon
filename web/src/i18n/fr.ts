@@ -393,6 +393,9 @@ export const fr: Dict = {
   issue: {
     effort: (n) => `EFFORT ${n}/3`,
     prio: (n) => `prio ${n.toFixed(1)}`,
+    bucket: (b) => ({ high: "Haute", medium: "Moyenne", low: "Basse" })[b] ?? b,
+    scopeArchitectural:
+      "Ces pages partagent une même cause — un seul correctif au niveau du rendu les couvre toutes. Listées comme périmètre, pas comme tâches individuelles.",
   },
   criterionHints: {
     crossPlatformTitle: "Plateformes reconnues",

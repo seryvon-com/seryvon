@@ -8,7 +8,7 @@
 """Markdown export of the report (derived from the JSON source of truth).
 
 Deterministic rendering: global score, per-pillar scores, agentic readiness,
-prioritized action plan (P1–P4) and criteria detail grouped by pillar. The
+prioritized action plan (high/medium/low) and criteria detail grouped by pillar. The
 rendered report text itself stays in French (product output).
 """
 

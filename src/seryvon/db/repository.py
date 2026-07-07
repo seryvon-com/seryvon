@@ -187,6 +187,8 @@ def persist_pages(
             "word_count": p.word_count,
             "images_total": p.images_total,
             "images_with_alt": p.images_with_alt,
+            "svg_total": p.svg_total,
+            "svg_accessible": p.svg_accessible,
             "raw_word_count": p.raw_word_count,
             "rendered_word_count": p.rendered_word_count,
             "aso": {

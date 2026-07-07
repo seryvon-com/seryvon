@@ -38,6 +38,116 @@ def _host(url: str) -> str:
     return (urlsplit(url).hostname or "").lower()
 
 
+def _is_decorative_svg(svg: object) -> bool:
+    """True if an <svg> is marked decorative/hidden and exempt from `img.svg_alt`.
+
+    Covers `aria-hidden="true"`, `role="presentation"/"none"`, and inline
+    `display:none` icon-sprite sheets (defining <symbol>s, never rendered directly).
+    """
+    attrs = svg.attributes  # type: ignore[attr-defined]
+    if (attrs.get("aria-hidden") or "").strip().lower() == "true":
+        return True
+    if (attrs.get("role") or "").strip().lower() in ("presentation", "none"):
+        return True
+    style = (attrs.get("style") or "").replace(" ", "").lower()
+    return "display:none" in style
+
+
+#: Elements whose own accessible name is what a screen reader announces for
+#: an icon nested inside them (WCAG accessible-name computation).
+_INTERACTIVE_TAGS = ("a", "button")
+#: How many ancestor levels to search for the nearest interactive control
+#: before giving up. Icon libraries often nest the <svg> a couple of wrapper
+#: elements deep inside the real `<a>`/`<button>` (e.g. an `<span class="icon-wrap">`),
+#: and that control can itself sit inside a larger card-level link.
+_LABEL_CONTEXT_MAX_DEPTH = 5
+
+
+def _is_named(node: object, *, deep: bool) -> bool:
+    """True if a node has a non-empty `aria-label`/`aria-labelledby` or text.
+
+    `deep=True` reads the full accessible-name computation for an interactive
+    control (all descendant text counts, per WCAG). `deep=False` reads only
+    the node's own direct text nodes — used when there is no interactive
+    ancestor to anchor on, so we must not pull in a nested descendant's text
+    (e.g. a sibling <svg>'s own <title>, or an unrelated nested element).
+    """
+    attrs = node.attributes  # type: ignore[attr-defined]
+    if (attrs.get("aria-label") or "").strip():
+        return True
+    if (attrs.get("aria-labelledby") or "").strip():
+        return True
+    return bool(node.text(deep=deep, strip=True))  # type: ignore[attr-defined]
+
+
+def _has_labeled_context(svg: object) -> bool:
+    """True if the icon's accessible-name-defining ancestor already has a name.
+
+    Walks up looking for the *nearest* interactive ancestor (`<a>`/`<button>`/
+    `role=button`) within `_LABEL_CONTEXT_MAX_DEPTH` levels, skipping plain
+    wrapper elements (div/span) along the way without reading their text —
+    reading an arbitrary wrapper's aggregated text would leak unrelated
+    sibling content (e.g. a card's category badge or a neighboring row) and
+    wrongly exempt an unlabeled icon-only control nested inside the same card.
+    Once an interactive ancestor is found, the check stops there and judges
+    only that element's own full accessible name — a nested icon-only button
+    inside a bigger labeled card link is a distinct control and does NOT
+    inherit the card's name. If no interactive ancestor exists at all, falls
+    back to the immediate parent's own *direct* text only (handles
+    non-interactive captions, e.g. `<time>Updated Mar 10<svg/></time>`) —
+    deliberately not `deep`, so a sibling <svg>'s own <title> text (or any
+    other nested descendant) cannot leak in and falsely label this icon.
+    """
+    node = svg.parent  # type: ignore[attr-defined]
+    depth = 0
+    while node is not None and depth < _LABEL_CONTEXT_MAX_DEPTH:
+        tag = node.tag
+        role = (node.attributes.get("role") or "").strip().lower()
+        if tag in _INTERACTIVE_TAGS or role in ("button", "link"):
+            return _is_named(node, deep=True)
+        node = node.parent
+        depth += 1
+    parent = svg.parent  # type: ignore[attr-defined]
+    return parent is not None and _is_named(parent, deep=False)
+
+
+def _svg_accessible_name(svg: object) -> str:
+    """Non-empty text of the svg's <title> child, if any (empty string otherwise).
+
+    A `<title>` node can exist but be left empty by a charting library's default
+    markup (e.g. Recharts) — that provides no real accessible name, so presence
+    alone is not enough; the text itself must be checked.
+    """
+    title = svg.css_first("title")  # type: ignore[attr-defined]
+    return title.text(strip=True) if title is not None else ""
+
+
+def _svg_accessibility(tree: HTMLParser) -> tuple[int, int]:
+    """Count content <svg> elements and how many have an accessible name.
+
+    Excluded upfront (not counted at all): decorative/hidden svgs
+    (`_is_decorative_svg`) and icons with a labeled ancestor context
+    (`_has_labeled_context`) — neither needs its own name.
+    An accessible name is a non-empty `aria-label`/`aria-labelledby`, or a
+    <title> child with non-empty text (an empty <title> stub does not count).
+    """
+    total = 0
+    accessible = 0
+    for svg in tree.css("svg"):
+        if _is_decorative_svg(svg) or _has_labeled_context(svg):
+            continue
+        total += 1
+        attrs = svg.attributes
+        has_name = (
+            bool((attrs.get("aria-label") or "").strip())
+            or bool((attrs.get("aria-labelledby") or "").strip())
+            or bool(_svg_accessible_name(svg))
+        )
+        if has_name:
+            accessible += 1
+    return total, accessible
+
+
 def _links_from_tree(tree: HTMLParser, base_url: str) -> list[str]:
     """Absolute HTTP(S) links of a tree, fragment removed, deduplicated and sorted."""
     links: set[str] = set()
@@ -333,6 +443,7 @@ def extract_page_signals(
 
     images = tree.css("img")
     images_with_alt = sum(1 for img in images if (img.attributes.get("alt") or "").strip())
+    svg_total, svg_accessible = _svg_accessibility(tree)
 
     page_host = _host(url)
     all_links = _links_from_tree(tree, url)
@@ -392,6 +503,8 @@ def extract_page_signals(
         internal_link_targets=internal_targets,
         images_total=len(images),
         images_with_alt=images_with_alt,
+        svg_total=svg_total,
+        svg_accessible=svg_accessible,
         tables_count=len(tree.css("table")),
         definition_lists_count=len(tree.css("dl")),
         question_headings=question_headings,

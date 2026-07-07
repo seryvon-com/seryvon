@@ -29,7 +29,7 @@ from typing import Any, ClassVar
 
 from seryvon.i18n import t
 from seryvon.models.criterion import Criterion, CriterionResult, ThresholdConfig, register
-from seryvon.models.enums import STATUS_OK_THRESHOLD, status_from_score
+from seryvon.models.enums import STATUS_OK_THRESHOLD, Status, status_from_score
 from seryvon.models.signals import PageSignals, SignalBundle
 
 # Default thresholds (document 04, §2).
@@ -37,6 +37,11 @@ TITLE_MIN_LEN, TITLE_MAX_LEN = 30, 60
 DESC_MIN_LEN, DESC_MAX_LEN = 120, 158
 CONTENT_MIN_WORDS = 800
 TEXT_RATIO_MIN = 0.15
+# Absolute number of missing-alt images above which img.alt cannot score `ok`.
+# A percentage score is scale-invariant: 86% is 86% whether 1/7 or 102/738 images
+# are missing. This floor keeps the score continuous but caps the status at
+# `warning` so a large absolute backlog surfaces in the action plan.
+IMG_ALT_MAX_MISSING = 25
 LINKS_MIN, LINKS_MAX = 3, 100
 MAX_REDIRECT_HOPS = 1
 OG_REQUIRED = ("og:title", "og:description", "og:image", "og:url", "og:type")
@@ -436,6 +441,15 @@ class ImgAltCriterion(Criterion):
     pillars: ClassVar[list[str]] = ["seo"]
     weight = 0.5
 
+    @staticmethod
+    def _max_missing(thresholds: ThresholdConfig | None) -> int:
+        """Volume floor: `img.alt.max_missing` override or default `IMG_ALT_MAX_MISSING`."""
+        section = thresholds.get("img.alt") if thresholds else None
+        value = section.get("max_missing") if section else None
+        if isinstance(value, int | float) and value > 0:
+            return int(value)
+        return IMG_ALT_MAX_MISSING
+
     def evaluate(
         self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
     ) -> CriterionResult:
@@ -445,15 +459,79 @@ class ImgAltCriterion(Criterion):
                 self.key, self.pillars, self.weight, t("reason.no_images")
             )
         with_alt = sum(p.images_with_alt for p in signals.pages)
+        without_alt = total - with_alt
         score = round(with_alt / total * 100, 2)
+        status = status_from_score(score)
+        # Volume floor: a passing percentage on a large image set can still hide a
+        # significant absolute backlog. Cap the status at `warning` so it surfaces
+        # in the action plan; the score itself stays continuous.
+        max_missing = self._max_missing(thresholds)
+        if status is Status.OK and without_alt >= max_missing:
+            status = Status.WARNING
         return CriterionResult(
             key=self.key,
             pillars=self.pillars,
-            raw_value={"images": total, "with_alt": with_alt},
+            raw_value={
+                "images": total,
+                "with_alt": with_alt,
+                "without_alt": without_alt,
+                "max_missing": max_missing,
+            },
+            score=score,
+            status=status,
+            threshold={"target": "100% d'images avec alt", "max_missing": max_missing},
+            explanation=t("expl.img_alt", without_alt=without_alt, total=total),
+            evidence=_EVIDENCE_HTML,
+            weight=self.weight,
+        )
+
+
+@register
+class ImgSvgAltCriterion(Criterion):
+    """Inline SVG accessible names (`img.svg_alt`): % of content <svg> with a name.
+
+    Complements `img.alt`: SVG-heavy sites (icon/illustration systems built on
+    inline <svg> rather than <img>) can pass `img.alt` on a near-empty <img>
+    count while their real visual content has no accessible name at all.
+    Excludes decorative/hidden svgs (aria-hidden, role=presentation,
+    display:none sprite sheets) and icons with a labeled context within a few
+    ancestor levels (e.g. `<button>Learn <svg/></button>`, or `<time>Updated
+    Mar 10<svg/></time>` — the icon is redundant with nearby visible text or
+    an aria-label, so it needs no name of its own). A <title> child must have
+    non-empty text to count as a name (an empty stub, as some charting
+    libraries emit by default, does not).
+    See `crawler.extract._svg_accessibility`. `not_measured` if the site has
+    no such content <svg>.
+    """
+
+    key = "img.svg_alt"
+    pillars: ClassVar[list[str]] = ["seo"]
+    weight = 0.4
+
+    def evaluate(
+        self, signals: SignalBundle, thresholds: ThresholdConfig | None = None
+    ) -> CriterionResult:
+        total = sum(p.svg_total for p in signals.pages)
+        if total == 0:
+            return CriterionResult.not_measured(
+                self.key, self.pillars, self.weight, t("reason.no_svg")
+            )
+        accessible = sum(p.svg_accessible for p in signals.pages)
+        score = round(accessible / total * 100, 2)
+        return CriterionResult(
+            key=self.key,
+            pillars=self.pillars,
+            raw_value={
+                "svg": total,
+                "accessible": accessible,
+                "without_name": total - accessible,
+            },
             score=score,
             status=status_from_score(score),
-            threshold={"target": "100% d'images avec alt"},
-            explanation=t("expl.img_alt", without_alt=total - with_alt, total=total),
+            threshold={"target": "100% des <svg> de contenu avec un nom accessible"},
+            explanation=t(
+                "expl.img_svg_alt", without_name=total - accessible, total=total
+            ),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )

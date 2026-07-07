@@ -8,7 +8,9 @@
 """Prioritized action plan (document 04 §7-8).
 
 Turns the `warning`/`critical` `CriterionResult` objects into prioritized
-`Issue` objects: `priority = (impact × severity) / effort`, bucketed into P1–P4.
+`Issue` objects: `priority = (impact × severity) / effort`, bucketed into three
+coarse bands (`high`/`medium`/`low`). The score is a ROI proxy, so `high` groups
+the quick, high-value fixes rather than the most severe finding in absolute terms.
 Pure and deterministic (stable sort by descending priority then key).
 
 Severity: warning=1, critical=2. Impact: derived from the criterion weight (1–3);
@@ -41,6 +43,7 @@ _EFFORT: dict[str, int] = {
     "struct.schema": 1,
     "links.internal": 1,
     "img.alt": 1,
+    "img.svg_alt": 1,
     "crawl.sitemap": 1,
     "crawl.redirects": 1,
     "i18n.hreflang": 1,
@@ -111,13 +114,16 @@ def _impact(result: CriterionResult) -> int:
 
 
 def _bucket(priority: float) -> str:
-    if priority >= 4.0:
-        return "P1"
-    if priority >= 2.0:
-        return "P2"
+    """Coarse 3-level priority band from the ROI score.
+
+    `high` = strong return (critical + cheap structural fixes, or high-impact
+    field metrics); `medium` = the broad middle; `low` = high-effort warnings.
+    """
+    if priority >= 3.0:
+        return "high"
     if priority >= 1.0:
-        return "P3"
-    return "P4"
+        return "medium"
+    return "low"
 
 
 def _affected_pages(result: CriterionResult) -> list[str]:

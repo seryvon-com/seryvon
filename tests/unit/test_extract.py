@@ -37,6 +37,101 @@ def test_extract_links_and_images(sample_html: str) -> None:
     assert signals.images_with_alt == 1
 
 
+def test_extract_svg_accessibility_counts_content_svgs() -> None:
+    html = """
+    <html><body>
+      <svg role="img"><title>Company logo</title></svg>
+      <svg aria-label="Search"></svg>
+      <svg><path d="M0 0"/></svg>
+      <svg aria-hidden="true"><path d="M0 0"/></svg>
+      <svg role="presentation"><path d="M0 0"/></svg>
+      <svg style="display: none"><symbol id="icon-x"></symbol></svg>
+    </body></html>
+    """
+    signals = extract_page_signals("https://example.com/", html)
+    # 3 non-decorative svgs (title, aria-label, unnamed); 2 with an accessible name.
+    assert signals.svg_total == 3
+    assert signals.svg_accessible == 2
+
+
+def test_extract_svg_accessibility_empty_title_does_not_count() -> None:
+    # Some charting libraries (Recharts) emit an empty <title> stub by default —
+    # presence alone must not count as a real accessible name.
+    html = """
+    <html><body>
+      <svg role="application"><title></title><path d="M0 0"/></svg>
+    </body></html>
+    """
+    signals = extract_page_signals("https://example.com/", html)
+    assert signals.svg_total == 1
+    assert signals.svg_accessible == 0
+
+
+def test_extract_svg_icon_in_labeled_control_is_exempt() -> None:
+    html = """
+    <html><body>
+      <button>Learn<svg><path d="M0 0"/></svg></button>
+      <a href="/signin">Sign In<svg><path d="M0 0"/></svg></a>
+      <button aria-label="Close"><svg><path d="M0 0"/></svg></button>
+      <button><svg><path d="M0 0"/></svg></button>
+    </body></html>
+    """
+    signals = extract_page_signals("https://example.com/", html)
+    # 3 icons sit in a control with text/aria-label -> exempt (not even counted).
+    # The last bare icon-only button (no text, no aria-label) is a real gap.
+    assert signals.svg_total == 1
+    assert signals.svg_accessible == 0
+
+
+def test_extract_svg_icon_labeled_via_nearest_interactive_ancestor() -> None:
+    # Mirrors a real pattern found on world-models.io: a whole card is a
+    # labeled <a>, with a nested icon-only <button> (bookmark) and a <time>
+    # caption inside it. The card's <a> text must NOT leak down to label the
+    # nested button — that is a distinct control needing its own name.
+    html = """
+    <html><body>
+      <a class="card" href="/compare/x-vs-y/">
+        <div><span>Compare</span></div>
+        <button aria-label=""><svg class="lucide-bookmark"><path d="M0 0"/></svg></button>
+        <time>Updated Mar 10, 2026<svg class="lucide-clock"><path d="M0 0"/></svg></time>
+        <span>DreamerV3 vs PlaNet comparison summary text</span>
+        <span class="icon-wrap"><svg class="lucide-arrow-right"><path d="M0 0"/></svg></span>
+      </a>
+    </body></html>
+    """
+    signals = extract_page_signals("https://example.com/", html)
+    # clock and arrow-right both resolve to the labeled card <a> as their
+    # nearest interactive ancestor -> exempt. The bare bookmark button IS
+    # itself an interactive ancestor (found first, before reaching the card)
+    # with no name of its own -> stays flagged, regardless of the card's text.
+    assert signals.svg_total == 1
+    assert signals.svg_accessible == 0
+
+
+def test_extract_svg_icon_without_interactive_ancestor_falls_back_to_parent() -> None:
+    # No enclosing <a>/<button> at all: only the immediate parent's own text
+    # counts (no walking further, to avoid leaking unrelated ancestor text).
+    html = """
+    <html><body>
+      <time>Updated Mar 10, 2026<svg class="lucide-clock"><path d="M0 0"/></svg></time>
+      <div>
+        <span class="icon-wrap"><svg class="lucide-orphan"><path d="M0 0"/></svg></span>
+      </div>
+    </body></html>
+    """
+    signals = extract_page_signals("https://example.com/", html)
+    # <time>'s own text exempts the clock icon; the orphan icon's immediate
+    # parent (empty icon-wrap span) has no text -> stays flagged (real gap).
+    assert signals.svg_total == 1
+    assert signals.svg_accessible == 0
+
+
+def test_extract_svg_accessibility_zero_without_svg(sample_html: str) -> None:
+    signals = extract_page_signals("https://example.com/", sample_html)
+    assert signals.svg_total == 0
+    assert signals.svg_accessible == 0
+
+
 def test_extract_is_deterministic(sample_html: str) -> None:
     """Same HTML -> same signals (reproducibility property)."""
     a = extract_page_signals("https://example.com/", sample_html)

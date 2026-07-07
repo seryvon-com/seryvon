@@ -59,7 +59,7 @@ class Issue(BaseModel):
     impact: int
     effort: int
     priority_score: float
-    priority_bucket: str  # P1 / P2 / P3 / P4
+    priority_bucket: str  # high / medium / low
     recommendation: str = ""
     explanation: str = ""   # what the tool found on the audited site
     raw_value: object = None  # measured value that triggered the issue (JSON-serializable)

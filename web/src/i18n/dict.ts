@@ -271,6 +271,8 @@ export interface Dict {
   issue: {
     effort: (n: number) => string;
     prio: (n: number) => string;
+    bucket: (b: string) => string;
+    scopeArchitectural: string;
   };
   criterionHints: {
     crossPlatformTitle: string;

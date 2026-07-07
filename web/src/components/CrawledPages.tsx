@@ -34,7 +34,55 @@ function jsDelta(p: PageRow): number | null {
   return p.rendered_word_count - p.raw_word_count;
 }
 
-type SortKey = "url" | "status_code" | "render_mode" | "word_count" | "js_delta" | "images_missing_alt" | "agent_usable_forms";
+const CSV_HEADERS = [
+  "url",
+  "http",
+  "rendu",
+  "mots",
+  "delta_js",
+  "alt_manquants",
+  "alt_total",
+  "svg_sans_nom",
+  "svg_total",
+  "forms",
+];
+
+function csvRow(p: PageRow): string[] {
+  return [
+    p.url,
+    p.status_code != null ? String(p.status_code) : "",
+    p.render_mode ?? "",
+    p.word_count != null ? String(p.word_count) : "",
+    jsDelta(p) != null ? String(jsDelta(p)) : "",
+    p.images_missing_alt != null ? String(p.images_missing_alt) : "",
+    p.images_total != null ? String(p.images_total) : "",
+    p.svg_missing_name != null ? String(p.svg_missing_name) : "",
+    p.svg_total != null ? String(p.svg_total) : "",
+    p.agent_usable_forms != null ? String(p.agent_usable_forms) : "",
+  ];
+}
+
+function downloadPagesCsv(pages: PageRow[]) {
+  const rows = [CSV_HEADERS, ...pages.map(csvRow)];
+  const csv = rows.map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = "pages_crawlees.csv";
+  a.click();
+  URL.revokeObjectURL(href);
+}
+
+type SortKey =
+  | "url"
+  | "status_code"
+  | "render_mode"
+  | "word_count"
+  | "js_delta"
+  | "images_missing_alt"
+  | "svg_missing_name"
+  | "agent_usable_forms";
 type SortDir = "asc" | "desc";
 
 const COLUMNS: { key: SortKey; label: string; hint?: string }[] = [
@@ -62,7 +110,12 @@ const COLUMNS: { key: SortKey; label: string; hint?: string }[] = [
   {
     key: "images_missing_alt",
     label: "Alt",
-    hint: "Nombre d'images sans attribut alt, sur le total d'images de la page.",
+    hint: "Nombre d'images avec un attribut alt, sur le total d'images de la page.",
+  },
+  {
+    key: "svg_missing_name",
+    label: "SVG",
+    hint: "Nombre de <svg> de contenu avec un nom accessible (title/aria-label), sur le total de <svg> de contenu de la page. Exclut les icônes décoratives et celles déjà couvertes par le texte d'un bouton/lien parent.",
   },
   {
     key: "agent_usable_forms",
@@ -85,6 +138,8 @@ function sortValue(p: PageRow, key: SortKey): number | string {
       return jsDelta(p) ?? -1;
     case "images_missing_alt":
       return p.images_missing_alt ?? -1;
+    case "svg_missing_name":
+      return p.svg_missing_name ?? -1;
     case "agent_usable_forms":
       return p.agent_usable_forms ?? -1;
   }
@@ -142,6 +197,13 @@ export function CrawledPages({ auditId }: { auditId: string }) {
       <div className="section-head">
         <h3 style={{ margin: 0 }}>Pages crawlées</h3>
         <span className="crawled-pages-count">{pages.length}</span>
+        <button
+          className="btn btn-ghost btn-sm crawled-pages-export"
+          onClick={() => downloadPagesCsv(sorted)}
+          title={`Exporter ${sorted.length} page(s) au format Excel (CSV)`}
+        >
+          ↓ Export Excel
+        </button>
       </div>
 
       <div className="crawled-pages-stats">
@@ -241,7 +303,12 @@ export function CrawledPages({ auditId }: { auditId: string }) {
                   </td>
                   <td className="cp-num" style={{ color: (p.images_missing_alt ?? 0) > 0 ? "var(--c-error)" : undefined }}>
                     {p.images_missing_alt != null && p.images_total != null
-                      ? `${p.images_missing_alt}/${p.images_total}`
+                      ? `${p.images_total - p.images_missing_alt}/${p.images_total}`
+                      : "—"}
+                  </td>
+                  <td className="cp-num" style={{ color: (p.svg_missing_name ?? 0) > 0 ? "var(--c-error)" : undefined }}>
+                    {p.svg_missing_name != null && p.svg_total != null
+                      ? `${p.svg_total - p.svg_missing_name}/${p.svg_total}`
                       : "—"}
                   </td>
                   <td className="cp-num" style={{ color: (p.agent_usable_forms ?? 0) > 0 ? "var(--c-ok)" : "var(--c-text-faint)" }}>
