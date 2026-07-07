@@ -242,8 +242,25 @@ export const fr: Dict = {
     clicks: "Clics",
     impressions: "Impressions",
     dateRange: (days) => `${days} derniers jours`,
+    queriesTitle: "Requêtes principales",
+    pagesTitle: "Pages principales",
+    comparison: {
+      title: (days: number) => `vs. ${days} jours précédents`,
+    },
+    period: {
+      label: "Période analysée",
+      apply: "Appliquer",
+      updating: "Mise à jour…",
+      error: "Impossible d'actualiser les données GSC pour cette période.",
+      days: (days: number) => `${days} j`,
+    },
+    filter: {
+      keyword: "Filtrer les mots-clés…",
+      page: "Filtrer les pages…",
+    },
     table: {
       keyword: "Mot-clé",
+      page: "Page",
       position: "Position",
       clicks: "Clics",
       impressions: "Impressions",

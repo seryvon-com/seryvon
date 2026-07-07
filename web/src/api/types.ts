@@ -184,13 +184,35 @@ export interface GscQuery {
   ctr: number;
 }
 
+export interface GscPage {
+  page: string;
+  position: number;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+}
+
+export interface GscComparison {
+  previous_clicks: number;
+  previous_impressions: number;
+  previous_ctr: number;
+  previous_avg_position: number | null;
+  clicks_delta: number;
+  impressions_delta: number;
+  ctr_delta: number;
+  position_delta: number | null;
+  period_days: number;
+}
+
 export interface GscResult {
   queries: GscQuery[];
+  pages: GscPage[];
   total_clicks: number;
   total_impressions: number;
   avg_ctr: number;
   avg_position: number | null;
   date_range_days: number;
+  comparison: GscComparison | null;
 }
 
 export interface PageRow {

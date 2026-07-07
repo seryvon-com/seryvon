@@ -105,6 +105,12 @@ export const api = {
   /** All pages crawled during an audit with per-page signals. */
   getAuditPages: (auditId: string) => request<PageRow[]>(`/audits/${auditId}/pages`),
 
+  /** Live GSC rank-tracking re-fetch over a custom look-back window (days). */
+  getRankTracking: (auditId: string, days: number) =>
+    request<import("./types").GscResult>(
+      `/audits/${auditId}/rank-tracking?days=${encodeURIComponent(days)}`,
+    ),
+
   /** List BYOK key statuses for all connectors (masked values only). */
   listKeys: () => request<KeyEntry[]>("/keys"),
 

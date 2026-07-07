@@ -43,8 +43,25 @@ export interface Dict {
     clicks: string;
     impressions: string;
     dateRange: (days: number) => string;
+    queriesTitle: string;
+    pagesTitle: string;
+    comparison: {
+      title: (days: number) => string;
+    };
+    period: {
+      label: string;
+      apply: string;
+      updating: string;
+      error: string;
+      days: (days: number) => string;
+    };
+    filter: {
+      keyword: string;
+      page: string;
+    };
     table: {
       keyword: string;
+      page: string;
       position: string;
       clicks: string;
       impressions: string;

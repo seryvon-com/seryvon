@@ -242,8 +242,25 @@ export const en: Dict = {
     clicks: "Clicks",
     impressions: "Impressions",
     dateRange: (days) => `Last ${days} days`,
+    queriesTitle: "Top queries",
+    pagesTitle: "Top pages",
+    comparison: {
+      title: (days: number) => `vs. previous ${days} days`,
+    },
+    period: {
+      label: "Look-back period",
+      apply: "Apply",
+      updating: "Updating…",
+      error: "Could not refresh GSC data for this period.",
+      days: (days: number) => `${days}d`,
+    },
+    filter: {
+      keyword: "Filter keywords…",
+      page: "Filter pages…",
+    },
     table: {
       keyword: "Keyword",
+      page: "Page",
       position: "Position",
       clicks: "Clicks",
       impressions: "Impressions",

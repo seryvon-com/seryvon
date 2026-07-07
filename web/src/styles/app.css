@@ -1868,6 +1868,282 @@
   border: 1px solid var(--c-border);
 }
 
+/* ===== Rank Tracking (M10) ===== */
+.rank-tracking {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rank-tracking .section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 6px 0 -4px;
+}
+
+.rank-tracking .kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+}
+
+.rank-tracking-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.period-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.period-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c-text-faint);
+}
+
+.period-presets {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.period-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border-control);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
+  cursor: pointer;
+}
+
+.period-chip:hover:not(:disabled) {
+  border-color: var(--c-border-hover);
+  color: var(--c-text);
+}
+
+.period-chip.active {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+}
+
+.period-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.period-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.period-custom input {
+  width: 68px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-border-control);
+  background: var(--c-surface-3);
+  color: var(--c-text);
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-card);
+  border-radius: var(--r-lg, 12px);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--c-text);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.rank-tracking .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.rank-tracking .data-table th {
+  text-align: left;
+  color: var(--c-text-faint);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--c-border-card);
+}
+
+.rank-tracking .table-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 8px;
+}
+
+.rank-tracking .table-search input {
+  flex: 1;
+  max-width: 320px;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-border-control);
+  background: var(--c-surface-3);
+  color: var(--c-text);
+}
+
+.rank-tracking .table-search input:focus {
+  outline: none;
+  border-color: var(--c-accent);
+}
+
+.rank-tracking .table-search-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--c-text-faint);
+}
+
+.rank-tracking .data-table.sortable th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.rank-tracking .data-table.sortable th:hover {
+  color: var(--c-text-muted);
+}
+
+.rank-tracking .data-table .th-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* right-aligned numeric headers keep the arrows next to the label */
+.rank-tracking .data-table th:not(:first-child) .th-inner {
+  flex-direction: row-reverse;
+}
+
+.rank-tracking .sort-arrows {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 6px;
+  font-size: 7px;
+}
+
+.rank-tracking .sort-arrows span {
+  color: var(--c-text-faint-2);
+}
+
+.rank-tracking .sort-arrows span.on {
+  color: var(--c-accent);
+}
+
+.rank-tracking .data-table th:not(:first-child),
+.rank-tracking .data-table td:not(:first-child) {
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  width: 1%;
+}
+
+.rank-tracking .data-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--c-border-row);
+  color: var(--c-text);
+}
+
+/* First column (keyword / page URL) wraps instead of stretching the table. */
+.rank-tracking .data-table td:first-child {
+  max-width: 360px;
+  overflow-wrap: anywhere;
+}
+
+.rank-tracking .data-table tbody tr:hover {
+  background: var(--c-surface-2);
+}
+
+/* before/after delta chips */
+.stat-delta {
+  margin-top: 4px;
+}
+
+.delta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.delta-chip.up {
+  color: var(--c-ok);
+  background: color-mix(in srgb, var(--c-ok) 14%, transparent);
+}
+
+.delta-chip.down {
+  color: var(--c-critical);
+  background: color-mix(in srgb, var(--c-critical) 14%, transparent);
+}
+
+.delta-chip.neutral {
+  color: var(--c-text-muted);
+  background: color-mix(in srgb, var(--c-text-muted) 12%, transparent);
+}
+
+.rank-tracking .cell-url {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+}
+
 .crawled-pages-table {
   width: 100%;
   border-collapse: collapse;
