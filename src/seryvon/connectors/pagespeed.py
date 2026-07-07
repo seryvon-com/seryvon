@@ -55,14 +55,9 @@ def _classify_http_error(exc: httpx.HTTPStatusError) -> str:
         error = payload.get("error", {}) if isinstance(payload, dict) else {}
         message = error.get("message", "")
         details = error.get("details", [])
-        reasons = {
-            d.get("reason")
-            for d in details
-            if isinstance(d, dict) and d.get("reason")
-        }
+        reasons = {d.get("reason") for d in details if isinstance(d, dict) and d.get("reason")}
         quota_zero = any(
-            isinstance(d, dict)
-            and str(d.get("metadata", {}).get("quota_limit_value")) == "0"
+            isinstance(d, dict) and str(d.get("metadata", {}).get("quota_limit_value")) == "0"
             for d in details
         )
         if "RATE_LIMIT_EXCEEDED" in reasons or quota_zero:

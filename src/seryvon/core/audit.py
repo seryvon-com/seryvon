@@ -327,8 +327,7 @@ async def run_audit(
     # Warn when a key is configured but the connector returned no data (silent failure).
     if settings.psi_api_key and external.lighthouse_performance is None:
         reason = external.psi_error_reason or (
-            "Lighthouse returned no data — check key validity or network access"
-            " to googleapis.com"
+            "Lighthouse returned no data — check key validity or network access to googleapis.com"
         )
         _progress(f"⚠ PSI: {reason}")
     if external.dataforseo_active and external.open_page_rank is None:

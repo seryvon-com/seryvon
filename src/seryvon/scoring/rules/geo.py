@@ -220,9 +220,7 @@ class GeoSsrCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% content parity before JS"},
-            explanation=t(
-                "expl.ssr", parity=round(score), csr=csr, total=len(pages_with_mode)
-            ),
+            explanation=t("expl.ssr", parity=round(score), csr=csr, total=len(pages_with_mode)),
             evidence={"source": source, "non_conformes": _ssr_affected_pages(pages_with_mode)},
             weight=self.weight,
         )

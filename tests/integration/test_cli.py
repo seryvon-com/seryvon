@@ -210,9 +210,7 @@ def test_citations_requires_key(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_compare_outputs_summary() -> None:
     """compare runs two audits and prints a comparison summary."""
-    result = runner.invoke(
-        app, ["compare", "https://example.com", "https://competitor.com"]
-    )
+    result = runner.invoke(app, ["compare", "https://example.com", "https://competitor.com"])
     assert result.exit_code == 0
     assert "Comparaison" in result.stdout
     assert "Par pilier" in result.stdout

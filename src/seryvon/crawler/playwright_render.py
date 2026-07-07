@@ -99,6 +99,7 @@ async def renderer_session(
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
         try:
+
             async def _render(url: str) -> RenderedPage | None:
                 from seryvon.crawler.safety import assert_url_safe
 

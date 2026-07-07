@@ -198,9 +198,7 @@ class AsoAccessibleFormsCriterion(Criterion):
             ),
         }
         pages_with_forms = [
-            p.url
-            for p in signals.pages
-            if p.aso.agent_usable_forms_detail.get("found", 0) > 0
+            p.url for p in signals.pages if p.aso.agent_usable_forms_detail.get("found", 0) > 0
         ]
 
         return CriterionResult(

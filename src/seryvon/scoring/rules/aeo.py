@@ -196,8 +196,7 @@ class AeoComparisonTablesCriterion(Criterion):
         # Only count pages explicitly under a /compare/ path to avoid false positives
         # from research pages whose titles happen to contain "-vs-".
         compare_pages = [
-            p for p in signals.pages
-            if "/compare/" in p.url or "/compare-models" in p.url
+            p for p in signals.pages if "/compare/" in p.url or "/compare-models" in p.url
         ]
         js_only = not present and len(compare_pages) > 0
         if js_only:

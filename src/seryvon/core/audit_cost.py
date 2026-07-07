@@ -90,11 +90,16 @@ def estimate_audit_cost(settings: Settings) -> AuditCostEstimate:
         ("gsc", bool(settings.gsc_service_account), "Free (your own GSC data)"),
     ]
     for name, active, note in free:
-        lines.append(ConnectorLine(
-            connector=name, active=active,
-            calls=1 if active else 0,
-            unit_usd=0.0, total_usd=0.0, note=note,
-        ))
+        lines.append(
+            ConnectorLine(
+                connector=name,
+                active=active,
+                calls=1 if active else 0,
+                unit_usd=0.0,
+                total_usd=0.0,
+                note=note,
+            )
+        )
 
     # --- DataForSEO ---
     dfs_active = bool(settings.dataforseo_api_key)
@@ -106,14 +111,16 @@ def estimate_audit_cost(settings: Settings) -> AuditCostEstimate:
     else:
         dfs_calls = 0
         dfs_total = 0.0
-    lines.append(ConnectorLine(
-        connector="dataforseo",
-        active=dfs_active,
-        calls=dfs_calls,
-        unit_usd=_DATAFORSEO_PER_CALL,
-        total_usd=round(dfs_total, 4),
-        note="Technologies + Labs fallback (worst case 2 calls)",
-    ))
+    lines.append(
+        ConnectorLine(
+            connector="dataforseo",
+            active=dfs_active,
+            calls=dfs_calls,
+            unit_usd=_DATAFORSEO_PER_CALL,
+            total_usd=round(dfs_total, 4),
+            note="Technologies + Labs fallback (worst case 2 calls)",
+        )
+    )
 
     # --- SerpAPI ---
     serp_active = bool(settings.serp_api_key)
@@ -122,28 +129,35 @@ def estimate_audit_cost(settings: Settings) -> AuditCostEstimate:
         total += serp_total
     else:
         serp_total = 0.0
-    lines.append(ConnectorLine(
-        connector="serpapi",
-        active=serp_active,
-        calls=_SERPAPI_PROBES if serp_active else 0,
-        unit_usd=_SERPAPI_PER_SEARCH,
-        total_usd=round(serp_total, 4),
-        note=f"{_SERPAPI_PROBES} SERP probes (branded + definitional + evaluative)",
-    ))
+    lines.append(
+        ConnectorLine(
+            connector="serpapi",
+            active=serp_active,
+            calls=_SERPAPI_PROBES if serp_active else 0,
+            unit_usd=_SERPAPI_PER_SEARCH,
+            total_usd=round(serp_total, 4),
+            note=f"{_SERPAPI_PROBES} SERP probes (branded + definitional + evaluative)",
+        )
+    )
 
     # --- LLM citation (informational only — not triggered by the audit itself) ---
-    llm_engines = [e for e in ("perplexity", "openai", "anthropic", "gemini")
-                   if getattr(settings, f"{e}_api_key", "")]
-    lines.append(ConnectorLine(
-        connector="llm_citation",
-        active=bool(llm_engines),
-        calls=0,
-        unit_usd=0.0,
-        total_usd=0.0,
-        note=(
-            f"Not included in audit cost — triggered separately "
-            f"(active engines: {', '.join(llm_engines) or 'none'})"
-        ),
-    ))
+    llm_engines = [
+        e
+        for e in ("perplexity", "openai", "anthropic", "gemini")
+        if getattr(settings, f"{e}_api_key", "")
+    ]
+    lines.append(
+        ConnectorLine(
+            connector="llm_citation",
+            active=bool(llm_engines),
+            calls=0,
+            unit_usd=0.0,
+            total_usd=0.0,
+            note=(
+                f"Not included in audit cost — triggered separately "
+                f"(active engines: {', '.join(llm_engines) or 'none'})"
+            ),
+        )
+    )
 
     return AuditCostEstimate(total_usd=round(total, 4), lines=lines)
