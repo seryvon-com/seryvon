@@ -529,9 +529,7 @@ class ImgSvgAltCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% des <svg> de contenu avec un nom accessible"},
-            explanation=t(
-                "expl.img_svg_alt", without_name=total - accessible, total=total
-            ),
+            explanation=t("expl.img_svg_alt", without_name=total - accessible, total=total),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )
@@ -565,9 +563,7 @@ class CrawlIndexableCriterion(Criterion):
             score=score,
             status=status_from_score(score),
             threshold={"target": "100% indexables (200, pas de noindex)"},
-            explanation=t(
-                "expl.indexable", non_indexable=len(pages) - indexable, total=len(pages)
-            ),
+            explanation=t("expl.indexable", non_indexable=len(pages) - indexable, total=len(pages)),
             evidence=_EVIDENCE_HTML,
             weight=self.weight,
         )
@@ -706,6 +702,17 @@ class SeoAvgPositionCriterion(Criterion):
                     }
                     for q in gsc.queries
                 ],
+                "pages": [
+                    {
+                        "page": p.page,
+                        "position": p.position,
+                        "clicks": p.clicks,
+                        "impressions": p.impressions,
+                        "ctr": p.ctr,
+                    }
+                    for p in gsc.pages
+                ],
+                "comparison": (gsc.comparison.model_dump() if gsc.comparison is not None else None),
             },
             score=score,
             status=status_from_score(score),

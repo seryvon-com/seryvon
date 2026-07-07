@@ -28,12 +28,15 @@ from pydantic import BaseModel, ConfigDict, HttpUrl
 from sqlalchemy.orm import Session
 
 from seryvon import __version__
+from seryvon.connectors.gsc import fetch_gsc
 from seryvon.core.config import get_settings
 from seryvon.core.crypto import EncryptionError, decrypt_value, encrypt_value, mask_value
+from seryvon.core.settings_resolver import resolve_settings
 from seryvon.db import repository
 from seryvon.db.base import session_scope
 from seryvon.models.prompts import PromptSet
 from seryvon.models.report import AuditReport
+from seryvon.models.signals import GscResult
 from seryvon.scoring import (
     ComparisonMode,
     ComparisonResult,
@@ -314,6 +317,35 @@ def get_audit_pdf(audit_id: uuid.UUID, session: Session = Depends(get_session)) 
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/audits/{audit_id}/rank-tracking", response_model=GscResult)
+async def get_rank_tracking(
+    audit_id: uuid.UUID,
+    days: int = 90,
+    session: Session = Depends(get_session),
+) -> GscResult:
+    """Re-fetch GSC rank tracking for the audit's domain over a custom window.
+
+    Live query (no re-audit) so the UI can switch the look-back period on the
+    fly. `days` is the look-back window (1–480); the before/after comparison is
+    recomputed against the immediately preceding window of the same length.
+    404 if the audit is unknown or GSC is not configured; an empty result
+    (`avg_position=None`) if the property is not accessible.
+    """
+    if days < 1 or days > 480:
+        raise HTTPException(status_code=422, detail="days must be between 1 and 480")
+    report = repository.load_report(session, audit_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    settings = resolve_settings(session)
+    if not settings.gsc_service_account:
+        raise HTTPException(status_code=404, detail="GSC is not configured")
+    return await fetch_gsc(
+        report.domain,
+        service_account_json=settings.gsc_service_account,
+        date_range_days=days,
     )
 
 

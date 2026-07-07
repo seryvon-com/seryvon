@@ -23,7 +23,8 @@ a property covered by an explicit test (document 03, §9).
 11 = SERP / AI Overview metrics in `external` (M9);
 12 = `agent_usable_forms_detail` breakdown in `AsoSignals`;
 13 = `raw_word_count`/`rendered_word_count` for the geo.ssr severity breakdown;
-14 = `svg_total`/`svg_accessible` for the img.svg_alt criterion.
+14 = `svg_total`/`svg_accessible` for the img.svg_alt criterion;
+15 = GSC `pages` breakdown + `comparison` (before/after period deltas).
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-SIGNAL_SCHEMA_VERSION = 14
+SIGNAL_SCHEMA_VERSION = 15
 
 
 class WebMcpSignals(BaseModel):
@@ -163,20 +164,62 @@ class GscQuery(BaseModel):
     ctr: float  # 0–1
 
 
+class GscPage(BaseModel):
+    """A single GSC search analytics row aggregated by page (M10).
+
+    Same metrics as `GscQuery` but keyed by URL instead of query — lets the
+    action plan attribute rank/traffic changes to the specific page that was
+    optimised.
+    """
+
+    page: str
+    position: float  # average_position (GSC doc — never instantaneous)
+    clicks: int
+    impressions: int
+    ctr: float  # 0–1
+
+
+class GscComparison(BaseModel):
+    """Before/after delta between two equal-length GSC periods (M10).
+
+    Deltas are ``current − previous``. For clicks/impressions/ctr a positive
+    delta is an improvement; for `position_delta` a **negative** value is an
+    improvement (a lower average position ranks better). ``None`` fields mean
+    the metric was absent in one of the two periods.
+    """
+
+    previous_clicks: int = 0
+    previous_impressions: int = 0
+    previous_ctr: float = 0.0
+    previous_avg_position: float | None = None
+    clicks_delta: int = 0
+    impressions_delta: int = 0
+    ctr_delta: float = 0.0
+    position_delta: float | None = None
+    period_days: int = 90
+
+
 class GscResult(BaseModel):
     """GSC search analytics snapshot for a domain (M10 Rank Tracking).
 
     Populated by `connectors.gsc.fetch_gsc`; empty (`queries=[]`,
     `avg_position=None`) when GSC is not configured or the property is not
     accessible. `avg_position=None` => dependent criteria `not_measured`.
+
+    `pages` (dimension=page) and `comparison` (previous equal-length period)
+    are optional enrichments used to evaluate the impact of the action plan;
+    they stay empty/None when not requested or unavailable and never affect
+    scoring (only `avg_position`/`avg_ctr` feed criteria).
     """
 
     queries: list[GscQuery] = Field(default_factory=list)
+    pages: list[GscPage] = Field(default_factory=list)
     total_clicks: int = 0
     total_impressions: int = 0
     avg_ctr: float = 0.0
     avg_position: float | None = None
     date_range_days: int = 90
+    comparison: GscComparison | None = None
 
 
 class AioSource(BaseModel):

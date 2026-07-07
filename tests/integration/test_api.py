@@ -34,10 +34,12 @@ def test_health() -> None:
 # API-key middleware                                                           #
 # --------------------------------------------------------------------------- #
 
+
 def test_api_key_not_required_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
     """No SERYVON_API_KEY configured → all requests pass through."""
     monkeypatch.setattr("seryvon.core.config.get_settings.cache_clear", lambda: None)
     from seryvon.core.config import get_settings
+
     get_settings.cache_clear()
     monkeypatch.setenv("SERYVON_API_KEY", "")
     get_settings.cache_clear()
@@ -48,6 +50,7 @@ def test_api_key_not_required_when_unset(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_api_key_enforced_when_set(monkeypatch: pytest.MonkeyPatch) -> None:
     """SERYVON_API_KEY set → request without header returns 401."""
     from seryvon.core.config import get_settings
+
     get_settings.cache_clear()
     monkeypatch.setenv("SERYVON_API_KEY", "test-secret")
     get_settings.cache_clear()
@@ -62,6 +65,7 @@ def test_api_key_enforced_when_set(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_api_key_accepted_with_correct_header(monkeypatch: pytest.MonkeyPatch) -> None:
     """Correct X-API-Key header → request is forwarded (not 401)."""
     from seryvon.core.config import get_settings
+
     get_settings.cache_clear()
     monkeypatch.setenv("SERYVON_API_KEY", "test-secret")
     get_settings.cache_clear()
@@ -76,6 +80,7 @@ def test_api_key_accepted_with_correct_header(monkeypatch: pytest.MonkeyPatch) -
 def test_health_exempt_from_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """/health is reachable without X-API-Key even when a key is configured."""
     from seryvon.core.config import get_settings
+
     get_settings.cache_clear()
     monkeypatch.setenv("SERYVON_API_KEY", "test-secret")
     get_settings.cache_clear()
@@ -186,3 +191,83 @@ def test_compare_unknown_run_returns_404(db_client: TestClient) -> None:
         json={"left_run_id": str(uuid.uuid4()), "right_run_id": str(uuid.uuid4())},
     )
     assert resp.status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# Rank tracking live re-fetch (no DB: session + collaborators are patched)     #
+# --------------------------------------------------------------------------- #
+@pytest.fixture
+def rank_client() -> Iterator[TestClient]:
+    def _override() -> Iterator[None]:
+        yield None
+
+    app.dependency_overrides[get_session] = _override
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+def test_rank_tracking_rejects_bad_days(rank_client: TestClient) -> None:
+    aid = uuid.uuid4()
+    assert rank_client.get(f"/audits/{aid}/rank-tracking?days=0").status_code == 422
+    assert rank_client.get(f"/audits/{aid}/rank-tracking?days=999").status_code == 422
+
+
+def test_rank_tracking_unknown_audit_404(
+    rank_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from seryvon.api import main as api_main
+
+    monkeypatch.setattr(api_main.repository, "load_report", lambda _s, _a: None)
+    resp = rank_client.get(f"/audits/{uuid.uuid4()}/rank-tracking?days=10")
+    assert resp.status_code == 404
+
+
+def test_rank_tracking_no_gsc_key_404(
+    rank_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+
+    from seryvon.api import main as api_main
+
+    monkeypatch.setattr(
+        api_main.repository, "load_report", lambda _s, _a: SimpleNamespace(domain="example.com")
+    )
+    monkeypatch.setattr(
+        api_main, "resolve_settings", lambda _s: SimpleNamespace(gsc_service_account="")
+    )
+    resp = rank_client.get(f"/audits/{uuid.uuid4()}/rank-tracking?days=10")
+    assert resp.status_code == 404
+
+
+def test_rank_tracking_happy_path(
+    rank_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from types import SimpleNamespace
+    from typing import Any
+
+    from seryvon.api import main as api_main
+    from seryvon.models.signals import GscComparison, GscResult
+
+    monkeypatch.setattr(
+        api_main.repository, "load_report", lambda _s, _a: SimpleNamespace(domain="example.com")
+    )
+    monkeypatch.setattr(
+        api_main, "resolve_settings", lambda _s: SimpleNamespace(gsc_service_account="{}")
+    )
+
+    async def fake_fetch(domain: str, **kwargs: Any) -> GscResult:
+        assert domain == "example.com"
+        assert kwargs["date_range_days"] == 10
+        return GscResult(
+            avg_position=12.4,
+            date_range_days=kwargs["date_range_days"],
+            comparison=GscComparison(period_days=kwargs["date_range_days"], position_delta=-1.5),
+        )
+
+    monkeypatch.setattr(api_main, "fetch_gsc", fake_fetch)
+    resp = rank_client.get(f"/audits/{uuid.uuid4()}/rank-tracking?days=10")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["date_range_days"] == 10
+    assert body["avg_position"] == 12.4
+    assert body["comparison"]["position_delta"] == -1.5

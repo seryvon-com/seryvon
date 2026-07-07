@@ -10,9 +10,33 @@ from typing import Any
 import httpx
 import pytest
 
-from seryvon.connectors.gsc import fetch_gsc, parse_gsc
+from seryvon.connectors.gsc import (
+    build_comparison,
+    fetch_gsc,
+    parse_gsc,
+    parse_gsc_pages,
+)
 from seryvon.core.config import Settings
 from seryvon.models.signals import GscResult
+
+SAMPLE_GSC_PAGES: dict[str, Any] = {
+    "rows": [
+        {
+            "keys": ["https://example.com/blog/a"],
+            "position": 4.0,
+            "clicks": 90,
+            "impressions": 700,
+            "ctr": 0.1286,
+        },
+        {
+            "keys": ["https://example.com/"],
+            "position": 6.0,
+            "clicks": 200,
+            "impressions": 2000,
+            "ctr": 0.10,
+        },
+    ]
+}
 
 SAMPLE_GSC: dict[str, Any] = {
     "rows": [
@@ -88,6 +112,46 @@ def test_parse_date_range_days_forwarded() -> None:
     assert result.date_range_days == 30
 
 
+def test_parse_pages_sorted_by_clicks_desc() -> None:
+    pages = parse_gsc_pages(SAMPLE_GSC_PAGES)
+    assert len(pages) == 2
+    assert pages[0].page == "https://example.com/"  # 200 clicks
+    assert pages[1].page == "https://example.com/blog/a"  # 90 clicks
+
+
+def test_parse_pages_skips_rows_without_keys() -> None:
+    assert parse_gsc_pages({"rows": [{"clicks": 5}]}) == []
+
+
+def test_build_comparison_computes_deltas() -> None:
+    current = parse_gsc(SAMPLE_GSC)  # clicks=177, impr=2850
+    previous = {
+        "rows": [
+            {
+                "keys": ["seryvon audit"],
+                "position": 5.0,
+                "clicks": 100,
+                "impressions": 2000,
+                "ctr": 0.05,
+            }
+        ]
+    }
+    cmp = build_comparison(current, previous, period_days=90)
+    assert cmp.previous_clicks == 100
+    assert cmp.clicks_delta == 77  # 177 - 100
+    assert cmp.impressions_delta == 850  # 2850 - 2000
+    assert cmp.period_days == 90
+    # current avg_position (~8.6) worse than previous (5.0) => positive delta.
+    assert cmp.position_delta is not None and cmp.position_delta > 0
+
+
+def test_build_comparison_none_position_when_previous_empty() -> None:
+    current = parse_gsc(SAMPLE_GSC)
+    cmp = build_comparison(current, {}, period_days=90)
+    assert cmp.previous_avg_position is None
+    assert cmp.position_delta is None
+
+
 # --------------------------------------------------------------------------- #
 # fetch_gsc (I/O via MockTransport + _access_token injection)                  #
 # --------------------------------------------------------------------------- #
@@ -104,6 +168,8 @@ async def test_fetch_success_sc_domain() -> None:
         "example.com",
         service_account_json="{}",
         client=client,
+        include_pages=False,
+        compare=False,
         _access_token="fake-token",
     )
     await client.aclose()
@@ -127,11 +193,43 @@ async def test_fetch_falls_back_to_url_prefix() -> None:
         "example.com",
         service_account_json="{}",
         client=client,
+        include_pages=False,
+        compare=False,
         _access_token="fake-token",
     )
     await client.aclose()
-    assert len(calls) == 2
+    # Resolution probes sc-domain (403) then url-prefix (200), then the query runs.
+    assert any("sc-domain" in c for c in calls)
+    assert any("sc-domain" not in c for c in calls)
     assert len(result.queries) == 3
+
+
+async def test_fetch_with_pages_and_comparison() -> None:
+    """Page breakdown + previous-period comparison are populated when requested."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = request.content.decode()
+        if '"page"' in body:
+            return httpx.Response(200, json=SAMPLE_GSC_PAGES)
+        return httpx.Response(200, json=SAMPLE_GSC)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    result = await fetch_gsc(
+        "example.com",
+        service_account_json="{}",
+        client=client,
+        include_pages=True,
+        compare=True,
+        _access_token="fake-token",
+    )
+    await client.aclose()
+    assert len(result.pages) == 2
+    # Sorted by clicks descending.
+    assert result.pages[0].page == "https://example.com/"
+    assert result.comparison is not None
+    # Current == previous (same fixture) => zero deltas.
+    assert result.comparison.clicks_delta == 0
+    assert result.comparison.position_delta == 0.0
 
 
 async def test_fetch_both_403_returns_empty() -> None:
