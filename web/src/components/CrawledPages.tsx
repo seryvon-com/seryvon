@@ -44,7 +44,8 @@ const CSV_HEADERS = [
   "alt_total",
   "svg_sans_nom",
   "svg_total",
-  "forms",
+  "forms_utilisables",
+  "forms_total",
 ];
 
 function csvRow(p: PageRow): string[] {
@@ -59,6 +60,7 @@ function csvRow(p: PageRow): string[] {
     p.svg_missing_name != null ? String(p.svg_missing_name) : "",
     p.svg_total != null ? String(p.svg_total) : "",
     p.agent_usable_forms != null ? String(p.agent_usable_forms) : "",
+    p.forms_total != null ? String(p.forms_total) : "",
   ];
 }
 
@@ -120,7 +122,7 @@ const COLUMNS: { key: SortKey; label: string; hint?: string }[] = [
   {
     key: "agent_usable_forms",
     label: "Forms",
-    hint: "Formulaires exploitables par un agent IA : action/method définis, champs avec label ou aria-label.",
+    hint: "Formulaires exploitables par un agent IA (action/method définis, champs avec label ou aria-label), sur le total de formulaires de la page. Ex. 0/1 : un formulaire présent mais non exploitable (souvent soumis en JavaScript, sans action).",
   },
 ];
 
@@ -141,7 +143,8 @@ function sortValue(p: PageRow, key: SortKey): number | string {
     case "svg_missing_name":
       return p.svg_missing_name ?? -1;
     case "agent_usable_forms":
-      return p.agent_usable_forms ?? -1;
+      // Sort by disqualified forms (total − usable) so problematic pages surface first.
+      return p.forms_total != null ? p.forms_total - (p.agent_usable_forms ?? 0) : -1;
   }
 }
 
@@ -178,7 +181,8 @@ export function CrawledPages({ auditId }: { auditId: string }) {
 
   const visible = expanded ? sorted : sorted.slice(0, 50);
 
-  const formsTotal = pages.reduce((s, p) => s + (p.agent_usable_forms ?? 0), 0);
+  const formsUsable = pages.reduce((s, p) => s + (p.agent_usable_forms ?? 0), 0);
+  const formsGrandTotal = pages.reduce((s, p) => s + (p.forms_total ?? 0), 0);
   const imgMissing = pages.reduce((s, p) => s + (p.images_missing_alt ?? 0), 0);
   const imgTotal = pages.reduce((s, p) => s + (p.images_total ?? 0), 0);
   const csrPages = pages.filter((p) => p.render_mode === "csr").length;
@@ -212,7 +216,19 @@ export function CrawledPages({ auditId }: { auditId: string }) {
           <span className="cp-stat-cap">rendues JS (CSR)</span>
         </div>
         <div className="cp-stat">
-          <span className="cp-stat-val">{formsTotal}</span>
+          <span
+            className="cp-stat-val"
+            style={{
+              color:
+                formsGrandTotal === 0
+                  ? undefined
+                  : formsUsable < formsGrandTotal
+                    ? "var(--c-error)"
+                    : "var(--c-ok)",
+            }}
+          >
+            {formsGrandTotal > 0 ? `${formsUsable}/${formsGrandTotal}` : formsUsable}
+          </span>
           <span className="cp-stat-cap">formulaires agents</span>
         </div>
         <div className="cp-stat">
@@ -311,8 +327,20 @@ export function CrawledPages({ auditId }: { auditId: string }) {
                       ? `${p.svg_total - p.svg_missing_name}/${p.svg_total}`
                       : "—"}
                   </td>
-                  <td className="cp-num" style={{ color: (p.agent_usable_forms ?? 0) > 0 ? "var(--c-ok)" : "var(--c-text-faint)" }}>
-                    {p.agent_usable_forms ?? "—"}
+                  <td
+                    className="cp-num"
+                    style={{
+                      color:
+                        p.forms_total == null || p.forms_total === 0
+                          ? "var(--c-text-faint)"
+                          : (p.agent_usable_forms ?? 0) < p.forms_total
+                            ? "var(--c-error)"
+                            : "var(--c-ok)",
+                    }}
+                  >
+                    {p.forms_total != null && p.forms_total > 0
+                      ? `${p.agent_usable_forms ?? 0}/${p.forms_total}`
+                      : "—"}
                   </td>
                 </tr>
               );

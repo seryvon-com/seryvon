@@ -374,6 +374,7 @@ class PageRow(BaseModel):
     svg_total: int | None
     svg_missing_name: int | None
     agent_usable_forms: int | None
+    forms_total: int | None
     title: str | None
     raw_word_count: int | None
     rendered_word_count: int | None
@@ -430,6 +431,7 @@ def get_audit_pages(
                 svg_total=svg_total,
                 svg_missing_name=svg_missing_name,
                 agent_usable_forms=aso.get("agent_usable_forms"),
+                forms_total=aso.get("agent_usable_forms_detail", {}).get("found"),
                 title=internal.get("title"),
                 raw_word_count=internal.get("raw_word_count"),
                 rendered_word_count=internal.get("rendered_word_count"),

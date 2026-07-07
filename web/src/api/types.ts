@@ -225,6 +225,7 @@ export interface PageRow {
   svg_total: number | null;
   svg_missing_name: number | null;
   agent_usable_forms: number | null;
+  forms_total: number | null;
   title: string | null;
   raw_word_count: number | null;
   rendered_word_count: number | null;
