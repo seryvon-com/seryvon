@@ -4,7 +4,7 @@
     "testCoverage": "87%",
     "mypyStrictErrors": "0",
     "varianceOnRerun": "<2%",
-    "currentRelease": "0.1.0.dev0",
+    "currentRelease": "v1.0-rc",
     "pillarsUnified": "5",
     "auditDuration": "~4min",
     "ssrfGuard": "SSRF"
