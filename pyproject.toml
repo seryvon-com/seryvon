@@ -63,9 +63,9 @@ dev = [
 
 [project.urls]
 Homepage = "https://seryvon.com"
-Repository = "https://github.com/powehi/seryvon"
+Repository = "https://github.com/seryvon-com/seryvon"
 Documentation = "https://seryvon.com/docs"
-Issues = "https://github.com/powehi/seryvon/issues"
+Issues = "https://github.com/seryvon-com/seryvon/issues"
 
 [project.scripts]
 seryvon = "seryvon.cli.main:app"
