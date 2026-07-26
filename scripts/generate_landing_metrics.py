@@ -69,9 +69,7 @@ def load_coverage_percent(path: Path) -> str | None:
     return f"{rounded}%"
 
 
-def env_or(
-    existing: dict[str, Any], env_key: str, existing_key: str, fallback: Any = None
-) -> Any:
+def env_or(existing: dict[str, Any], env_key: str, existing_key: str, fallback: Any = None) -> Any:
     value = os.getenv(env_key)
     if value not in (None, ""):
         return value
@@ -95,24 +93,16 @@ def main() -> None:
         "testCoverage": env_or(
             existing_stats, "LANDING_TEST_COVERAGE", "testCoverage", coverage or "0%"
         ),
-        "mypyStrictErrors": env_or(
-            existing_stats, "LANDING_MYPY_ERRORS", "mypyStrictErrors", "0"
-        ),
-        "varianceOnRerun": env_or(
-            existing_stats, "LANDING_VARIANCE", "varianceOnRerun", "<2%"
-        ),
+        "mypyStrictErrors": env_or(existing_stats, "LANDING_MYPY_ERRORS", "mypyStrictErrors", "0"),
+        "varianceOnRerun": env_or(existing_stats, "LANDING_VARIANCE", "varianceOnRerun", "<2%"),
         "currentRelease": env_or(
             existing_stats,
             "LANDING_CURRENT_RELEASE",
             "currentRelease",
             project_version or existing_stats.get("currentRelease") or "dev",
         ),
-        "pillarsUnified": env_or(
-            existing_stats, "LANDING_PILLARS_UNIFIED", "pillarsUnified", "5"
-        ),
-        "auditDuration": env_or(
-            existing_stats, "LANDING_AUDIT_DURATION", "auditDuration", "~4min"
-        ),
+        "pillarsUnified": env_or(existing_stats, "LANDING_PILLARS_UNIFIED", "pillarsUnified", "5"),
+        "auditDuration": env_or(existing_stats, "LANDING_AUDIT_DURATION", "auditDuration", "~4min"),
         "ssrfGuard": env_or(existing_stats, "LANDING_SSRF_GUARD", "ssrfGuard", "SSRF"),
     }
 

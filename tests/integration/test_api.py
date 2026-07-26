@@ -239,9 +239,7 @@ def test_rank_tracking_no_gsc_key_404(
     assert resp.status_code == 404
 
 
-def test_rank_tracking_happy_path(
-    rank_client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_rank_tracking_happy_path(rank_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     from types import SimpleNamespace
     from typing import Any
 

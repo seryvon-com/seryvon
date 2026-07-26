@@ -9,6 +9,7 @@ Revision ID: b1c2d3e4f5a6
 Revises: a7b8c9d0e1f2
 Create Date: 2026-07-01 10:00:00.000000
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
