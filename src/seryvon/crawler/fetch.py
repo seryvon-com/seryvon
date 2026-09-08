@@ -33,6 +33,7 @@ class FetchResult:
     status_code: int
     html: str
     redirects: int
+    content_type: str | None = None
 
 
 @dataclass(slots=True)
@@ -87,6 +88,7 @@ async def fetch_page(
         status_code=response.status_code,
         html=response.text,
         redirects=redirects,
+        content_type=response.headers.get("content-type"),
     )
 
 

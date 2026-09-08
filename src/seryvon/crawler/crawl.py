@@ -54,6 +54,12 @@ CrawlProgress = Callable[[int, int, int], None]  # (depth, wave_size, total_done
 
 DEFAULT_MAX_CONCURRENCY = 5
 
+
+def _is_html_response(result: FetchResult) -> bool:
+    """Return whether a fetched resource is suitable for browser rendering."""
+    content_type = (result.content_type or "").lower().split(";", 1)[0].strip()
+    return content_type in ("", "text/html", "application/xhtml+xml")
+
 # SSR/CSR heuristic (D2) — fallback when Playwright is unavailable.
 _SSR_MIN_WORDS = 50
 _CSR_MOUNT_SELECTORS = ("#root", "#app", "[data-reactroot]", "[ng-version]")
@@ -153,7 +159,9 @@ async def _run_crawl(
         # Render all fetched pages with Playwright concurrently when available.
         rendered_map: dict[str, RenderedPage] = {}
         if playwright_renderer is not None:
-            urls_to_render = [url for url in wave if url in fetched]
+            urls_to_render = [
+                url for url in wave if url in fetched and _is_html_response(fetched[url])
+            ]
             log.info("playwright render wave depth=%d pages=%d", depth, len(urls_to_render))
             render_results = await asyncio.gather(
                 *(playwright_renderer(fetched[url].final_url) for url in urls_to_render),

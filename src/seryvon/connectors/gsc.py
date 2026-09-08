@@ -30,6 +30,7 @@ import logging
 import time
 from datetime import date, timedelta
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -267,7 +268,10 @@ async def _resolve_site(
     )
     for template in _SITE_TEMPLATES:
         site_url = template.format(domain=domain)
-        url = _GSC_ENDPOINT.format(site=httpx.URL(site_url))
+        # The property is a path segment in the Search Console API.  Encode
+        # URL-prefix properties as a whole segment; otherwise httpx preserves
+        # `https://example.com/` and produces `sites/https://example.com//...`.
+        url = _GSC_ENDPOINT.format(site=quote(site_url, safe=":"))
         try:
             resp = await client.post(url, json=probe_body, headers=headers)
         except httpx.HTTPError as exc:
