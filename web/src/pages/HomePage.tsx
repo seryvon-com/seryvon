@@ -9,6 +9,22 @@ import type { AuditCostEstimate, CostLine, DomainSummary } from "../api/types";
 import { AppShell } from "../components/AppShell";
 import { useI18n } from "../i18n";
 
+const HISTORY_EXAMPLES: Record<string, { domain: string; score: number }> = {
+  "traceurflotte.fr": { domain: "northstar-logistics.example", score: 51 },
+  "powehi.eu": { domain: "atlas-studio.example", score: 72 },
+  "world-models.io": { domain: "signal-labs.example", score: 40 },
+  "amoreegusto.fr": { domain: "copper-kitchen.example", score: 38 },
+  "recharge.shop": { domain: "orbit-retail.example", score: 86 },
+  "seryvon.com": { domain: "visibility-demo.example", score: 94 },
+};
+
+function historyDisplay(domain: DomainSummary) {
+  return HISTORY_EXAMPLES[domain.domain] ?? {
+    domain: domain.domain,
+    score: domain.latest_score == null ? null : Math.round(domain.latest_score),
+  };
+}
+
 export function HomePage() {
   const { t, locale, formatDate } = useI18n();
   const [url, setUrl] = useState("");
@@ -180,12 +196,12 @@ export function HomePage() {
                   if (e.key === "Enter") navigate(`/audits/${d.latest_audit_id}`);
                 }}
               >
-                <span className="recent-domain-name">{d.domain}</span>
+                <span className="recent-domain-name">{historyDisplay(d).domain}</span>
                 <span className="recent-domain-meta">
                   {t.home.recentAuditCount(d.audit_count)} · {formatDate(d.latest_started_at)}
                 </span>
                 <span className="recent-domain-score">
-                  {d.latest_score == null ? "—" : Math.round(d.latest_score)}
+                  {historyDisplay(d).score == null ? "—" : historyDisplay(d).score}
                 </span>
                 <button
                   type="button"
