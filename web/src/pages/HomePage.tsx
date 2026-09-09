@@ -9,6 +9,17 @@ import type { AuditCostEstimate, CostLine, DomainSummary } from "../api/types";
 import { AppShell } from "../components/AppShell";
 import { useI18n } from "../i18n";
 
+const DEMO_DOMAINS: DomainSummary[] = [
+  { domain: "northstar-logistics.example", audit_count: 3, latest_audit_id: "demo-northstar", latest_score: 51, latest_started_at: "2026-09-08T21:49:00Z" },
+  { domain: "atlas-studio.example", audit_count: 4, latest_audit_id: "demo-atlas", latest_score: 72, latest_started_at: "2026-09-08T21:46:00Z" },
+  { domain: "signal-labs.example", audit_count: 2, latest_audit_id: "demo-signal", latest_score: 40, latest_started_at: "2026-09-08T21:40:00Z" },
+  { domain: "copper-kitchen.example", audit_count: 1, latest_audit_id: "demo-copper", latest_score: 38, latest_started_at: "2026-09-08T09:43:00Z" },
+  { domain: "orbit-retail.example", audit_count: 1, latest_audit_id: "demo-orbit", latest_score: 86, latest_started_at: "2026-07-04T13:31:00Z" },
+  { domain: "visibility-demo.example", audit_count: 2, latest_audit_id: "demo-visibility", latest_score: 94, latest_started_at: "2026-07-01T15:24:00Z" },
+];
+
+const isDemoMode = new URLSearchParams(window.location.search).get("demo") === "1";
+
 const HISTORY_EXAMPLES: Record<string, { domain: string; score: number }> = {
   "traceurflotte.fr": { domain: "northstar-logistics.example", score: 51 },
   "powehi.eu": { domain: "atlas-studio.example", score: 72 },
@@ -18,7 +29,7 @@ const HISTORY_EXAMPLES: Record<string, { domain: string; score: number }> = {
   "seryvon.com": { domain: "visibility-demo.example", score: 94 },
 };
 
-function historyDisplay(domain: DomainSummary) {
+function historyDisplay(domain: DomainSummary): { domain: string; score: number | null } {
   return HISTORY_EXAMPLES[domain.domain] ?? {
     domain: domain.domain,
     score: domain.latest_score == null ? null : Math.round(domain.latest_score),
@@ -52,7 +63,8 @@ export function HomePage() {
 
   useEffect(() => {
     api.getAuditCostEstimate().then(setCostEstimate).catch(() => {});
-    api.listDomains().then(setDomains).catch(() => setDomains([]));
+    if (isDemoMode) setDomains(DEMO_DOMAINS);
+    else api.listDomains().then(setDomains).catch(() => setDomains([]));
   }, []);
 
   useEffect(() => {
@@ -182,18 +194,18 @@ export function HomePage() {
         <div className="card recent-domains-card">
           <div className="section-head">
             <h3>{t.home.recentTitle}</h3>
-            <span className="section-sub">{t.home.recentSubtitle}</span>
+            <span className="section-sub">{isDemoMode ? "Sample data · no real audits" : t.home.recentSubtitle}</span>
           </div>
           <div className="recent-domains-list">
             {domains.map((d) => (
               <div
                 key={d.domain}
-                role="button"
-                tabIndex={0}
+                role={isDemoMode ? undefined : "button"}
+                tabIndex={isDemoMode ? undefined : 0}
                 className="recent-domain-item"
-                onClick={() => navigate(`/audits/${d.latest_audit_id}`)}
+                onClick={isDemoMode ? undefined : () => navigate(`/audits/${d.latest_audit_id}`)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") navigate(`/audits/${d.latest_audit_id}`);
+                  if (!isDemoMode && e.key === "Enter") navigate(`/audits/${d.latest_audit_id}`);
                 }}
               >
                 <span className="recent-domain-name">{historyDisplay(d).domain}</span>
@@ -203,7 +215,7 @@ export function HomePage() {
                 <span className="recent-domain-score">
                   {historyDisplay(d).score == null ? "—" : historyDisplay(d).score}
                 </span>
-                <button
+                {!isDemoMode && <button
                   type="button"
                   className="recent-domain-rerun"
                   disabled={running}
@@ -217,7 +229,7 @@ export function HomePage() {
                   <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3.5H10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                </button>
+                </button>}
               </div>
             ))}
           </div>
