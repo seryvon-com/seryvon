@@ -9,8 +9,7 @@ generative engines, AI Overviews, answer engines and — uniquely — **autonomo
 agents** (the ASO pillar). Every score is computed, traceable and reproducible:
 two audits of the same site yield the same result.
 
-> **Brand hierarchy:** **Powehi** (publisher, [powehi.eu](https://powehi.eu)) →
-> **Infollution** (umbrella brand) → **Seryvon** (product, [seryvon.com](https://seryvon.com)).
+> **Product identity:** **Seryvon** is published by **Powehi** ([powehi.eu](https://powehi.eu)).
 
 ---
 
@@ -127,7 +126,7 @@ see [`NOTICE`](./NOTICE) for attributions.
 
 > **Open core.** This repository holds the free core (the 5 audit pillars). The
 > operated offering (managed hosting, continuous monitoring, collaboration) is a
-> separate proprietary product, published by Powehi under the Infollution brand.
+> separate proprietary product, published by Powehi.
 
 ---
 
