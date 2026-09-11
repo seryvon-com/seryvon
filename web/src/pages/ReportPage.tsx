@@ -1,6 +1,6 @@
 // Seryvon — report page: load a persisted audit by id (PRISM). AGPL-3.0-or-later.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { api, ApiError } from "../api/client";
@@ -14,39 +14,28 @@ function DownloadPdfButton({
   auditId,
   domain,
   label,
+  locale,
 }: {
   auditId: string;
   domain: string;
   label: string;
+  locale: string;
 }) {
   const [busy, setBusy] = useState(false);
-  const anchorRef = useRef<HTMLAnchorElement>(null);
 
-  async function handleClick() {
+  function handleClick() {
     setBusy(true);
-    try {
-      const resp = await fetch(`/api/audits/${auditId}/report.pdf`, { method: "HEAD" });
-      if (resp.ok && anchorRef.current) {
-        anchorRef.current.click();
-        return;
-      }
-    } catch {
-      // network error — fall through to print
-    } finally {
-      setBusy(false);
-    }
-    window.print();
+    const anchor = document.createElement("a");
+    anchor.href = `/api/audits/${auditId}/report.pdf?locale=${locale}`;
+    anchor.download = `seryvon-${domain}.pdf`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => setBusy(false), 500);
   }
 
   return (
     <>
-      <a
-        ref={anchorRef}
-        href={`/api/audits/${auditId}/report.pdf`}
-        download={`seryvon-${domain}.pdf`}
-        style={{ display: "none" }}
-        aria-hidden
-      />
       <button className="btn btn-ghost btn-sm" onClick={handleClick} disabled={busy}>
         {busy ? "…" : `↓ ${label}`}
       </button>
@@ -56,7 +45,7 @@ function DownloadPdfButton({
 
 export function ReportPage() {
   const { auditId } = useParams<{ auditId: string }>();
-  const { t, formatDate } = useI18n();
+  const { t, locale, formatDate } = useI18n();
   const [report, setReport] = useState<AuditReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +79,7 @@ export function ReportPage() {
       {report && (
         <>
           <div className="report-toolbar">
-            <DownloadPdfButton auditId={auditId!} domain={report.domain} label={t.report.downloadPdf} />
+            <DownloadPdfButton auditId={auditId!} domain={report.domain} label={t.report.downloadPdf} locale={locale} />
           </div>
           <ReportView report={report} />
           <CrawledPages auditId={auditId!} />

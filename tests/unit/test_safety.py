@@ -89,6 +89,24 @@ def test_unresolvable_host_rejected() -> None:
         validate_url("http://nope.invalid/", resolver=PUBLIC)
 
 
+def test_resolver_oserror_is_reported_as_cannot_resolve() -> None:
+    def resolver(_: str) -> list[str]:
+        raise OSError("dns unavailable")
+
+    with pytest.raises(UnsafeUrlError, match="cannot resolve"):
+        validate_url("https://example.com/", resolver=resolver)
+
+
+def test_resolver_empty_answer_is_rejected() -> None:
+    with pytest.raises(UnsafeUrlError, match="did not resolve"):
+        validate_url("https://example.com/", resolver=lambda _: [])
+
+
+def test_invalid_resolver_address_is_rejected() -> None:
+    with pytest.raises(UnsafeUrlError, match="non-public"):
+        validate_url("https://example.com/", resolver=lambda _: ["not-an-ip"])
+
+
 def test_one_private_answer_among_public_rejected() -> None:
     mixed = _resolver({"mixed.example": ["93.184.216.34", "10.1.2.3"]})
     with pytest.raises(UnsafeUrlError):
@@ -146,3 +164,14 @@ async def test_safe_get_caps_redirect_chain() -> None:
     async with _client(handler) as client:
         with pytest.raises(UnsafeUrlError, match="too many redirects"):
             await safe_get(client, "https://example.com/", resolver=PUBLIC, max_redirects=3)
+
+
+@pytest.mark.asyncio
+async def test_safe_get_returns_redirect_without_location() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(302)
+
+    async with _client(handler) as client:
+        resp, redirects = await safe_get(client, "https://example.com/", resolver=PUBLIC)
+    assert resp.status_code == 302
+    assert redirects == 0

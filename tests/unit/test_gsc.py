@@ -5,12 +5,17 @@
 
 from __future__ import annotations
 
+import builtins
+import json
+from datetime import date
 from typing import Any
 
 import httpx
 import pytest
 
 from seryvon.connectors.gsc import (
+    _get_access_token,
+    _query,
     build_comparison,
     fetch_gsc,
     parse_gsc,
@@ -272,9 +277,160 @@ async def test_fetch_no_token_returns_empty() -> None:
     assert result.avg_position is None
 
 
+async def test_fetch_gsc_constructs_and_closes_owned_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class OwnedClient:
+        def __init__(self, **kwargs: object) -> None:
+            self.closed = False
+
+        async def post(self, url: str, **kwargs: object) -> httpx.Response:
+            return httpx.Response(403, request=httpx.Request("POST", url))
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    holder: dict[str, OwnedClient] = {}
+
+    def factory(**kwargs: object) -> OwnedClient:
+        client = OwnedClient(**kwargs)
+        holder["client"] = client
+        return client
+
+    monkeypatch.setattr("seryvon.connectors.gsc.httpx.AsyncClient", factory)
+    assert (
+        await fetch_gsc("example.com", service_account_json="{}", _access_token="token")
+        == GscResult()
+    )
+    assert holder["client"].closed is True
+
+
+@pytest.mark.asyncio
+async def test_query_paginates_until_short_page() -> None:
+    calls: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        start = int(json.loads(request.content)["startRow"])
+        calls.append(start)
+        rows = [{"keys": [str(start + i)]} for i in range(2 if start == 0 else 1)]
+        return httpx.Response(200, json={"rows": rows})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    result = await _query(
+        client,
+        "https://gsc.test/query",
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 1, 2),
+        dimensions=["query"],
+        headers={},
+        row_limit=2,
+        max_rows=4,
+    )
+    await client.aclose()
+    assert result is not None and len(result["rows"]) == 3
+    assert calls == [0, 2]
+
+
+@pytest.mark.asyncio
+async def test_query_returns_none_on_network_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("offline")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    result = await _query(
+        client,
+        "https://gsc.test/query",
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 1, 2),
+        dimensions=["query"],
+        headers={},
+        row_limit=10,
+        max_rows=10,
+    )
+    await client.aclose()
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_query_returns_none_on_status_or_json_error() -> None:
+    for response in (
+        httpx.Response(503),
+        httpx.Response(200, content=b"invalid-json"),
+    ):
+        client = httpx.AsyncClient(transport=httpx.MockTransport(lambda request, r=response: r))
+        result = await _query(
+            client,
+            "https://gsc.test/query",
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 2),
+            dimensions=["query"],
+            headers={},
+            row_limit=10,
+            max_rows=10,
+        )
+        await client.aclose()
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_fetch_returns_empty_when_resolved_property_query_fails() -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200 if calls == 1 else 503, json={"rows": []})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    result = await fetch_gsc(
+        "example.com",
+        service_account_json="{}",
+        client=client,
+        include_pages=False,
+        compare=False,
+        _access_token="token",
+    )
+    await client.aclose()
+    assert result == GscResult()
+
+
 # --------------------------------------------------------------------------- #
 # BYOK: key read via GSC_SERVICE_ACCOUNT                                       #
 # --------------------------------------------------------------------------- #
 def test_settings_reads_gsc_service_account(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GSC_SERVICE_ACCOUNT", '{"type": "service_account"}')
     assert Settings().gsc_service_account == '{"type": "service_account"}'
+
+
+def test_get_access_token_handles_missing_google_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    original_import = builtins.__import__
+
+    def missing_google_auth(name: str, *args: Any, **kwargs: Any) -> Any:
+        if name.startswith("google.auth") or name.startswith("google.oauth2"):
+            raise ImportError("google-auth unavailable")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", missing_google_auth)
+    assert _get_access_token("{}") is None
+
+
+def test_get_access_token_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    from google.auth.transport import requests as auth_requests
+    from google.oauth2 import service_account
+
+    class Credentials:
+        token: str | None = None
+
+        def refresh(self, request: object) -> None:
+            self.token = "token-from-google"
+
+    def from_info(info: dict[str, Any], *, scopes: list[str]) -> Credentials:
+        assert info == {}
+        assert scopes
+        return Credentials()
+
+    monkeypatch.setattr(
+        service_account.Credentials, "from_service_account_info", staticmethod(from_info)
+    )
+    monkeypatch.setattr(auth_requests, "Request", lambda: object())
+    assert _get_access_token("{}") == "token-from-google"

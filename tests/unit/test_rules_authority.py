@@ -27,10 +27,31 @@ def test_opr_not_measured_without_key() -> None:
     assert result.status is Status.NOT_MEASURED
 
 
+def test_opr_not_measured_with_dataforseo_but_without_data() -> None:
+    bundle = SignalBundle(
+        domain="ex.com",
+        external=ExternalSignals(open_page_rank=None, dataforseo_active=True),
+    )
+    assert AuthorityOprCriterion().evaluate(bundle).status is Status.NOT_MEASURED
+
+
+def test_opr_score_is_clamped() -> None:
+    assert AuthorityOprCriterion().evaluate(_bundle(opr=-1)).score == 0.0
+    assert AuthorityOprCriterion().evaluate(_bundle(opr=20)).score == 100.0
+
+
 def test_backlinks_not_measured_by_default() -> None:
     # v0.1: no referring-domains source -> referring_domains None (D3).
     result = AuthorityBacklinksCriterion().evaluate(_bundle())
     assert result.status is Status.NOT_MEASURED
+
+
+def test_backlinks_not_measured_with_dataforseo_but_without_data() -> None:
+    bundle = SignalBundle(
+        domain="ex.com",
+        external=ExternalSignals(referring_domains=None, dataforseo_active=True),
+    )
+    assert AuthorityBacklinksCriterion().evaluate(bundle).status is Status.NOT_MEASURED
 
 
 def test_backlinks_log_scale_when_present() -> None:

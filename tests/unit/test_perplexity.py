@@ -117,6 +117,47 @@ async def test_query_captures_rate_limit_headers() -> None:
     assert "x-other" not in response.rate_limit_snapshot
 
 
+def test_parse_citations_ignores_invalid_fallback_entries() -> None:
+    from seryvon.citation.perplexity import _parse_citations
+
+    citations = _parse_citations({"search_results": [], "citations": ["https://a.test", 4, ""]})
+    assert [item.url for item in citations] == ["https://a.test"]
+
+
+def test_parse_citations_returns_empty_for_missing_metadata() -> None:
+    from seryvon.citation.perplexity import _parse_citations
+
+    assert _parse_citations({"search_results": "not-a-list", "citations": None}) == []
+
+
+async def test_query_constructs_and_closes_owned_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    class OwnedClient:
+        def __init__(self, **kwargs: Any) -> None:
+            self.closed = False
+
+        async def post(self, *args: Any, **kwargs: Any) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json=SONAR_RESPONSE,
+                request=httpx.Request("POST", "https://api.perplexity.ai/chat/completions"),
+            )
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    holder: dict[str, OwnedClient] = {}
+
+    def factory(**kwargs: Any) -> OwnedClient:
+        client = OwnedClient(**kwargs)
+        holder["client"] = client
+        return client
+
+    monkeypatch.setattr("seryvon.citation.perplexity.httpx.AsyncClient", factory)
+    response = await PerplexityConnector("key").query("prompt?")
+    assert response.response_text.startswith("Seryvon")
+    assert holder["client"].closed is True
+
+
 async def test_query_raises_on_http_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, json={"error": "server"})

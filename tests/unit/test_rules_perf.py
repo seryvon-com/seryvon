@@ -46,6 +46,12 @@ def test_cwv_not_measured_without_data() -> None:
     assert PerfInpCriterion().evaluate(_bundle({"lcp": 2000})).status is Status.NOT_MEASURED
 
 
+def test_cwv_reports_missing_crux_when_lighthouse_is_available() -> None:
+    result = PerfLcpCriterion().evaluate(_bundle(None, lighthouse=0.8))
+    assert result.status is Status.NOT_MEASURED
+    assert "CrUX" in result.explanation
+
+
 def test_lighthouse_score() -> None:
     result = PerfLighthouseCriterion().evaluate(_bundle(lighthouse=0.92))
     assert result.score == 92.0

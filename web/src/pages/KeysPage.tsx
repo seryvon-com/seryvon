@@ -30,6 +30,14 @@ const CONNECTOR_GROUPS: { groupKey: string; connectors: string[] }[] = [
   { groupKey: "llm",         connectors: ["perplexity", "openai", "anthropic", "gemini"] },
 ];
 
+export function canSaveKey(value: string, saving: boolean): boolean {
+  return Boolean(value.trim()) && !saving;
+}
+
+export function canDeleteKey(deleting: boolean): boolean {
+  return !deleting;
+}
+
 export function KeysPage() {
   const { t } = useI18n();
   const [keys, setKeys] = useState<KeyEntry[] | null>(null);
@@ -94,7 +102,7 @@ export function KeysPage() {
   );
 }
 
-function ConnectorCard({
+export function ConnectorCard({
   connector,
   entry,
   noEncryption,
@@ -124,7 +132,6 @@ function ConnectorCard({
   }
 
   function handleSave() {
-    if (!inputValue.trim() || saving) return;
     setSaving(true);
     api
       .upsertKey(connector, inputValue.trim())
@@ -142,7 +149,6 @@ function ConnectorCard({
   }
 
   function handleDelete() {
-    if (deleting) return;
     setDeleting(true);
     api
       .deleteKey(connector)
@@ -209,7 +215,7 @@ function ConnectorCard({
               type="password"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              onKeyDown={(e) => e.key === "Enter" && canSaveKey(inputValue, saving) && handleSave()}
               placeholder={t.keys.placeholder}
               autoComplete="off"
             />

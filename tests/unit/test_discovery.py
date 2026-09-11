@@ -7,14 +7,17 @@ from __future__ import annotations
 
 import gzip
 
+import httpx
 import pytest
 
+from seryvon.crawler import discovery as discovery_module
 from seryvon.crawler.discovery import (
     ResourceFetcher,
     RobotsTxt,
     discover,
     normalize_url,
     parse_sitemap,
+    same_host,
 )
 from seryvon.crawler.fetch import FetchedResource
 
@@ -144,6 +147,17 @@ def test_parse_rejects_doctype_entities() -> None:
 def test_parse_mislabeled_gzip_is_invalid() -> None:
     # content-type claims gzip but the body is not: invalid, no exception.
     assert parse_sitemap(b"<urlset></urlset>", content_type="application/gzip").valid is False
+
+
+def test_parse_sitemap_ignores_missing_and_empty_locations() -> None:
+    raw = b"<urlset><url><lastmod>today</lastmod></url><url><loc>  </loc></url></urlset>"
+    result = parse_sitemap(raw)
+    assert result.valid is True
+    assert result.urls == []
+
+
+def test_same_host_rejects_malformed_port() -> None:
+    assert same_host("https://[bad/", "example.com") is False
 
 
 # --------------------------------------------------------------------------- #
@@ -293,3 +307,130 @@ async def test_discover_is_deterministic() -> None:
         "https://example.com/b",
         "https://example.com/c",
     ]
+
+
+@pytest.mark.asyncio
+async def test_discover_skips_fetch_errors_invalid_and_empty_sitemaps() -> None:
+    calls: list[str] = []
+
+    async def fetch(url: str) -> FetchedResource:
+        calls.append(url)
+        if url.endswith("robots.txt"):
+            raise httpx.ConnectError("offline")
+        if url.endswith("sitemap.xml"):
+            return FetchedResource(
+                url=url, final_url=url, status_code=200, content=b"bad", content_type=None
+            )
+        return FetchedResource(
+            url=url, final_url=url, status_code=503, content=b"", content_type=None
+        )
+
+    result = await discover("example.com", user_agent=UA, fetch=fetch, max_index_depth=2)
+    assert result.robots_found is False
+    assert result.sitemap_valid is False
+    assert result.frontier == ["https://example.com/"]
+    assert "https://example.com/robots.txt" in calls
+
+
+@pytest.mark.asyncio
+async def test_discover_limits_sitemap_urls_and_index_depth() -> None:
+    responses = {
+        "https://example.com/sitemap.xml": (
+            200,
+            _index("https://example.com/next.xml"),
+            "application/xml",
+        ),
+        "https://example.com/next.xml": (
+            200,
+            _urlset("https://example.com/b", "https://example.com/a"),
+            "application/xml",
+        ),
+    }
+    result = await discover(
+        "example.com",
+        user_agent=UA,
+        fetch=make_fetcher(responses),
+        max_sitemap_urls=1,
+        max_index_depth=2,
+    )
+    assert result.sitemap_urls == ["https://example.com/a"]
+    assert result.frontier == ["https://example.com/", "https://example.com/a"]
+
+
+@pytest.mark.asyncio
+async def test_discover_builds_internal_http_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Client:
+        def __init__(self, **kwargs: object) -> None:
+            self.kwargs = kwargs
+
+        async def __aenter__(self) -> Client:
+            return self
+
+        async def __aexit__(self, *_: object) -> None:
+            return None
+
+    async def fake_safe_get(client: Client, url: str) -> tuple[object, int]:
+        response = SimpleNamespace(url=url, status_code=404, content=b"", headers={})
+        return response, 0
+
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(httpx, "AsyncClient", Client)
+    monkeypatch.setattr("seryvon.crawler.discovery.safe_get", fake_safe_get)
+    result = await discover("example.com", user_agent=UA)
+    assert result.home_url == "https://example.com/"
+    assert result.frontier == ["https://example.com/"]
+
+
+def test_discovery_helpers_cover_xml_and_gzip_guard_branches() -> None:
+    import xml.etree.ElementTree as ET
+
+    root = ET.fromstring("<root><other><loc>ignored</loc></other><url><x>1</x></url></root>")
+    assert discovery_module._collect_locs(root, "url") == []
+    assert (
+        discovery_module._maybe_gunzip(b"plain", content_type=None, source_url="file.xml")
+        == b"plain"
+    )
+    assert (
+        discovery_module._maybe_gunzip(b"bad", content_type=None, source_url="file.xml.gz") is None
+    )
+    with pytest.raises(OSError):
+        discovery_module._gunzip_bounded(gzip.compress(b"12345"), 2)
+
+
+def test_gzip_guard_checks_flush_size(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Decompressor:
+        unconsumed_tail = b""
+
+        def decompress(self, *_: object) -> bytes:
+            return b"x"
+
+        def flush(self) -> bytes:
+            return b"xx"
+
+    monkeypatch.setattr(discovery_module.zlib, "decompressobj", lambda *_, **__: Decompressor())
+    with pytest.raises(OSError):
+        discovery_module._gunzip_bounded(b"data", 1)
+
+
+@pytest.mark.asyncio
+async def test_discover_skips_duplicate_and_failed_index_children() -> None:
+    responses = {
+        "https://example.com/sitemap.xml": (
+            200,
+            _index("https://example.com/child.xml", "https://example.com/child.xml"),
+            "application/xml",
+        ),
+    }
+
+    async def fetch(url: str) -> FetchedResource:
+        if url.endswith("sitemap.xml"):
+            status, content, ctype = responses[url]
+            return FetchedResource(
+                url=url, final_url=url, status_code=status, content=content, content_type=ctype
+            )
+        raise httpx.ConnectError("child unavailable")
+
+    result = await discover("example.com", user_agent=UA, fetch=fetch, max_index_depth=2)
+    assert result.sitemap_valid is True
+    assert result.sitemap_urls == []

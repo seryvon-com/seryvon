@@ -81,6 +81,17 @@ def test_classify_incompatible_on_rule_catalog_change() -> None:
     assert comp is Comparability.INCOMPATIBLE
 
 
+def test_classify_unknown_digest_change_falls_back_to_intersection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import seryvon.scoring.comparison as comparison_module
+
+    monkeypatch.setattr(comparison_module, "_profile_differences", lambda left, right: ["unknown"])
+    comp, diffs = classify(_profile("a"), _profile("b"))
+    assert comp is Comparability.INTERSECTION
+    assert diffs == ["unknown"]
+
+
 # --------------------------------------------------------------------------- #
 # compare_scorecards                                                          #
 # --------------------------------------------------------------------------- #

@@ -156,6 +156,7 @@ class AuditConfig(BaseModel):
             criteria_overrides=raw.get("criteria_overrides", {}),
             thresholds=raw.get("thresholds", {}),
             crawl=CrawlConfig(**raw.get("crawl", {})),
+            locale=raw.get("locale", "en"),
         )
 
     @classmethod

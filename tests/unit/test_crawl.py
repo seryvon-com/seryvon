@@ -6,7 +6,9 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 
+import seryvon.crawler.crawl as crawl_module
 from seryvon.crawler.crawl import PageFetcher, crawl_site, detect_render_mode
 from seryvon.crawler.discovery import DiscoveryResult, RobotsTxt
 from seryvon.crawler.extract import extract_links
@@ -242,3 +244,57 @@ async def test_crawl_applies_crawl_delay() -> None:
     discovery = discovery_for([HOME], crawl_delay=2.0)
     await crawl_site(discovery, user_agent=UA, fetch=make_fetcher(pages), sleep=spy_sleep)
     assert calls and all(c == 2.0 for c in calls)
+
+
+@pytest.mark.asyncio
+async def test_crawl_reports_progress_and_falls_back_after_render_error() -> None:
+    progress: list[tuple[int, int, int]] = []
+    pages = {HOME: page(body="texte court")}
+
+    async def failing_renderer(_: str) -> object:
+        raise RuntimeError("browser unavailable")
+
+    result = await crawl_site(
+        discovery_for([HOME]),
+        user_agent=UA,
+        fetch=make_fetcher(pages),
+        sleep=_no_sleep,
+        playwright_renderer=failing_renderer,  # type: ignore[arg-type]
+        on_progress=lambda depth, wave, total: progress.append((depth, wave, total)),
+    )
+    assert [p.url for p in result] == [HOME]
+    assert progress == [(0, 1, 1)]
+
+
+@pytest.mark.asyncio
+async def test_crawl_uses_default_fetcher_when_not_injected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_fetch(url: str, *, user_agent: str, timeout: float) -> FetchResult:
+        assert user_agent == UA
+        assert timeout == 3.0
+        return FetchResult(url=url, final_url=url, status_code=200, html=page(), redirects=0)
+
+    monkeypatch.setattr(crawl_module, "fetch_page", fake_fetch)
+    result = await crawl_site(discovery_for([HOME]), user_agent=UA, timeout=3.0, sleep=_no_sleep)
+    assert [p.url for p in result] == [HOME]
+
+
+@pytest.mark.asyncio
+async def test_crawl_deduplicates_two_urls_with_same_final_url() -> None:
+    duplicate = "https://example.com/duplicate"
+
+    async def fetch(url: str) -> FetchResult:
+        return FetchResult(
+            url=url,
+            final_url=HOME,
+            status_code=200,
+            html=page(),
+            redirects=1,
+        )
+
+    result = await crawl_site(
+        discovery_for([HOME, duplicate]), user_agent=UA, fetch=fetch, sleep=_no_sleep
+    )
+    assert len(result) == 1
+    assert result[0].url == HOME

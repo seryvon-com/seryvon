@@ -11,7 +11,6 @@ __pycache__
 .coverage
 htmlcov
 docs
-tests
 .env
 .env.*
 !.env.example

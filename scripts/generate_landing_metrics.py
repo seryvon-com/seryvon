@@ -79,8 +79,11 @@ def env_or(existing: dict[str, Any], env_key: str, existing_key: str, fallback: 
 def main() -> None:
     existing = load_json(OUTPUT_PATH)
     existing_stats = existing.get("stats", {})
-    pytest_summary = load_pytest_summary(ROOT / ".tmp-pytest.xml")
-    coverage = load_coverage_percent(ROOT / ".tmp-coverage.json")
+    # Keep these paths aligned with the CI artifact locations.  Previously the
+    # generator silently kept stale landing numbers because it looked one level
+    # above `.tmp/`.
+    pytest_summary = load_pytest_summary(ROOT / ".tmp" / "pytest.xml")
+    coverage = load_coverage_percent(ROOT / ".tmp" / "coverage.json")
     project_version = load_project_version()
 
     stats = {

@@ -51,10 +51,14 @@ export function CriteriaTable({ report }: { report: AuditReport }) {
     if (pillarFilter !== "all") {
       return [{ pillar: pillarFilter as string, items: filtered }];
     }
-    return PILLARS.map((p) => ({
+    const canonical = PILLARS.map((p) => ({
       pillar: p as string,
       items: filtered.filter((c) => primaryPillar(c) === p),
     })).filter((g) => g.items.length > 0);
+    const extras = Array.from(new Set(filtered.map(primaryPillar)))
+      .filter((p) => !PILLARS.includes(p as typeof PILLARS[number]))
+      .map((p) => ({ pillar: p, items: filtered.filter((c) => primaryPillar(c) === p) }));
+    return [...canonical, ...extras];
   }, [filtered, pillarFilter]);
 
   function toggleStatus(s: Status) {

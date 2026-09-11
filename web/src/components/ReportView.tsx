@@ -9,6 +9,14 @@ import { PillarCard } from "./PillarCard";
 import { ScoreGauge } from "./ScoreGauge";
 import { Spectrum } from "./Spectrum";
 
+export function formatReportDuration(
+  d: ReturnType<typeof durationParts>,
+  seconds: (value: number) => string,
+  minutes: (m: number, s: number) => string,
+): string {
+  return d.kind === "s" ? seconds(d.s) : d.kind === "m" ? minutes(d.m, d.s) : "—";
+}
+
 export function ReportView({ report }: { report: AuditReport }) {
   const { t } = useI18n();
   const applicable = report.criteria.filter((c) => c.status !== "not_applicable");
@@ -19,8 +27,7 @@ export function ReportView({ report }: { report: AuditReport }) {
   const aso = report.pillars["aso"];
 
   const d = durationParts(report.started_at, report.finished_at);
-  const duration =
-    d.kind === "s" ? t.durationSeconds(d.s) : d.kind === "m" ? t.durationMinutes(d.m, d.s) : "—";
+  const duration = formatReportDuration(d, t.durationSeconds, t.durationMinutes);
 
   const primarySources = report.criteria.find((c) => c.key === "geo.primary_sources");
   const rv = primarySources?.raw_value;

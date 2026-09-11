@@ -224,3 +224,29 @@ async def test_fetch_dataforseo_one_endpoint_fails_other_succeeds() -> None:
     assert result.domain_rank is None
     assert result.organic_etv == 100.0
     assert result.open_page_rank_equivalent is not None
+
+
+async def test_fetch_dataforseo_constructs_and_closes_owned_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class OwnedClient:
+        def __init__(self, **kwargs: object) -> None:
+            self.closed = False
+
+        async def post(self, url: str, **kwargs: object) -> httpx.Response:
+            return httpx.Response(500, request=httpx.Request("POST", url))
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    holder: dict[str, OwnedClient] = {}
+
+    def factory(**kwargs: object) -> OwnedClient:
+        client = OwnedClient(**kwargs)
+        holder["client"] = client
+        return client
+
+    monkeypatch.setattr("seryvon.connectors.dataforseo.httpx.AsyncClient", factory)
+    result = await fetch_dataforseo("ex.com", api_key="user:pass")
+    assert result == DataForSeoResult()
+    assert holder["client"].closed is True

@@ -8,6 +8,7 @@ from __future__ import annotations
 import unicodedata
 
 from seryvon.citation import extract_theme_profile, generate_prompt_set
+from seryvon.citation.promptset import ThemeProfile, _brand, _candidates, _content_type, _is_biased
 from seryvon.models.prompts import PromptIntent
 from seryvon.models.signals import PageSignals, SignalBundle
 
@@ -89,3 +90,41 @@ def test_empty_bundle_yields_no_prompts() -> None:
     ps = generate_prompt_set(SignalBundle(domain="ex.com"))
     assert ps.prompts == []
     assert ps.theme_profile.topics == []
+
+
+def test_brand_fallbacks_and_missing_home() -> None:
+    assert _brand(SignalBundle(domain="ex.com")) is None
+    assert (
+        _brand(
+            SignalBundle(
+                domain="ex.com",
+                pages=[PageSignals(url="https://ex.com/", title="Plain title")],
+            )
+        )
+        == "Plain title"
+    )
+    assert (
+        _brand(
+            SignalBundle(
+                domain="ex.com",
+                pages=[PageSignals(url="https://ex.com/", title="Brand | Topic")],
+            )
+        )
+        == "Brand"
+    )
+
+
+def test_content_type_classification() -> None:
+    assert _content_type({"SoftwareApplication"}) == "software"
+    assert _content_type({"Article"}) == "editorial"
+    assert _content_type({"FAQPage"}) == "knowledge_base"
+    assert _content_type(set()) == "general"
+
+
+def test_brand_missing_title_and_candidate_filters() -> None:
+    assert _brand(SignalBundle(domain="ex.com", pages=[PageSignals(url="https://ex.com/")])) is None
+    profile = ThemeProfile(domain="acme.com", brand="Acme", topics=["pricing"])
+    assert _is_biased("Acme pricing", profile)
+    candidates = _candidates(profile.model_copy(update={"topics": ["pricing", "pricing"]}))
+    texts = [prompt.text for values in candidates.values() for prompt in values]
+    assert len(texts) == len({_norm(text) for text in texts})

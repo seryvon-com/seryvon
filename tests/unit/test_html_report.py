@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from seryvon.i18n import get_locale, set_locale
 from seryvon.models.criterion import CriterionResult
 from seryvon.models.enums import Status
 from seryvon.models.report import AuditReport, PillarScore
@@ -92,3 +93,15 @@ def test_html_ok_band_for_high_score() -> None:
     report.score_global = 92.0
     html = report_to_html(report)
     assert 'class="global score-ok"' in html
+
+
+def test_html_uses_english_labels_when_locale_is_english() -> None:
+    previous = get_locale()
+    set_locale("en")
+    try:
+        html = report_to_html(_report())
+    finally:
+        set_locale(previous)
+    assert 'lang="en"' in html
+    assert "Measured value" in html
+    assert "couverture" not in html

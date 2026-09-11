@@ -15,6 +15,10 @@ import { useI18n } from "../i18n";
 import type { Dict } from "../i18n/dict";
 import { pillarColor } from "../lib/format";
 
+export function canRunComparison(auditId: string | undefined, selectedRightId: string | null): boolean {
+  return Boolean(auditId) && Boolean(selectedRightId);
+}
+
 export function ComparePage() {
   const { auditId } = useParams<{ auditId: string }>();
   const { t, formatDate } = useI18n();
@@ -85,12 +89,11 @@ export function ComparePage() {
   }
 
   function runCompare() {
-    if (!auditId || !selectedRightId) return;
     setComparing(true);
     setResult(null);
     setCompareError(null);
     api
-      .compareAudits(auditId, selectedRightId, "descriptive")
+      .compareAudits(auditId!, selectedRightId!, "descriptive")
       .then((r) => {
         setResult(r);
         setComparing(false);

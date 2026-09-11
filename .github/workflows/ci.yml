@@ -77,7 +77,11 @@ jobs:
           mkdir -p .tmp
           pytest \
             --junitxml=.tmp/pytest.xml \
-            --cov-report=json:.tmp/coverage.json
+            --cov-report=json:.tmp/coverage.json \
+            --cov-fail-under=100
+
+      - name: Verify generated quality metrics
+        run: python scripts/generate_landing_metrics.py
 
       - name: Refresh landing metrics feed
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -17,6 +17,8 @@ from seryvon.crawler.playwright_render import (
     RenderedPage,
     classify_render_mode,
     make_renderer,
+    renderer_session,
+    word_count,
 )
 
 # ---------------------------------------------------------------------------
@@ -84,6 +86,178 @@ def test_make_renderer_returns_none_when_playwright_absent(monkeypatch: pytest.M
     monkeypatch.setattr(builtins, "__import__", _no_playwright)
     result = make_renderer(user_agent="TestBot/1.0", timeout=5.0)
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_renderer_session_gracefully_degrades_without_playwright(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import builtins
+
+    real_import = builtins.__import__
+
+    def _no_playwright(name: str, *args: object, **kwargs: object) -> object:
+        if name.startswith("playwright"):
+            raise ImportError("playwright unavailable")
+        return real_import(name, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(builtins, "__import__", _no_playwright)
+    async with renderer_session(user_agent="TestBot/1.0", timeout=1.0) as renderer:
+        assert renderer is None
+
+
+@pytest.mark.asyncio
+async def test_make_renderer_returns_none_after_browser_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FailingChromium:
+        async def launch(self, **_: object) -> object:
+            raise RuntimeError("browser unavailable")
+
+    class Playwright:
+        chromium = FailingChromium()
+
+        async def __aenter__(self) -> Playwright:
+            return self
+
+        async def __aexit__(self, *_: object) -> None:
+            return None
+
+    class FakeModule:
+        @staticmethod
+        def async_playwright() -> Playwright:
+            return Playwright()
+
+    monkeypatch.setitem(__import__("sys").modules, "playwright.async_api", FakeModule)
+    renderer = make_renderer(user_agent="TestBot/1.0", timeout=1.0)
+    assert renderer is not None
+    assert await renderer("https://example.com/") is None
+
+
+@pytest.mark.asyncio
+async def test_make_renderer_renders_and_closes_browser(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Page:
+        async def goto(self, *_: object, **__: object) -> None:
+            return None
+
+        async def wait_for_timeout(self, *_: object) -> None:
+            return None
+
+        async def content(self) -> str:
+            return _html(4)
+
+    class Browser:
+        async def new_page(self, **_: object) -> Page:
+            return Page()
+
+        async def close(self) -> None:
+            return None
+
+    class Playwright:
+        class Chromium:
+            async def launch(self, **_: object) -> Browser:
+                return Browser()
+
+        chromium = Chromium()
+
+        async def __aenter__(self) -> Playwright:
+            return self
+
+        async def __aexit__(self, *_: object) -> None:
+            return None
+
+    class FakeModule:
+        @staticmethod
+        def async_playwright() -> Playwright:
+            return Playwright()
+
+    monkeypatch.setitem(__import__("sys").modules, "playwright", object())
+    monkeypatch.setitem(__import__("sys").modules, "playwright.async_api", FakeModule)
+
+    async def allow_url(_: str) -> None:
+        return None
+
+    monkeypatch.setattr("seryvon.crawler.safety.assert_url_safe", allow_url)
+    renderer = make_renderer(user_agent="TestBot/1.0", timeout=1.0)
+    result = await renderer("https://example.com/")  # type: ignore[misc]
+    assert result is not None and result.word_count == 4
+
+
+@pytest.mark.asyncio
+async def test_renderer_session_renders_and_handles_page_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Page:
+        async def goto(self, url: str, **_: object) -> None:
+            if "fail" in url:
+                raise RuntimeError("navigation failed")
+
+        async def evaluate(self, *_: object) -> None:
+            return None
+
+        async def wait_for_timeout(self, *_: object) -> None:
+            return None
+
+        async def content(self) -> str:
+            return _html(5)
+
+    class Context:
+        async def new_page(self) -> Page:
+            return Page()
+
+        async def close(self) -> None:
+            return None
+
+    class Browser:
+        async def new_context(self, **_: object) -> Context:
+            return Context()
+
+        async def close(self) -> None:
+            return None
+
+    class Playwright:
+        class Chromium:
+            async def launch(self, **_: object) -> Browser:
+                return Browser()
+
+        chromium = Chromium()
+
+        async def __aenter__(self) -> Playwright:
+            return self
+
+        async def __aexit__(self, *_: object) -> None:
+            return None
+
+    class FakeModule:
+        @staticmethod
+        def async_playwright() -> Playwright:
+            return Playwright()
+
+    monkeypatch.setitem(__import__("sys").modules, "playwright", object())
+    monkeypatch.setitem(__import__("sys").modules, "playwright.async_api", FakeModule)
+
+    async def allow_url(_: str) -> None:
+        return None
+
+    monkeypatch.setattr("seryvon.crawler.safety.assert_url_safe", allow_url)
+    async with renderer_session(user_agent="TestBot/1.0", timeout=1.0) as renderer:
+        assert renderer is not None
+        result = await renderer("https://example.com/ok")
+        assert result is not None and result.word_count == 5
+        assert await renderer("https://example.com/fail") is None
+
+
+def test_word_count_handles_missing_body() -> None:
+    assert word_count("<html><head><title>Only head</title></head></html>") == 0
+    assert word_count("") == 0
+
+
+def test_word_count_handles_parser_without_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    class NoBody:
+        body = None
+
+    monkeypatch.setattr("seryvon.crawler.playwright_render.HTMLParser", lambda _: NoBody())
+    assert word_count("<not-html>") == 0
 
 
 # ---------------------------------------------------------------------------

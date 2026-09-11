@@ -85,6 +85,17 @@ function ComparisonBanner({ cmp }: { cmp: GscComparison }) {
 
 type SortDir = "asc" | "desc";
 
+export const queryKeywordValue = (q: GscQuery) => q.query;
+export const queryPositionValue = (q: GscQuery) => q.position;
+export const queryClicksValue = (q: GscQuery) => q.clicks;
+export const queryImpressionsValue = (q: GscQuery) => q.impressions;
+export const queryCtrValue = (q: GscQuery) => q.ctr;
+export const pageValue = (p: GscPage) => p.page;
+export const pagePositionValue = (p: GscPage) => p.position;
+export const pageClicksValue = (p: GscPage) => p.clicks;
+export const pageImpressionsValue = (p: GscPage) => p.impressions;
+export const pageCtrValue = (p: GscPage) => p.ctr;
+
 interface SortColumn<T> {
   id: string;
   label: string;
@@ -103,7 +114,7 @@ function SortArrows({ active, dir }: { active: boolean; dir: SortDir }) {
 }
 
 /** Generic client-side sortable table. Numeric columns sort numerically. */
-function SortableTable<T>({
+export function SortableTable<T>({
   rows,
   columns,
   initialSortId,
@@ -257,7 +268,7 @@ function PeriodSelector({
   );
 }
 
-function RankTrackingView({ gsc: initialGsc, auditId }: { gsc: GscResult; auditId: string }) {
+export function RankTrackingView({ gsc: initialGsc, auditId }: { gsc: GscResult; auditId: string }) {
   const { t } = useI18n();
   const rt = t.rankTracking;
   const [gsc, setGsc] = useState(initialGsc);
@@ -342,31 +353,31 @@ function RankTrackingView({ gsc: initialGsc, auditId }: { gsc: GscResult; auditI
               {
                 id: "keyword",
                 label: rt.table.keyword,
-                value: (q) => q.query,
+                value: queryKeywordValue,
                 render: (q) => q.query,
               },
               {
                 id: "position",
                 label: rt.table.position,
-                value: (q) => q.position,
+                value: queryPositionValue,
                 render: (q) => q.position.toFixed(1),
               },
               {
                 id: "clicks",
                 label: rt.table.clicks,
-                value: (q) => q.clicks,
+                value: queryClicksValue,
                 render: (q) => q.clicks.toLocaleString(),
               },
               {
                 id: "impressions",
                 label: rt.table.impressions,
-                value: (q) => q.impressions,
+                value: queryImpressionsValue,
                 render: (q) => q.impressions.toLocaleString(),
               },
               {
                 id: "ctr",
                 label: rt.table.ctr,
-                value: (q) => q.ctr,
+                value: queryCtrValue,
                 render: (q) => `${(q.ctr * 100).toFixed(1)}%`,
               },
             ]}
@@ -389,32 +400,32 @@ function RankTrackingView({ gsc: initialGsc, auditId }: { gsc: GscResult; auditI
               {
                 id: "page",
                 label: rt.table.page,
-                value: (p) => p.page,
+                value: pageValue,
                 render: (p) => p.page,
                 cellClassName: "cell-url",
               },
               {
                 id: "position",
                 label: rt.table.position,
-                value: (p) => p.position,
+                value: pagePositionValue,
                 render: (p) => p.position.toFixed(1),
               },
               {
                 id: "clicks",
                 label: rt.table.clicks,
-                value: (p) => p.clicks,
+                value: pageClicksValue,
                 render: (p) => p.clicks.toLocaleString(),
               },
               {
                 id: "impressions",
                 label: rt.table.impressions,
-                value: (p) => p.impressions,
+                value: pageImpressionsValue,
                 render: (p) => p.impressions.toLocaleString(),
               },
               {
                 id: "ctr",
                 label: rt.table.ctr,
-                value: (p) => p.ctr,
+                value: pageCtrValue,
                 render: (p) => `${(p.ctr * 100).toFixed(1)}%`,
               },
             ]}

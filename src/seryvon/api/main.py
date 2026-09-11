@@ -23,7 +23,7 @@ from datetime import datetime
 from typing import Any
 
 from celery.result import AsyncResult
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, HttpUrl
 from sqlalchemy.orm import Session
 
@@ -298,13 +298,19 @@ def get_audit(audit_id: uuid.UUID, session: Session = Depends(get_session)) -> A
 
 
 @app.get("/audits/{audit_id}/report.pdf")
-def get_audit_pdf(audit_id: uuid.UUID, session: Session = Depends(get_session)) -> Response:
+def get_audit_pdf(
+    audit_id: uuid.UUID,
+    locale: str = Query(default="en", pattern="^(en|fr)$"),
+    session: Session = Depends(get_session),
+) -> Response:
     """Render a persisted audit as a PDF file (requires seryvon[pdf])."""
+    from seryvon.i18n import set_locale
     from seryvon.reporting.pdf_report import report_to_pdf
 
     report = repository.load_report(session, audit_id)
     if report is None:
         raise HTTPException(status_code=404, detail="Audit not found")
+    set_locale(locale)
     try:
         pdf_bytes = report_to_pdf(report)
     except ImportError as exc:

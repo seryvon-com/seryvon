@@ -276,6 +276,13 @@ def test_img_alt_small_backlog_stays_ok() -> None:
     assert ImgAltCriterion().evaluate(bundle).status is Status.OK
 
 
+def test_img_alt_custom_missing_threshold() -> None:
+    bundle = _pages(_page(images_total=100, images_with_alt=98))
+    thresholds = {"img.alt": {"max_missing": 1}}
+    result = ImgAltCriterion().evaluate(bundle, thresholds)
+    assert result.status is Status.WARNING
+
+
 def test_svg_alt_not_measured_without_svg() -> None:
     result = ImgSvgAltCriterion().evaluate(_pages(_page()))
     assert result.status is Status.NOT_MEASURED
@@ -423,3 +430,14 @@ def test_ctr_not_measured_without_gsc() -> None:
     bundle = SignalBundle(domain="ex.com", pages=[_page()])
     result = SeoClickThroughRateCriterion().evaluate(bundle)
     assert result.status is Status.NOT_MEASURED
+
+
+def test_ctr_lower_score_tiers() -> None:
+    for ctr, expected in ((0.01, 50.0), (0.004, 25.0)):
+        gsc = GscResult(
+            queries=[], total_clicks=1, total_impressions=1000, avg_ctr=ctr, avg_position=8.0
+        )
+        bundle = SignalBundle(
+            domain="ex.com", pages=[_page()], external=ExternalSignals(gsc_data=gsc)
+        )
+        assert SeoClickThroughRateCriterion().evaluate(bundle).score == expected

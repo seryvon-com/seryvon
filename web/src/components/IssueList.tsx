@@ -28,7 +28,7 @@ export function IssueList({ issues, auditId, domain }: Props) {
           tracking={getTracking(issue.criterion_key)}
           currentAuditId={auditId}
           onToggle={() => auditId && toggleDone(issue.criterion_key, auditId)}
-          onSetDate={(date) => setDoneAt(issue.criterion_key, date)}
+          onSetDate={setDoneAt.bind(null, issue.criterion_key)}
           onAddProof={(proof) => addProof(issue.criterion_key, proof)}
           onRemoveProof={(id) => removeProof(issue.criterion_key, id)}
         />

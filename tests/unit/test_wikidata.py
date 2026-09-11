@@ -79,6 +79,29 @@ async def test_fetch_error_returns_empty() -> None:
     assert result == WikidataResult()
 
 
+async def test_fetch_constructs_and_closes_owned_client(monkeypatch: Any) -> None:
+    class OwnedClient:
+        def __init__(self, **kwargs: object) -> None:
+            self.closed = False
+
+        async def get(self, url: str, **kwargs: object) -> httpx.Response:
+            return httpx.Response(500, request=httpx.Request("GET", url))
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    holder: dict[str, OwnedClient] = {}
+
+    def factory(**kwargs: object) -> OwnedClient:
+        client = OwnedClient(**kwargs)
+        holder["client"] = client
+        return client
+
+    monkeypatch.setattr("seryvon.connectors.wikidata.httpx.AsyncClient", factory)
+    assert await fetch_wikidata("Apple") == WikidataResult()
+    assert holder["client"].closed is True
+
+
 # --------------------------------------------------------------------------- #
 # aso.brand_coherence                                                         #
 # --------------------------------------------------------------------------- #

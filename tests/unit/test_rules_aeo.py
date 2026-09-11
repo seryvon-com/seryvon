@@ -22,7 +22,7 @@ from seryvon.scoring.rules.aeo import (
     AeoKgPresenceCriterion,
     AeoLlmCitationCriterion,
 )
-from seryvon.scoring.rules.geo import GeoSsrCriterion
+from seryvon.scoring.rules.geo import GeoPrimarySourcesCriterion, GeoSsrCriterion
 
 
 def _page(url: str = "https://ex.com/", **kwargs: object) -> PageSignals:
@@ -67,6 +67,14 @@ def test_dates_structured_is_multipillar() -> None:
 def test_comparison_tables() -> None:
     assert AeoComparisonTablesCriterion().evaluate(_pages(_page(tables_count=2))).score == 100
     assert AeoComparisonTablesCriterion().evaluate(_pages(_page())).score == 0
+
+
+def test_comparison_tables_js_only_path() -> None:
+    result = AeoComparisonTablesCriterion().evaluate(
+        _pages(_page("https://ex.com/compare/models", render_mode="csr"))
+    )
+    assert result.score == 0
+    assert "JS-rendered" in result.explanation
 
 
 def test_answer_directness_ratio() -> None:
@@ -145,6 +153,13 @@ def test_geo_ssr_not_measured_without_mode() -> None:
     assert GeoSsrCriterion().evaluate(_pages(_page())).status is Status.NOT_MEASURED
 
 
+def test_geo_route_breakdown_skips_unknown_render_mode() -> None:
+    result = GeoSsrCriterion().evaluate(
+        _pages(_page(render_mode="ssr"), _page("https://ex.com/unknown", render_mode="unknown"))
+    )
+    assert result.raw_value["by_route"][0]["pages"] == 1
+
+
 def test_geo_ssr_by_route_breakdown() -> None:
     bundle = _pages(
         _page(url="https://ex.com/en/models/a/", render_mode="csr"),
@@ -188,3 +203,15 @@ def test_geo_ssr_top_offenders_sorted_by_parity() -> None:
         "parity_pct": 2,
     }
     assert len(offenders) == 2  # the SSR page is excluded
+
+
+def test_geo_primary_sources_warning_band() -> None:
+    result = GeoPrimarySourcesCriterion().evaluate(
+        _pages(
+            _page("https://ex.com/a", word_count=500, external_link_domains=["source.test"]),
+            _page("https://ex.com/b", word_count=500),
+            _page("https://ex.com/c", word_count=500),
+        )
+    )
+    assert result.score == 33.33
+    assert result.status is Status.WARNING

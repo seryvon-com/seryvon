@@ -7,7 +7,7 @@
 # (at your option) any later version. See <https://www.gnu.org/licenses/>.
 """Seryvon — moteur d'audit déterministe sur 5 piliers (SEO/GEO/GSO/AEO/ASO)."""
 
-__version__ = "0.1.0.dev0"
+__version__ = "1.0.0rc1"
 
 # Liste canonique des piliers, dans l'ordre de pondération par défaut.
 PILLARS: tuple[str, ...] = ("seo", "geo", "gso", "aeo", "aso")

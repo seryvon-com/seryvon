@@ -123,6 +123,14 @@ async def test_anthropic_parses_text_and_search_results() -> None:
     assert [c.url for c in response.citations] == ["https://seryvon.com/"]
 
 
+async def test_anthropic_ignores_non_mapping_content_blocks() -> None:
+    payload = {**ANTHROPIC, "content": ["invalid", {"type": "text", "text": "ok"}]}
+    client = _client(lambda request: httpx.Response(200, json=payload))
+    response = await AnthropicConnector("k").query("prompt?", client=client)
+    await client.aclose()
+    assert response.response_text == "ok"
+
+
 async def test_gemini_parses_grounding_chunks() -> None:
     captured: dict[str, Any] = {}
 

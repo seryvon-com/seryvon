@@ -18,7 +18,9 @@ const DEMO_DOMAINS: DomainSummary[] = [
   { domain: "visibility-demo.example", audit_count: 2, latest_audit_id: "demo-visibility", latest_score: 94, latest_started_at: "2026-07-01T15:24:00Z" },
 ];
 
-const isDemoMode = new URLSearchParams(window.location.search).get("demo") === "1";
+export function isDemoMode(): boolean {
+  return new URLSearchParams(window.location.search).get("demo") === "1";
+}
 
 const HISTORY_EXAMPLES: Record<string, { domain: string; score: number }> = {
   "traceurflotte.fr": { domain: "northstar-logistics.example", score: 51 },
@@ -63,7 +65,7 @@ export function HomePage() {
 
   useEffect(() => {
     api.getAuditCostEstimate().then(setCostEstimate).catch(() => {});
-    if (isDemoMode) setDomains(DEMO_DOMAINS);
+    if (isDemoMode()) setDomains(DEMO_DOMAINS);
     else api.listDomains().then(setDomains).catch(() => setDomains([]));
   }, []);
 
@@ -194,18 +196,18 @@ export function HomePage() {
         <div className="card recent-domains-card">
           <div className="section-head">
             <h3>{t.home.recentTitle}</h3>
-            <span className="section-sub">{isDemoMode ? "Sample data · no real audits" : t.home.recentSubtitle}</span>
+            <span className="section-sub">{isDemoMode() ? "Sample data · no real audits" : t.home.recentSubtitle}</span>
           </div>
           <div className="recent-domains-list">
             {domains.map((d) => (
               <div
                 key={d.domain}
-                role={isDemoMode ? undefined : "button"}
-                tabIndex={isDemoMode ? undefined : 0}
+                role={isDemoMode() ? undefined : "button"}
+                tabIndex={isDemoMode() ? undefined : 0}
                 className="recent-domain-item"
-                onClick={isDemoMode ? undefined : () => navigate(`/audits/${d.latest_audit_id}`)}
+                onClick={isDemoMode() ? undefined : () => navigate(`/audits/${d.latest_audit_id}`)}
                 onKeyDown={(e) => {
-                  if (!isDemoMode && e.key === "Enter") navigate(`/audits/${d.latest_audit_id}`);
+                  if (!isDemoMode() && e.key === "Enter") navigate(`/audits/${d.latest_audit_id}`);
                 }}
               >
                 <span className="recent-domain-name">{historyDisplay(d).domain}</span>
@@ -215,7 +217,7 @@ export function HomePage() {
                 <span className="recent-domain-score">
                   {historyDisplay(d).score == null ? "—" : historyDisplay(d).score}
                 </span>
-                {!isDemoMode && <button
+                {!isDemoMode() && <button
                   type="button"
                   className="recent-domain-rerun"
                   disabled={running}

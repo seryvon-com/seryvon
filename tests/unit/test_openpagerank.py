@@ -86,6 +86,39 @@ async def test_fetch_http_error_returns_empty() -> None:
     assert result == OpenPageRankResult()
 
 
+async def test_fetch_invalid_json_returns_empty() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"not-json")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    result = await fetch_openpagerank("ex.com", api_key="k", client=client)
+    await client.aclose()
+    assert result == OpenPageRankResult()
+
+
+async def test_fetch_constructs_and_closes_owned_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    class OwnedClient:
+        def __init__(self, **kwargs: object) -> None:
+            self.closed = False
+
+        async def get(self, url: str, **kwargs: object) -> httpx.Response:
+            return httpx.Response(503, request=httpx.Request("GET", url))
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    holder: dict[str, OwnedClient] = {}
+
+    def factory(**kwargs: object) -> OwnedClient:
+        client = OwnedClient(**kwargs)
+        holder["client"] = client
+        return client
+
+    monkeypatch.setattr("seryvon.connectors.openpagerank.httpx.AsyncClient", factory)
+    assert await fetch_openpagerank("ex.com", api_key="k") == OpenPageRankResult()
+    assert holder["client"].closed is True
+
+
 def test_settings_reads_opr_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPR_API_KEY", "opr-key")
     assert Settings().opr_api_key == "opr-key"

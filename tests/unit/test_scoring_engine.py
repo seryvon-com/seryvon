@@ -5,9 +5,13 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
+import pytest
+
 from seryvon.core.audit import _build_measurement_profile, _rule_catalog_digest
 from seryvon.core.config import DEFAULT_PILLAR_WEIGHTS, AuditConfig
-from seryvon.models.criterion import CriterionResult
+from seryvon.models.criterion import Criterion, CriterionResult, clear_registry, register
 from seryvon.models.enums import CoverageLabel, Status
 from seryvon.models.report import PillarScore
 from seryvon.models.signals import ExternalSignals, PageSignals, SignalBundle, SiteSignals
@@ -161,6 +165,22 @@ def test_score_global_excludes_unmeasured_pillars() -> None:
     assert overall == expected
 
 
+def test_score_global_returns_zero_without_contributing_pillars() -> None:
+    assert score_global({}, AuditConfig.default()) == 0.0
+    assert score_pillar("unknown", []).score == 0.0
+
+
+def test_score_coverage_returns_zero_when_all_criteria_are_not_applicable() -> None:
+    result = CriterionResult(
+        key="irrelevant",
+        pillars=["seo"],
+        score=0.0,
+        status=Status.NOT_APPLICABLE,
+        weight=1.0,
+    )
+    assert score_coverage([result]) == 0.0
+
+
 def test_score_clamped_to_range(bundle_with_title: SignalBundle) -> None:
     results = run_criteria(bundle_with_title, AuditConfig.default())
     for r in results:
@@ -240,6 +260,34 @@ def test_rule_catalog_digest_is_stable() -> None:
     d2 = _rule_catalog_digest()
     assert d1 == d2
     assert len(d1) == 16
+
+
+def test_criterion_result_factory_methods() -> None:
+    missing = CriterionResult.not_measured("x", ["seo"], 2.0, "unavailable")
+    irrelevant = CriterionResult.not_applicable("y", ["geo"], 3.0, "not relevant")
+    assert missing.status == Status.NOT_MEASURED
+    assert missing.explanation == "unavailable"
+    assert irrelevant.status == Status.NOT_APPLICABLE
+    assert irrelevant.weight == 3.0
+
+
+def test_register_rejects_duplicate_and_clear_registry(monkeypatch: pytest.MonkeyPatch) -> None:
+    import seryvon.models.criterion as criterion_module
+
+    monkeypatch.setattr(criterion_module, "RULES", {})
+
+    class DemoCriterion(Criterion):
+        key = "demo"
+        pillars: ClassVar[list[str]] = ["seo"]
+
+        def evaluate(self, signals: SignalBundle, thresholds: object = None) -> CriterionResult:
+            return CriterionResult.not_measured(self.key, self.pillars, 1.0, "test")
+
+    register(DemoCriterion)
+    with pytest.raises(ValueError, match="already registered"):
+        register(DemoCriterion)
+    clear_registry()
+    assert criterion_module.RULES == {}
 
 
 def test_run_criteria_applies_threshold_override() -> None:

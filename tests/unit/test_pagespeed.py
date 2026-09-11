@@ -148,6 +148,66 @@ async def test_fetch_rejected_key_reason() -> None:
     assert result.error_reason is not None and "API key" in result.error_reason
 
 
+async def test_fetch_runtime_error_without_lighthouse_score() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"lighthouseResult": {"runtimeError": {"message": "navigation failed"}}},
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    result = await fetch_pagespeed("https://ex.com/", api_key="k", client=client)
+    await client.aclose()
+    assert result.error_reason == "PageSpeed returned no Lighthouse score: navigation failed"
+
+
+async def test_fetch_rate_limit_reason_without_zero_quota() -> None:
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                429,
+                json={"error": {"details": [{"reason": "RATE_LIMIT_EXCEEDED"}]}},
+            )
+        )
+    )
+    result = await fetch_pagespeed("https://ex.com/", api_key="k", client=client)
+    await client.aclose()
+    assert result.error_reason is not None and "rate limit exceeded" in result.error_reason
+
+
+async def test_fetch_http_error_with_invalid_error_json_is_tolerated() -> None:
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: httpx.Response(500, content=b"not-json"))
+    )
+    result = await fetch_pagespeed("https://ex.com/", api_key="k", client=client)
+    await client.aclose()
+    assert result.error_reason == "PageSpeed Insights request failed (HTTP 500)."
+
+
+async def test_fetch_constructs_and_closes_owned_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    class OwnedClient:
+        def __init__(self, **kwargs: object) -> None:
+            self.closed = False
+
+        async def get(self, url: str, **kwargs: object) -> httpx.Response:
+            return httpx.Response(500, request=httpx.Request("GET", url))
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    holder: dict[str, OwnedClient] = {}
+
+    def factory(**kwargs: object) -> OwnedClient:
+        client = OwnedClient(**kwargs)
+        holder["client"] = client
+        return client
+
+    monkeypatch.setattr("seryvon.connectors.pagespeed.httpx.AsyncClient", factory)
+    result = await fetch_pagespeed("https://ex.com/", api_key="k")
+    assert result.error_reason is not None
+    assert holder["client"].closed is True
+
+
 # --------------------------------------------------------------------------- #
 # BYOK: key read via PSI_API_KEY                                               #
 # --------------------------------------------------------------------------- #

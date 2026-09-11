@@ -9,13 +9,14 @@ WORKDIR /app
 
 # Dépendances système minimales (psycopg binaire, build léger).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends \
+       curl libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b \
     && rm -rf /var/lib/apt/lists/*
 
 # Couche de dépendances (cache) : on copie d'abord les métadonnées du paquet.
 COPY pyproject.toml README.md LICENSE NOTICE ./
 COPY src ./src
-RUN pip install --upgrade pip && pip install -e .
+RUN pip install --upgrade pip && pip install -e ".[pdf]"
 
 # Le reste du code (migrations, config).
 COPY alembic.ini ./
@@ -29,6 +30,22 @@ EXPOSE 8000
 
 # Par défaut : API. Les workers surchargent la commande dans docker-compose.
 CMD ["uvicorn", "seryvon.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# ---------------------------------------------------------------------------
+# Stage test : dépendances de développement et tests backend.
+# Non utilisée par les services runtime ; elle permet une validation complète
+# dans Docker, notamment pour WeasyPrint et ses bibliothèques natives.
+# ---------------------------------------------------------------------------
+FROM base AS test
+
+USER root
+# The base stage already contains the production PDF runtime. Install only
+# development tools here so the test stage reuses the expensive PDF layer.
+RUN pip install ".[dev]"
+COPY tests ./tests
+ENV SERYVON_TEST_DATABASE_URL=postgresql+psycopg://seryvon:seryvon@postgres:5432/seryvon
+USER seryvon
+CMD ["python", "-m", "pytest", "-q"]
 
 # ---------------------------------------------------------------------------
 # Stage worker-cpu : ajoute Playwright + Chromium pour le rendu SSR (geo.ssr).

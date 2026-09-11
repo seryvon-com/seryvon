@@ -27,14 +27,16 @@ def _minimal_report() -> AuditReport:
         audit_id=uuid.uuid4(),
         domain="example.com",
         seed_url="https://example.com",
+        tool_version="test",
+        schema_version=1,
         score_global=72.5,
         coverage=0.85,
         pillars={},
         criteria=[],
         issues=[],
         active_connectors=[],
-        started_at=datetime(2026, 6, 23, 12, 0, 0, tzinfo=datetime.UTC),
-        finished_at=datetime(2026, 6, 23, 12, 0, 30, tzinfo=datetime.UTC),
+        started_at=datetime.datetime(2026, 6, 23, 12, 0, 0, tzinfo=datetime.UTC),
+        finished_at=datetime.datetime(2026, 6, 23, 12, 0, 30, tzinfo=datetime.UTC),
     )
 
 

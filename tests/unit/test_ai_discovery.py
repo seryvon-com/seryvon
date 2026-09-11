@@ -43,6 +43,10 @@ def test_valid_faq() -> None:
     assert valid_faq({"faq": good}) is True  # wrapped form
     assert valid_faq([{"question": "court", "answer": "court"}]) is False
     assert valid_faq([]) is False
+    assert (
+        valid_faq(["invalid", {"question": "Une question assez longue ?", "answer": "x" * 20}])
+        is False
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -123,3 +127,54 @@ async def test_probe_nlweb_absent() -> None:
     client = httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(404)))
     assert await probe_nlweb("https://ex.com", client=client, resolver=PUBLIC) == "absent"
     await client.aclose()
+
+
+async def test_probe_ai_discovery_constructs_and_closes_owned_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class OwnedClient:
+        def __init__(self, **kwargs: object) -> None:
+            self.closed = False
+
+        async def get(self, url: str) -> httpx.Response:
+            return httpx.Response(404, request=httpx.Request("GET", url))
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    holder: dict[str, OwnedClient] = {}
+
+    def factory(**kwargs: object) -> OwnedClient:
+        client = OwnedClient(**kwargs)
+        holder["client"] = client
+        return client
+
+    monkeypatch.setattr("seryvon.connectors.ai_discovery.httpx.AsyncClient", factory)
+    result = await probe_ai_discovery("https://ex.com", resolver=PUBLIC)
+    assert result["ai_txt"] is False
+    assert holder["client"].closed is True
+
+
+async def test_probe_nlweb_constructs_and_closes_owned_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class OwnedClient:
+        def __init__(self, **kwargs: object) -> None:
+            self.closed = False
+
+        async def get(self, url: str) -> httpx.Response:
+            return httpx.Response(404, request=httpx.Request("GET", url))
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    holder: dict[str, OwnedClient] = {}
+
+    def factory(**kwargs: object) -> OwnedClient:
+        client = OwnedClient(**kwargs)
+        holder["client"] = client
+        return client
+
+    monkeypatch.setattr("seryvon.connectors.ai_discovery.httpx.AsyncClient", factory)
+    assert await probe_nlweb("https://ex.com", resolver=PUBLIC) == "absent"
+    assert holder["client"].closed is True

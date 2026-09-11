@@ -223,6 +223,59 @@ def test_extract_records_redirects() -> None:
     assert signals.redirects == 2
 
 
+def test_extract_form_quality_breakdown_and_openapi_links() -> None:
+    html = """<html><body>
+      <form></form>
+      <form action="/empty"></form>
+      <form method="post"><input name="x"></form>
+      <form action="/ok"><input placeholder="Query"></form>
+      <a href="/swagger-ui"></a><link href="/openapi.json">
+    </body></html>"""
+    signals = extract_page_signals("https://example.com/", html)
+    assert signals.aso.agent_usable_forms == 1
+    assert signals.aso.agent_usable_forms_detail == {
+        "found": 4,
+        "no_action": 1,
+        "no_fields": 1,
+        "no_label": 1,
+    }
+    assert signals.aso.openapi_links == ["/openapi.json", "/swagger-ui"]
+
+
+def test_extract_jsonld_empty_script_and_nested_types() -> None:
+    html = """<html><head>
+      <script type="application/ld+json"> </script>
+      <script type="application/ld+json">{"@graph":[{"@type":["Service", 4], "sameAs":["https://x.test"]}]}</script>
+    </head><body><p>Hello world</p></body></html>"""
+    signals = extract_page_signals("https://example.com/", html)
+    assert "Service" in signals.structured_data_types
+    assert signals.social_platforms == []
+
+
+def test_extract_jsonld_scalar_same_as_and_svg_labelledby() -> None:
+    jsonld = (
+        '{"@type":"Organization", "sameAs":"https://example.org", '
+        '"potentialAction":[{"@type":"SearchAction"}]}'
+    )
+    html = f"""<html><head>
+      <meta name="robots" content="noindex">
+      <script type="application/ld+json">{jsonld}</script>
+    </head><body><svg aria-labelledby="svg-title"><title id="svg-title">Logo</title>
+    </svg></body></html>"""
+    signals = extract_page_signals("https://example.com/", html)
+    assert signals.meta_robots == "noindex"
+    assert signals.svg_accessible == 1
+
+
+def test_extract_svg_context_with_labelledby_is_exempt() -> None:
+    html = (
+        '<html><body><span id="name">Menu</span>'
+        '<button aria-labelledby="name"><svg></svg></button></body></html>'
+    )
+    signals = extract_page_signals("https://example.com/", html)
+    assert signals.svg_total == 0
+
+
 # --------------------------------------------------------------------------- #
 # M3.2 — signaux GSO/AEO on-page + ASO statique                               #
 # --------------------------------------------------------------------------- #

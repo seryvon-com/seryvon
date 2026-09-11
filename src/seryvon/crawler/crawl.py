@@ -60,6 +60,7 @@ def _is_html_response(result: FetchResult) -> bool:
     content_type = (result.content_type or "").lower().split(";", 1)[0].strip()
     return content_type in ("", "text/html", "application/xhtml+xml")
 
+
 # SSR/CSR heuristic (D2) — fallback when Playwright is unavailable.
 _SSR_MIN_WORDS = 50
 _CSR_MOUNT_SELECTORS = ("#root", "#app", "[data-reactroot]", "[ng-version]")

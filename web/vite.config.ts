@@ -9,6 +9,10 @@ declare const process: { env: Record<string, string | undefined> };
 // behind a reverse proxy.
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: "jsdom",
+    globals: true,
+  },
   server: {
     port: Number(process.env.PORT) || 5173,
     proxy: {

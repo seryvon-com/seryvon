@@ -12,12 +12,12 @@ const STATUS_COLOR: Record<string, string> = {
   "5": "var(--c-error)",
 };
 
-function statusColor(code: number | null): string {
+export function statusColor(code: number | null): string {
   if (code == null) return "var(--c-text-faint)";
   return STATUS_COLOR[String(code)[0]] ?? "var(--c-text-faint)";
 }
 
-function renderBadge(mode: string | null) {
+export function renderBadge(mode: string | null) {
   if (!mode) return null;
   const label = mode === "csr" ? "CSR" : mode === "ssr" ? "SSR" : mode.toUpperCase();
   const bg = mode === "csr" ? "rgba(108,143,255,0.15)" : "rgba(60,200,120,0.12)";
@@ -48,7 +48,7 @@ const CSV_HEADERS = [
   "forms_total",
 ];
 
-function csvRow(p: PageRow): string[] {
+export function csvRow(p: PageRow): string[] {
   return [
     p.url,
     p.status_code != null ? String(p.status_code) : "",
@@ -126,7 +126,7 @@ const COLUMNS: { key: SortKey; label: string; hint?: string }[] = [
   },
 ];
 
-function sortValue(p: PageRow, key: SortKey): number | string {
+export function sortValue(p: PageRow, key: SortKey): number | string {
   switch (key) {
     case "url":
       return p.url;
@@ -146,6 +146,10 @@ function sortValue(p: PageRow, key: SortKey): number | string {
       // Sort by disqualified forms (total − usable) so problematic pages surface first.
       return p.forms_total != null ? p.forms_total - (p.agent_usable_forms ?? 0) : -1;
   }
+}
+
+export function nextSortDirection(direction: "asc" | "desc"): "asc" | "desc" {
+  return direction === "asc" ? "desc" : "asc";
 }
 
 export function CrawledPages({ auditId }: { auditId: string }) {
@@ -189,7 +193,7 @@ export function CrawledPages({ auditId }: { auditId: string }) {
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      setSortDir(nextSortDirection);
     } else {
       setSortKey(key);
       setSortDir("desc");

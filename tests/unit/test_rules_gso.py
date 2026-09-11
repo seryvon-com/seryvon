@@ -33,6 +33,12 @@ def test_faqpage_presence() -> None:
     assert GsoFaqPageCriterion().evaluate(_pages(_page())).score == 0
 
 
+def test_schema_presence_absent_paths_for_all_schema_rules() -> None:
+    empty = _pages(_page())
+    assert GsoHowToCriterion().evaluate(empty).score == 0
+    assert GsoBreadcrumbCriterion().evaluate(empty).score == 0
+
+
 def test_howto_is_multipillar_gso_aso() -> None:
     result = GsoHowToCriterion().evaluate(_pages(_page(structured_data_types=["HowTo"])))
     assert result.score == 100
@@ -75,6 +81,14 @@ def test_cwv_eligible() -> None:
         external=ExternalSignals(core_web_vitals={"lcp": 5000, "cls": 0.05, "inp": 150}),
     )
     assert GsoCwvEligibleCriterion().evaluate(bad).score == 0
+
+
+def test_cwv_eligible_accepts_boundary_values() -> None:
+    boundary = SignalBundle(
+        domain="ex.com",
+        external=ExternalSignals(core_web_vitals={"lcp": 2500, "cls": 0.1, "inp": 200}),
+    )
+    assert GsoCwvEligibleCriterion().evaluate(boundary).score == 100
 
 
 def test_cwv_eligible_not_measured_without_data() -> None:

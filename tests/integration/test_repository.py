@@ -28,6 +28,7 @@ from seryvon.models.report import (
     MeasurementProfile,
     PillarScore,
 )
+from seryvon.models.signals import PageSignals
 
 _TEST_DB = os.environ.get("SERYVON_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -163,3 +164,40 @@ def test_list_domains_one_per_domain_with_latest(session: Session) -> None:
     assert by_host["b.com"].audit_count == 1
     # latest_audit_id must resolve to a real, loadable report.
     assert repository.load_report(session, by_host["a.com"].latest_audit_id) is not None
+
+
+def test_persist_pages_roundtrips_key_signals(session: Session) -> None:
+    audit_id = repository.persist_report(_report(), session)
+    page = PageSignals(
+        url="https://example.com/",
+        status_code=200,
+        render_mode="ssr",
+        title="Home",
+        word_count=42,
+        images_total=3,
+        images_with_alt=2,
+        raw_word_count=40,
+        rendered_word_count=42,
+        aso={"agent_usable_forms": 1, "agent_usable_forms_detail": {"contact": 1}},
+    )
+    repository.persist_pages(audit_id, [page], session)
+    session.commit()
+    row = session.query(repository.m.Page).one()
+    assert row.url == page.url
+    assert row.signal.internal["word_count"] == 42
+    assert row.signal.internal["aso"]["agent_usable_forms"] == 1
+
+
+def test_key_crud_covers_create_update_lookup_list_delete(session: Session) -> None:
+    assert repository.get_key_row(session, "psi") is None
+    created = repository.upsert_key(session, "psi", b"one")
+    session.commit()
+    assert repository.get_key_encrypted(session, "psi") == b"one"
+    updated = repository.upsert_key(session, "psi", b"two")
+    session.commit()
+    assert updated.id == created.id
+    assert repository.get_key_encrypted(session, "psi") == b"two"
+    assert [row.connector for row in repository.list_keys(session)] == ["psi"]
+    assert repository.delete_key(session, "psi") is True
+    session.commit()
+    assert repository.delete_key(session, "psi") is False

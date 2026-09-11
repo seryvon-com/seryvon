@@ -32,6 +32,7 @@ criteria_overrides:
     weight: 3.0
 crawl:
   max_pages: 50
+locale: fr
 """,
         encoding="utf-8",
     )
@@ -41,6 +42,7 @@ crawl:
     assert cfg.pillar_weights["seo"] == 0.30
     assert cfg.criteria_overrides["meta.title"]["weight"] == 3.0
     assert cfg.crawl.max_pages == 50
+    assert cfg.locale == "fr"
 
 
 def test_from_yaml_empty_file(tmp_path: Path) -> None:

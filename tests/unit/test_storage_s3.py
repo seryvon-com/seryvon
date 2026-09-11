@@ -109,3 +109,30 @@ def test_missing_boto3_raises_clear_error(monkeypatch: pytest.MonkeyPatch) -> No
     # Config alone is fine (lazy); the error surfaces on first I/O.
     with pytest.raises(RuntimeError, match="seryvon\\[storage\\]"):
         store.put(b"d", project_id="p", run_id="r", artifact_type=ArtifactType.HTML)
+
+
+def test_lazy_client_builds_boto3_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+    from types import SimpleNamespace
+
+    fake_client = FakeS3Client()
+    fake_boto3 = SimpleNamespace(client=lambda service, **config: fake_client)
+    monkeypatch.setitem(sys.modules, "boto3", fake_boto3)
+    store = S3ArtifactStore("seryvon", endpoint_url="http://minio:9000")
+    assert store._client is fake_client
+    assert store._client is fake_client
+
+
+def test_unexpected_s3_errors_are_not_hidden() -> None:
+    class BrokenClient:
+        def get_object(self, **kwargs: Any) -> Any:
+            raise ValueError("backend unavailable")
+
+        def head_object(self, **kwargs: Any) -> None:
+            raise ValueError("backend unavailable")
+
+    store = S3ArtifactStore("seryvon", client=BrokenClient())
+    with pytest.raises(ValueError, match="backend unavailable"):
+        store._read("key")
+    with pytest.raises(ValueError, match="backend unavailable"):
+        store._exists("key")

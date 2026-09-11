@@ -103,6 +103,13 @@ def test_parse_aio_with_sources_key() -> None:
     assert result.target_position == 1
 
 
+def test_parse_aio_skips_invalid_or_unlinked_references() -> None:
+    payload = {"ai_overview": {"references": ["bad", {}, {"title": "missing link"}]}}
+    result = parse_serp_aio(payload, TARGET, "q")
+    assert result.aio_triggered is True
+    assert result.sources == []
+
+
 # ---------------------------------------------------------------------------
 # aggregate_aio — pure unit tests
 # ---------------------------------------------------------------------------
@@ -221,6 +228,46 @@ async def test_fetch_serp_aio_http_error_degrades_gracefully() -> None:
     assert metrics.query_count == 2
     # First query failed → no AIO; second cited → 1/2
     assert metrics.presence_rate == pytest.approx(0.5)
+
+
+@pytest.mark.asyncio
+async def test_fetch_serp_aio_constructs_and_closes_owned_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class OwnedClient:
+        def __init__(self, **kwargs: object) -> None:
+            self.closed = False
+
+        async def get(self, url: str, **kwargs: object) -> httpx.Response:
+            return httpx.Response(200, json=_PAYLOAD_NO_AIO, request=httpx.Request("GET", url))
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    holder: dict[str, OwnedClient] = {}
+
+    def factory(**kwargs: object) -> OwnedClient:
+        client = OwnedClient(**kwargs)
+        holder["client"] = client
+        return client
+
+    monkeypatch.setattr("seryvon.connectors.serp.httpx.AsyncClient", factory)
+    result = await fetch_serp_aio(TARGET, api_key="key", queries=["q"])
+    assert result is not None and result.query_count == 1
+    assert holder["client"].closed is True
+
+
+@pytest.mark.asyncio
+async def test_fetch_serp_aio_fatal_gather_returns_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def explode(*args: object, **kwargs: object) -> AioResult:
+        raise RuntimeError("unexpected worker failure")
+
+    monkeypatch.setattr("seryvon.connectors.serp._fetch_one", explode)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200)))
+    assert await fetch_serp_aio(TARGET, api_key="key", queries=["q"], client=client) is None
+    await client.aclose()
 
 
 # ---------------------------------------------------------------------------
