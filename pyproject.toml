@@ -38,7 +38,8 @@ dependencies = [
     "celery>=5.4",
     "redis>=5.0",
     "pyyaml>=6.0",
-    "cryptography>=42.0",
+    "cryptography>=50.0",
+    "pyasn1>=0.6.4",
     "google-auth>=2.30",
     # google.auth.transport.requests (used by the GSC connector) needs `requests`;
     # google-auth ships it as an optional transport, so declare it explicitly.
@@ -50,7 +51,7 @@ dependencies = [
 [project.optional-dependencies]
 render = ["playwright>=1.44"]
 storage = ["boto3>=1.34"]
-pdf = ["weasyprint>=62.0"]
+pdf = ["weasyprint>=70.0", "Pillow>=12.3.0"]
 dev = [
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
