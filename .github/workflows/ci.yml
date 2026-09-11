@@ -14,36 +14,7 @@ jobs:
     name: Lint · Types · Tests
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: seryvon
-          POSTGRES_PASSWORD: seryvon
-          POSTGRES_DB: seryvon
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U seryvon"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
-
-    env:
-      SERYVON_DATABASE_URL: postgresql+psycopg://seryvon:seryvon@localhost:5432/seryvon
-      SERYVON_REDIS_URL: redis://localhost:6379/0
-
-    steps:
+      steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
@@ -69,16 +40,14 @@ jobs:
       - name: Type check with MyPy
         run: mypy src
 
-      - name: Apply database migrations
-        run: alembic upgrade head
-
-      - name: Run tests and coverage
+      - name: Run backend tests and coverage in the isolated Docker profile
         run: |
-          mkdir -p .tmp
-          pytest \
-            --junitxml=.tmp/pytest.xml \
-            --cov-report=json:.tmp/coverage.json \
-            --cov-fail-under=100
+          docker compose --profile test build test
+          docker compose --profile test run --rm --remove-orphans test \
+            pytest -q \
+              --junitxml=/tmp/pytest.xml \
+              --cov-report=json:/tmp/coverage.json \
+              --cov-fail-under=100
 
       - name: Verify generated quality metrics
         run: python scripts/generate_landing_metrics.py

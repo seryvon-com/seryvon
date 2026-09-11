@@ -33,6 +33,16 @@ jobs:
       - name: Build package
         run: python -m build
 
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          package_version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "$package_version" != "$tag_version" ]]; then
+            echo "Package version $package_version does not match tag $GITHUB_REF_NAME"
+            exit 1
+          fi
+
       - name: Validate package metadata
         run: python -m twine check dist/*
 
