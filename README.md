@@ -44,9 +44,9 @@ What is already delivered:
 | 4 C-P2/C-P3 | Content-addressed artifacts and scorecard comparison |
 | 5–10 | React UI/i18n, action-plan tracking, PDF export, GSC rank tracking, SERP/AIO, UX stabilization |
 
-Verification actuelle : 691 tests backend passant dans le profil Docker dédié, avec
-100 % de couverture Python (5 163 statements, 0 ligne manquante). Le frontend compte
-200 tests, avec typecheck propre et 100 % sur les lignes, branches et fonctions.
+Current verification: 691 backend tests pass in the dedicated Docker profile, with
+100% Python coverage (5,163 statements, zero missed). The frontend has 200 tests,
+with a clean typecheck and 100% coverage for lines, branches and functions.
 The frontend uses React Router 7.18.3 and has no known production dependency
 vulnerability (`npm audit --omit=dev`).
 
@@ -86,9 +86,9 @@ docker compose --profile test build test
 docker compose --profile test run --rm test
 ```
 
-La suite d’intégration doit être exécutée dans ce profil : PostgreSQL utilise
-`seryvon_test`, Redis est séparé du runtime et chaque test est limité à 30 s
-pour rendre les blocages immédiatement visibles.
+The integration suite must run in this profile: PostgreSQL uses `seryvon_test`,
+Redis is separate from the runtime, and each test is limited to 30 seconds so
+hangs become immediately visible.
 
 The `test` profile is never started by the normal runtime stack and therefore
 does not add development dependencies to the production API or worker images.
