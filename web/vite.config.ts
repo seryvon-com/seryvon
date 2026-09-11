@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 // No @types/node dependency in this project; declare just what this config needs.
 declare const process: { env: Record<string, string | undefined> };
@@ -12,6 +12,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    restoreMocks: true,
   },
   server: {
     port: Number(process.env.PORT) || 5173,
